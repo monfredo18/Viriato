@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, type Notificacao } from './api'
 
+const Sininho = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+  </svg>
+)
+
 export default function Sino() {
   const [total, setTotal] = useState(0)
   const [aberto, setAberto] = useState(false)
@@ -47,7 +54,8 @@ export default function Sino() {
   return (
     <div className="sino" ref={ref}>
       <button className="link" onClick={abrir} aria-label="Notificações">
-        🔔{total > 0 && <span className="badge">{total}</span>}
+        <Sininho />
+        {total > 0 && <span className="badge">{total > 99 ? '99+' : total}</span>}
       </button>
       {aberto && (
         <div className="menu-notif">

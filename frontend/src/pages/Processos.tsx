@@ -54,7 +54,7 @@ export default function Processos() {
       </div>
 
       {erro && <p className="erro">{erro}</p>}
-      <table>
+      <div className="tabela-wrap"><table>
         <thead>
           <tr><th>Número</th><th>Título</th><th>Etapa</th><th>Responsável</th><th>Prazo</th><th>Situação</th></tr>
         </thead>
@@ -71,7 +71,7 @@ export default function Processos() {
           ))}
           {dados && dados.content.length === 0 && <tr><td colSpan={6} className="vazio">Nenhum processo encontrado.</td></tr>}
         </tbody>
-      </table>
+      </table></div>
 
       {dados && dados.totalPages > 1 && (
         <div className="paginacao">
