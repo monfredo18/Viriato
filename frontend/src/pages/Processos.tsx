@@ -62,7 +62,7 @@ export default function Processos() {
           {dados?.content.map((p) => (
             <tr key={p.id}>
               <td><Link to={`/processos/${p.id}`}>{p.numero}</Link></td>
-              <td>{p.titulo}</td>
+              <td><Link to={`/processos/${p.id}`} className="titulo-link">{p.titulo}</Link></td>
               <td>{p.etapaAtual}</td>
               <td>{p.responsavelNome ?? '—'}</td>
               <td>{fmtData(p.prazoEtapa)}</td>

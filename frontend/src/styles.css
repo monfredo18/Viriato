@@ -119,6 +119,8 @@ th { font-size: .72rem; font-weight: 650; text-transform: uppercase; letter-spac
 tbody tr:hover { background: var(--destaque); }
 tr:last-child td { border-bottom: none; }
 td a { font-weight: 600; font-variant-numeric: tabular-nums; }
+td a.titulo-link { font-weight: 450; color: var(--texto); }
+td a.titulo-link:hover { color: var(--cor); }
 .cartao table th { background: transparent; }
 .paginacao { display: flex; gap: 1rem; justify-content: center; align-items: center; margin-top: 1.25rem; color: var(--suave); }
 
