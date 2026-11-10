@@ -1,0 +1,62 @@
+# Ambiente local completo:  docker compose up --build
+#   App:      http://localhost:3000
+#   API docs: http://localhost:8080/swagger-ui.html
+#   E-mails:  http://localhost:8025   (Mailpit - captura os e-mails enviados)
+#   S3 local: http://localhost:9090   (adobe/s3mock; dados em volume Docker)
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: viriato
+      MYSQL_USER: ${DB_USER:-viriato}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-viriato}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # S3 local para desenvolvimento (API compatível com a AWS S3). Em produção use o S3 real.
+  s3:
+    image: adobe/s3mock:latest
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: viriato-documentos
+    ports: ["9090:9090"]
+    volumes:
+      - s3-data:/s3mockroot
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025"]   # UI; SMTP em mailpit:1025 (rede interna)
+
+  backend:
+    build: ./backend
+    depends_on:
+      mysql: { condition: service_healthy }
+      s3: { condition: service_started }
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/viriato?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
+      DB_USER: ${DB_USER:-viriato}
+      DB_PASSWORD: ${DB_PASSWORD:-viriato}
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao-com-32-bytes-ou-mais}
+      S3_ENDPOINT: http://s3:9090
+      S3_ACCESS_KEY: dev
+      S3_SECRET_KEY: dev
+      S3_BUCKET: viriato-documentos
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      CORS_ORIGINS: http://localhost:3000
+    ports: ["8080:8080"]
+
+  frontend:
+    build: ./frontend
+    depends_on: [backend]
+    ports: ["3000:80"]
+
+volumes:
+  mysql-data:
+  s3-data:

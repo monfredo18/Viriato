@@ -1,0 +1,32 @@
+package br.com.viriato.processo;
+
+import jakarta.persistence.*;
+import java.time.Instant;
+import java.time.LocalDate;
+import lombok.Getter;
+import lombok.Setter;
+
+@Entity
+@Table(name = "processo")
+@Getter @Setter
+public class Processo {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @Column(name = "tenant_id") private Long tenantId;
+    private String numero;
+    private String titulo;
+    private String descricao;
+    @Column(name = "fluxo_id") private Long fluxoId;
+    @Column(name = "etapa_atual_id") private Long etapaAtualId;
+    @Column(name = "responsavel_id") private Long responsavelId;
+    @Enumerated(EnumType.STRING) private StatusProcesso status = StatusProcesso.ABERTO;
+    @Column(name = "prazo_etapa") private LocalDate prazoEtapa;
+    @Column(name = "prazo_alertado") private boolean prazoAlertado;
+    @Column(name = "campos_extras") private String camposExtras;
+    @Column(name = "criado_por") private Long criadoPor;
+    @Column(name = "criado_em") private Instant criadoEm;
+    @Column(name = "atualizado_em") private Instant atualizadoEm;
+
+    @PrePersist void antesDeInserir() { criadoEm = Instant.now(); atualizadoEm = criadoEm; }
+    @PreUpdate void antesDeAtualizar() { atualizadoEm = Instant.now(); }
+}
