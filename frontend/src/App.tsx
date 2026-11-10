@@ -1,6 +1,7 @@
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth'
 import Sino from './Sino'
+import BotaoTema from './tema'
 import Login from './pages/Login'
 import Processos from './pages/Processos'
 import ProcessoDetalhe from './pages/ProcessoDetalhe'
@@ -19,6 +20,7 @@ function Layout() {
           {ehAdmin && <NavLink to="/usuarios">Usuários</NavLink>}
         </nav>
         <span className="espaco" />
+        <BotaoTema />
         <Sino />
         <span className="quem">
           {usuario?.nome} · {empresa}

@@ -3,6 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Aplica o tema salvo (ou a preferência do sistema) antes da primeira pintura.
+      (function () {
+        try {
+          var t = localStorage.getItem('viriato.tema');
+          if (t !== 'claro' && t !== 'escuro') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
+          document.documentElement.dataset.tema = t;
+        } catch (e) {}
+      })();
+    </script>
     <title>Viriato — Controle de Processos</title>
   </head>
   <body>

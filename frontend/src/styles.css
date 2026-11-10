@@ -1,10 +1,23 @@
 :root {
   --bg: #f4f6f9; --card: #fff; --texto: #1e2430; --suave: #6b7280; --borda: #e2e6ec;
   --cor: #2459d6; --cor-escura: #1b46ab; --perigo: #c62828; --ok: #2e7d32; --aviso: #b26a00;
+  --selo-aberto-bg: #dbe7ff; --selo-aberto-fg: #1b46ab;
+  --selo-ok-bg: #d8f0da; --selo-ok-fg: #2e7d32;
+  --selo-neutro-bg: #eceef2; --selo-neutro-fg: #5b6472;
+  --selo-atraso-bg: #fde0dd; --selo-atraso-fg: #c62828;
+  --destaque: rgba(36, 89, 214, .08); --sombra: rgba(16, 24, 40, .18);
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #11151c; --card: #1a2029; --texto: #e6e9ef; --suave: #98a2b3; --borda: #2b3340; --cor: #5b8cff; --cor-escura: #7aa0ff; color-scheme: dark; }
+/* Tema escuro: ativado pelo botão (atributo data-tema no <html>). */
+:root[data-tema='escuro'] {
+  --bg: #0f131a; --card: #171d27; --texto: #e6e9ef; --suave: #9aa4b5; --borda: #2a3342;
+  --cor: #6b97ff; --cor-escura: #8aaeff; --perigo: #ff6b6b; --ok: #5fcf80; --aviso: #f0b050;
+  --selo-aberto-bg: #1f2f57; --selo-aberto-fg: #9db9ff;
+  --selo-ok-bg: #1c3a27; --selo-ok-fg: #7ee09b;
+  --selo-neutro-bg: #2a3342; --selo-neutro-fg: #a9b3c4;
+  --selo-atraso-bg: #4a2323; --selo-atraso-fg: #ff9a9a;
+  --destaque: rgba(107, 151, 255, .12); --sombra: rgba(0, 0, 0, .55);
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { margin: 0; font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--texto); }
@@ -51,9 +64,9 @@ th { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: 
 tr:last-child td { border-bottom: none; }
 .paginacao { display: flex; gap: 1rem; justify-content: center; align-items: center; margin-top: 1rem; }
 
-.selo { display: inline-block; padding: .1rem .55rem; border-radius: 99px; font-size: .78rem; font-weight: 600; background: var(--borda); }
-.selo.aberto { background: #dbe7ff; color: #1b46ab; } .selo.concluido { background: #d8f0da; color: var(--ok); }
-.selo.cancelado { background: #eee; color: #666; } .selo.atrasado { background: #fde0dd; color: var(--perigo); }
+.selo { display: inline-block; padding: .1rem .55rem; border-radius: 99px; font-size: .78rem; font-weight: 600; background: var(--selo-neutro-bg); color: var(--selo-neutro-fg); }
+.selo.aberto { background: var(--selo-aberto-bg); color: var(--selo-aberto-fg); } .selo.concluido { background: var(--selo-ok-bg); color: var(--selo-ok-fg); }
+.selo.cancelado { background: var(--selo-neutro-bg); color: var(--selo-neutro-fg); } .selo.atrasado { background: var(--selo-atraso-bg); color: var(--selo-atraso-fg); }
 
 dl { display: grid; grid-template-columns: 140px 1fr; gap: .4rem .75rem; margin: 0 0 .75rem; }
 dt { color: var(--suave); } dd { margin: 0; }
@@ -76,7 +89,13 @@ dt { color: var(--suave); } dd { margin: 0; }
 .modal { background: var(--card); border-radius: 10px; padding: 1.25rem; width: 100%; max-width: 460px; }
 
 .sino { position: relative; } .badge { background: var(--perigo); color: #fff; border-radius: 99px; font-size: .7rem; padding: 0 .4rem; margin-left: .15rem; vertical-align: top; }
-.menu-notif { position: absolute; right: 0; top: 2.2rem; width: 340px; max-height: 420px; overflow: auto; background: var(--card); border: 1px solid var(--borda); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.menu-notif { position: absolute; right: 0; top: 2.2rem; width: 340px; max-height: 420px; overflow: auto; background: var(--card); border: 1px solid var(--borda); border-radius: 10px; box-shadow: 0 8px 24px var(--sombra); }
 .menu-notif-topo { display: flex; justify-content: space-between; padding: .6rem .8rem; border-bottom: 1px solid var(--borda); }
 .notif { padding: .6rem .8rem; border-bottom: 1px solid var(--borda); cursor: pointer; font-size: .9rem; }
-.notif.nao-lida { background: rgba(36,89,214,.08); } .notif small { display: block; }
+.notif.nao-lida { background: var(--destaque); } .notif small { display: block; }
+
+/* Botão de tema (lua/sol) */
+.tema-btn { display: inline-grid; place-items: center; width: 2.1rem; height: 2.1rem; padding: 0; border-radius: 50%; color: var(--suave); }
+.tema-btn:hover:not(:disabled) { color: var(--cor); }
+.tema-btn svg { width: 1.15rem; height: 1.15rem; }
+.tema-flutuante { position: fixed; top: 1rem; right: 1rem; z-index: 10; }

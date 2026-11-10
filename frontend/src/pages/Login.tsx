@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { api, type Sessao } from '../api'
 import { useAuth } from '../auth'
+import BotaoTema from '../tema'
 
 export default function Login() {
   const { entrar } = useAuth()
@@ -29,6 +30,7 @@ export default function Login() {
 
   return (
     <div className="login">
+      <BotaoTema className="tema-flutuante" />
       <form className="cartao" onSubmit={enviar}>
         <h1>Viriato</h1>
         <p className="sub">{registro ? 'Cadastre sua empresa' : 'Controle de processos'}</p>
