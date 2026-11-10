@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, type Detalhe, type Documento, type Usuario } from '../api'
 import { useAuth } from '../auth'
@@ -79,7 +79,7 @@ export default function ProcessoDetalhe() {
           </dl>
           {p.descricao && <p className="desc">{p.descricao}</p>}
           {Object.entries(p.camposExtras).length > 0 && (
-            <dl>{Object.entries(p.camposExtras).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{String(v)}</dd></div>)}</dl>
+            <dl>{Object.entries(p.camposExtras).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{String(v)}</dd></Fragment>)}</dl>
           )}
 
           {aberto && (
