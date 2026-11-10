@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Viriato — Relatório do Sistema</title>
+<style>
+  @page { size: A4; }
+  :root { --cor: #2754d7; --texto: #101828; --suave: #667085; --borda: #e4e7ec; --fundo: #f5f7fa; --tint: #eef3ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--texto); font: 10.5pt/1.55 Inter, "Liberation Sans", Arial, sans-serif; }
+  h1 { break-after: avoid; font-size: 17pt; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 2px solid var(--cor); letter-spacing: -.01em; }
+  h2 { font-size: 12.5pt; margin: 7mm 0 2mm; color: var(--cor); break-after: avoid; }
+  h3 { font-size: 10.8pt; margin: 5mm 0 1.5mm; break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; } li { margin-bottom: 1mm; }
+  code { font: 9pt "DejaVu Sans Mono", "Liberation Mono", monospace; background: var(--fundo); padding: .2mm 1.2mm; border-radius: 1mm; }
+  .suave { color: var(--suave); }
+  section { break-before: page; }
+  section.sem-quebra { break-before: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.3pt; break-inside: avoid; }
+  th, td { text-align: left; padding: 1.6mm 2.2mm; border-bottom: .3mm solid var(--borda); vertical-align: top; }
+  th { background: var(--fundo); font-size: 8.3pt; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); }
+  td.c, th.c { text-align: center; }
+  figure { margin: 3mm 0 5mm; break-inside: avoid; }
+  figure img { width: 100%; border: .3mm solid var(--borda); border-radius: 2mm; }
+  figcaption { font-size: 8.8pt; color: var(--suave); margin-top: 1.2mm; }
+  .caixa { background: var(--tint); border-left: 1.2mm solid var(--cor); padding: 3mm 4mm; margin: 3mm 0 4mm; break-inside: avoid; border-radius: 0 1.5mm 1.5mm 0; }
+  .aviso { background: #fff7e6; border-left-color: #b26a00; }
+  .ok { color: #1f7a35; font-weight: 700; } .no { color: #b42318; font-weight: 700; }
+  svg text { font-family: Inter, "Liberation Sans", Arial, sans-serif; }
+
+  /* capa */
+  .capa { break-before: auto; height: 262mm; padding: 26mm 24mm 6mm; border-top: 3mm solid var(--cor); display: flex; flex-direction: column; }
+  .capa .marca { display: flex; align-items: center; gap: 4mm; font-size: 20pt; font-weight: 700; }
+  .capa h1 { font-size: 30pt; border: none; margin: 30mm 0 4mm; line-height: 1.1; padding: 0; }
+  .capa .sub { font-size: 13pt; color: var(--suave); max-width: 120mm; }
+  .capa .meta { margin-top: auto; font-size: 9.5pt; }
+  .capa .meta td { border: none; padding: .8mm 0; } .capa .meta td:first-child { color: var(--suave); width: 38mm; }
+  .conteudo { padding: 0 18mm; }
+  .conteudo > section:first-child { break-before: page; }
+</style>
+</head>
+<body>
+
+<!-- ============================ CAPA ============================ -->
+<div class="capa">
+  <div class="marca">
+    <svg width="44" height="44" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#2754d7"/><path d="M9 21l7-10 7 10" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="21" r="3" fill="#fff"/><circle cx="16" cy="11" r="3" fill="#fff"/><circle cx="23" cy="21" r="3" fill="#fff"/></svg>
+    Viriato
+  </div>
+  <h1>Relatório do Sistema</h1>
+  <p class="sub">Controle de processos multi-empresa: como o sistema funciona, como foi construído e quais são seus limites atuais.</p>
+  <table class="meta">
+    <tr><td>Versão do código</td><td>commit <code>6b83214</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
+    <tr><td>Data</td><td>10 de novembro de 2026</td></tr>
+    <tr><td>Estágio</td><td>MVP funcional, ainda não preparado para produção</td></tr>
+    <tr><td>Repositório</td><td>github.com/monfredo18/Viriato</td></tr>
+  </table>
+</div>
+
+<div class="conteudo">
+
+<!-- ============================ 1 ============================ -->
+<section>
+  <h1>1. Visão geral</h1>
+  <p>O Viriato é um sistema web para cadastrar, acompanhar e automatizar <strong>processos</strong> dentro de uma empresa. Cada processo percorre as <strong>etapas</strong> de um <strong>fluxo</strong> definido pela própria empresa, tem um responsável, um prazo por etapa, documentos anexados e um histórico completo do que aconteceu.</p>
+  <p>O sistema foi desenhado desde o início como <strong>SaaS multi-empresa</strong>: uma única instalação atende várias empresas, e os dados de uma nunca são visíveis para outra.</p>
+
+  <div class="caixa"><strong>Em uma frase:</strong> a empresa define um fluxo (por exemplo Abertura → Análise → Revisão → Concluído), abre processos nesse fluxo, e o sistema controla quem é o responsável, em que etapa cada processo está, quando vence o prazo e o que já foi feito.</div>
+
+  <h2>O que o sistema faz hoje</h2>
+  <ul>
+    <li><strong>Cadastro self-service de empresa:</strong> quem se cadastra vira administrador e já recebe um fluxo padrão.</li>
+    <li><strong>Usuários e papéis:</strong> Administrador, Gestor e Usuário, com permissões diferentes.</li>
+    <li><strong>Fluxos configuráveis:</strong> etapas com prazo em dias, etapa inicial e etapas finais.</li>
+    <li><strong>Processos:</strong> criação, busca e filtros, movimentação entre etapas respeitando as regras do fluxo, atribuição, comentários e cancelamento.</li>
+    <li><strong>Histórico:</strong> cada ação fica registrada com autor, data e comentário.</li>
+    <li><strong>Documentos:</strong> upload e download de arquivos por processo, guardados no AWS S3.</li>
+    <li><strong>Prazos e notificações:</strong> aviso dentro do sistema (sininho) e por e-mail, com alerta automático de prazo vencendo ou vencido.</li>
+    <li><strong>Interface:</strong> tema claro e escuro com botão de lua e sol.</li>
+  </ul>
+
+  <h2>Glossário</h2>
+  <table>
+    <tr><th style="width:30mm">Termo</th><th>Significado</th></tr>
+    <tr><td>Empresa (tenant)</td><td>Cliente do sistema. Todos os dados pertencem a uma empresa.</td></tr>
+    <tr><td>Fluxo</td><td>Modelo de trabalho: conjunto de etapas e das transições permitidas entre elas.</td></tr>
+    <tr><td>Etapa</td><td>Um passo do fluxo. Pode ter prazo em dias, ser a inicial ou ser final.</td></tr>
+    <tr><td>Transição</td><td>Caminho permitido de uma etapa para outra. Só movimentos previstos são aceitos.</td></tr>
+    <tr><td>Processo</td><td>Um caso concreto em andamento num fluxo (contrato, alvará, licença etc.).</td></tr>
+    <tr><td>Responsável</td><td>Usuário encarregado do processo no momento. Recebe os avisos.</td></tr>
+  </table>
+</section>
+
+<!-- ============================ 2 ============================ -->
+<section>
+  <h1>2. Arquitetura e tecnologias</h1>
+  <p>O sistema é um <strong>monolito modular</strong>: um único backend dividido em módulos por assunto, o que é mais simples de operar do que microsserviços e permite separar partes depois, se for preciso.</p>
+
+  <figure>
+    <svg viewBox="0 0 700 250" width="100%" role="img" aria-label="Diagrama de arquitetura">
+      <defs><marker id="s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker></defs>
+      <g font-size="12" text-anchor="middle">
+        <rect x="10" y="95" width="120" height="60" rx="8" fill="#eef3ff" stroke="#2754d7"/><text x="70" y="122" font-weight="700">Navegador</text><text x="70" y="140" fill="#667085" font-size="10.5">React + TypeScript</text>
+        <rect x="175" y="95" width="120" height="60" rx="8" fill="#eef3ff" stroke="#2754d7"/><text x="235" y="122" font-weight="700">Nginx</text><text x="235" y="140" fill="#667085" font-size="10.5">site estático + /api</text>
+        <rect x="340" y="60" width="150" height="130" rx="8" fill="#fff" stroke="#2754d7" stroke-width="1.5"/><text x="415" y="82" font-weight="700">Backend</text><text x="415" y="98" fill="#667085" font-size="10.5">Java 21 · Spring Boot</text>
+        <rect x="352" y="108" width="126" height="22" rx="4" fill="#f5f7fa" stroke="#d0d5dd"/><text x="415" y="123" font-size="10.5">API REST + JWT</text>
+        <rect x="352" y="136" width="126" height="22" rx="4" fill="#f5f7fa" stroke="#d0d5dd"/><text x="415" y="151" font-size="10.5">Regras de negócio</text>
+        <rect x="352" y="164" width="126" height="20" rx="4" fill="#f5f7fa" stroke="#d0d5dd"/><text x="415" y="178" font-size="10.5">Agendador de prazos</text>
+        <rect x="570" y="12" width="120" height="52" rx="8" fill="#fff" stroke="#667085"/><text x="630" y="36" font-weight="700">MySQL 8</text><text x="630" y="52" fill="#667085" font-size="10.5">dados + Flyway</text>
+        <rect x="570" y="99" width="120" height="52" rx="8" fill="#fff" stroke="#667085"/><text x="630" y="123" font-weight="700">AWS S3</text><text x="630" y="139" fill="#667085" font-size="10.5">documentos</text>
+        <rect x="570" y="186" width="120" height="52" rx="8" fill="#fff" stroke="#667085"/><text x="630" y="210" font-weight="700">SMTP / SES</text><text x="630" y="226" fill="#667085" font-size="10.5">e-mails</text>
+      </g>
+      <g stroke="#667085" stroke-width="1.4" fill="none" marker-end="url(#s)">
+        <path d="M130 125H172"/><path d="M295 125H337"/><path d="M490 100C530 100 530 40 567 40"/><path d="M490 125H567"/><path d="M490 150C530 150 530 212 567 212"/>
+      </g>
+    </svg>
+    <figcaption>Figura 1 — Visão geral. O navegador só fala com o Nginx; o Nginx entrega o site e repassa <code>/api</code> ao backend.</figcaption>
+  </figure>
+
+  <h2>Tecnologias</h2>
+  <table>
+    <tr><th style="width:32mm">Camada</th><th>Tecnologia</th><th>Papel</th></tr>
+    <tr><td>Interface</td><td>React 18, TypeScript, Vite, React Router</td><td>Telas, rotas, tema claro/escuro</td></tr>
+    <tr><td>Backend</td><td>Java 21, Spring Boot 3.3 (Web, Data JPA, Security, Validation, Mail)</td><td>API REST, regras, segurança</td></tr>
+    <tr><td>Banco</td><td>MySQL 8.4, Flyway</td><td>Dados e versionamento do esquema</td></tr>
+    <tr><td>Autenticação</td><td>JWT (jjwt), BCrypt</td><td>Login sem sessão no servidor</td></tr>
+    <tr><td>Arquivos</td><td>AWS S3 (SDK v2)</td><td>Documentos anexados</td></tr>
+    <tr><td>E-mail</td><td>Spring Mail (SMTP; AWS SES em produção)</td><td>Notificações por e-mail</td></tr>
+    <tr><td>Documentação da API</td><td>springdoc OpenAPI / Swagger UI</td><td>Referência interativa em <code>/swagger-ui.html</code></td></tr>
+    <tr><td>Infraestrutura</td><td>Docker, Docker Compose, Nginx</td><td>Execução local e base para produção</td></tr>
+    <tr><td>Qualidade</td><td>JUnit 5, MockMvc, H2, GitHub Actions</td><td>Testes automáticos e CI</td></tr>
+  </table>
+
+  <h2>Organização do código</h2>
+  <table>
+    <tr><th style="width:36mm">Módulo (backend)</th><th>Responsabilidade</th></tr>
+    <tr><td><code>seguranca</code></td><td>Geração e validação do JWT, filtro de requisições, regras de acesso e CORS.</td></tr>
+    <tr><td><code>usuario</code></td><td>Login, cadastro de empresa (onboarding), usuários e papéis.</td></tr>
+    <tr><td><code>fluxo</code></td><td>Fluxos, etapas e transições por empresa.</td></tr>
+    <tr><td><code>processo</code></td><td>Núcleo do sistema: processos, movimentação, histórico, atribuição, cancelamento.</td></tr>
+    <tr><td><code>documento</code></td><td>Upload, download e remoção de arquivos, com armazenamento abstraído (S3).</td></tr>
+    <tr><td><code>notificacao</code></td><td>Avisos no sistema, envio de e-mail e agendador de prazos.</td></tr>
+    <tr><td><code>comum</code></td><td>Tratamento padronizado de erros e utilitários de data.</td></tr>
+  </table>
+</section>
+
+<!-- ============================ 3 ============================ -->
+<section>
+  <h1>3. Como o sistema funciona</h1>
+  <p>Esta seção percorre a jornada de uso, da primeira tela até o encerramento de um processo.</p>
+
+  <h2>3.1 Primeiro acesso: cadastro da empresa</h2>
+  <p>Na tela de login, <em>Cadastrar minha empresa</em> pede o nome da empresa, o nome do usuário, e-mail e senha (mínimo de 8 caracteres). Numa única operação o sistema cria a empresa, o primeiro usuário como <strong>Administrador</strong> e um <strong>fluxo padrão</strong>, e já devolve a sessão. Não existe usuário ou senha pré-cadastrados.</p>
+  <figure><img src="img/login.png" alt="Tela de login"><figcaption>Figura 2 — Tela de login, com o botão de tema no canto superior direito.</figcaption></figure>
+
+  <h2>3.2 Login e sessão</h2>
+  <ol>
+    <li>O usuário informa e-mail e senha. O sistema confere a senha (BCrypt) e verifica se o usuário e a empresa estão ativos.</li>
+    <li>Se estiver tudo certo, devolve um <strong>token JWT</strong> válido por 12 horas. Ele carrega o identificador do usuário, o da empresa e o papel.</li>
+    <li>O navegador guarda o token e o envia em cada chamada. Se o servidor responder 401, o usuário é deslogado.</li>
+  </ol>
+  <p>A empresa de cada requisição vem <strong>sempre do token</strong>, nunca de algo que o usuário digite. É isso que sustenta o isolamento entre empresas.</p>
+
+  <h2>3.3 Fluxos</h2>
+  <p>Administradores e Gestores criam fluxos na tela <em>Fluxos</em>: informam as etapas em ordem, o prazo em dias de cada uma, qual é a inicial (exatamente uma) e quais são finais (ao menos uma). Regras validadas pelo sistema:</p>
+  <ul>
+    <li>mínimo de 2 etapas; todas com nome; prazo não negativo;</li>
+    <li>uma etapa final não pode ter saída;</li>
+    <li>pela tela, as etapas são ligadas em sequência (cada uma leva à seguinte). A API já aceita transições arbitrárias.</li>
+  </ul>
+  <p>Um fluxo pode ser desativado: deixa de aceitar novos processos, mas os que já existem continuam normalmente.</p>
+
+  <figure>
+    <svg viewBox="0 0 700 182" width="100%" role="img" aria-label="Fluxo padrão e estados do processo">
+      <defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker></defs>
+      <g font-size="12" text-anchor="middle">
+        <rect x="8" y="14" width="136" height="48" rx="8" fill="#eef3ff" stroke="#2754d7"/><text x="76" y="35" font-weight="700">Abertura</text><text x="76" y="51" fill="#667085" font-size="10.5">inicial · prazo 2 dias</text>
+        <rect x="190" y="14" width="136" height="48" rx="8" fill="#fff" stroke="#667085"/><text x="258" y="35" font-weight="700">Análise</text><text x="258" y="51" fill="#667085" font-size="10.5">prazo 5 dias</text>
+        <rect x="372" y="14" width="136" height="48" rx="8" fill="#fff" stroke="#667085"/><text x="440" y="35" font-weight="700">Revisão</text><text x="440" y="51" fill="#667085" font-size="10.5">prazo 3 dias</text>
+        <rect x="554" y="14" width="138" height="48" rx="8" fill="#dcf3e1" stroke="#1f7a35"/><text x="623" y="35" font-weight="700">Concluído</text><text x="623" y="51" fill="#667085" font-size="10.5">final · sem prazo</text>
+      </g>
+      <g stroke="#667085" stroke-width="1.4" fill="none" marker-end="url(#f)"><path d="M144 38H187"/><path d="M326 38H369"/><path d="M508 38H551"/></g>
+      <g font-size="11.5" text-anchor="middle">
+        <text x="350" y="92" font-weight="700" fill="#101828">Estado do processo</text>
+        <rect x="60" y="104" width="100" height="26" rx="13" fill="#e3ebff" stroke="#1d44b4"/><text x="110" y="121" fill="#1d44b4" font-weight="600">ABERTO</text>
+        <rect x="280" y="104" width="110" height="26" rx="13" fill="#dcf3e1" stroke="#1f7a35"/><text x="335" y="121" fill="#1f7a35" font-weight="600">CONCLUIDO</text>
+        <rect x="550" y="104" width="110" height="26" rx="13" fill="#eceef2" stroke="#5b6472"/><text x="605" y="121" fill="#5b6472" font-weight="600">CANCELADO</text>
+      </g>
+      <g stroke="#667085" stroke-width="1.4" fill="none" marker-end="url(#f)"><path d="M160 117H277"/><path d="M110 132C110 160 605 160 605 132"/></g>
+      <text x="219" y="110" font-size="9.5" fill="#667085" text-anchor="middle">entra na etapa final</text>
+      <text x="357" y="174" font-size="9.5" fill="#667085" text-anchor="middle">cancelamento (gestor)</text>
+    </svg>
+    <figcaption>Figura 3 — Fluxo padrão criado com a empresa e os três estados de um processo.</figcaption>
+  </figure>
+
+  <h2>3.4 Abrir e acompanhar processos</h2>
+  <p>Qualquer usuário pode abrir um processo informando título, descrição opcional, fluxo e responsável opcional. Ao criar, o sistema:</p>
+  <ol>
+    <li>confere que o fluxo é da empresa e está ativo, e que o responsável é um usuário ativo da empresa;</li>
+    <li>coloca o processo na etapa inicial e calcula o prazo (hoje + dias da etapa, fuso America/Sao_Paulo);</li>
+    <li>gera o número no formato <code>ANO-NNNNNN</code> (por exemplo <code>2026-000001</code>);</li>
+    <li>registra no histórico a ação <em>Criado</em> e avisa o responsável, se for outra pessoa.</li>
+  </ol>
+  <p>A lista de processos tem busca por título ou número, filtro por situação, <em>Meus</em> (onde sou responsável) e <em>Atrasados</em>, com paginação. Um processo é considerado <strong>atrasado</strong> quando está aberto e o prazo da etapa já passou; isso é calculado na hora da consulta.</p>
+  <figure><img src="img/processos-claro.png" alt="Lista de processos"><figcaption>Figura 4 — Lista de processos com busca, filtros e selos de situação (tema claro).</figcaption></figure>
+  <figure><img src="img/processos-escuro.png" alt="Lista de processos no tema escuro"><figcaption>Figura 5 — A mesma tela no tema escuro, escolhido pelo botão de sol/lua no topo.</figcaption></figure>
+
+  <h2>3.5 Movimentar um processo</h2>
+  <p>No detalhe do processo aparecem os botões das etapas para as quais o fluxo permite avançar a partir da etapa atual. Ao avançar:</p>
+  <ol>
+    <li>o processo precisa estar aberto e o usuário precisa ter permissão (ver seção 4);</li>
+    <li>a transição precisa existir no fluxo; senão o sistema recusa com a mensagem <em>Transição não permitida pelo fluxo</em>;</li>
+    <li>a etapa muda, o prazo é recalculado e o controle de alerta é zerado;</li>
+    <li>se a etapa de destino for final, o processo vira <strong>Concluído</strong> e o prazo é removido;</li>
+    <li>a movimentação entra no histórico, com o comentário opcional, e o responsável é avisado.</li>
+  </ol>
+  <figure><img src="img/detalhe.png" alt="Detalhe do processo"><figcaption>Figura 6 — Detalhe: dados, campos extras, documentos, ações disponíveis e histórico em linha do tempo.</figcaption></figure>
+
+  <h2>3.6 Documentos</h2>
+  <p>Cada processo aceita anexos de até 25 MB por arquivo. O sistema sanitiza o nome do arquivo (remove caminhos e caracteres perigosos), grava no S3 com uma chave única por empresa e processo e criptografia no repouso (AES-256), e só então registra no banco. Se o registro falhar, o arquivo enviado é removido para não sobrar lixo no bucket. O <strong>download passa pelo backend</strong>, que confere a empresa antes de entregar o arquivo; não há links públicos.</p>
+
+  <h2>3.7 Prazos e notificações</h2>
+  <p>Uma tarefa agendada roda todos os dias às 08:00 (America/Sao_Paulo). Ela procura processos abertos, com responsável, cujo prazo vence em até 1 dia ou já venceu e que ainda não foram alertados naquela etapa. Para cada um, avisa o responsável (<em>Prazo próximo do vencimento</em> ou <em>Prazo vencido</em>) e marca como alertado. O resultado é <strong>um alerta por etapa</strong>; ele volta a valer quando o processo muda de etapa ou de responsável.</p>
+  <p>Cada notificação é gravada no sistema (sininho no topo, com contador de não lidas, atualizado a cada 30 segundos) e enviada por e-mail de forma assíncrona. O e-mail é <em>best-effort</em>: se o servidor de e-mail falhar, isso é registrado em log e a operação principal não é afetada.</p>
+  <figure><img src="img/notificacoes.png" alt="Notificações"><figcaption>Figura 7 — Painel de notificações; as não lidas têm destaque e levam direto ao processo.</figcaption></figure>
+</section>
+
+<!-- ============================ 4 ============================ -->
+<section>
+  <h1>4. Papéis e permissões</h1>
+  <table>
+    <tr><th>Ação</th><th class="c">Administrador</th><th class="c">Gestor</th><th class="c">Usuário</th></tr>
+    <tr><td>Ver processos, documentos e histórico da empresa</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
+    <tr><td>Criar processo, comentar, anexar documento</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
+    <tr><td>Avançar etapa</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c">só se for o responsável, ou se não houver responsável</td></tr>
+    <tr><td>Reatribuir responsável</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c">só se for o responsável atual</td></tr>
+    <tr><td>Remover documento</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c">só os que ele mesmo enviou</td></tr>
+    <tr><td>Cancelar processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
+    <tr><td>Criar e ativar/desativar fluxos</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
+    <tr><td>Criar usuários, mudar papel, ativar/desativar</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
+  </table>
+  <p>Detalhes de comportamento:</p>
+  <ul>
+    <li>Recusas por papel (criar fluxo, criar usuário) devolvem HTTP 403. Recusas por regra de negócio (avançar sem ser o responsável, cancelar como Usuário) devolvem HTTP 422 com uma mensagem em português.</li>
+    <li>O administrador não consegue desativar nem rebaixar a si mesmo, para evitar ficar sem acesso.</li>
+    <li>Recursos de outra empresa respondem 404, como se não existissem.</li>
+  </ul>
+</section>
+
+<!-- ============================ 5 ============================ -->
+<section>
+  <h1>5. Modelo de dados</h1>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway (<code>V1__esquema_inicial.sql</code>).</p>
+  <figure>
+    <svg viewBox="0 0 700 300" width="100%" role="img" aria-label="Relações entre as tabelas">
+      <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker></defs>
+      <g font-size="12" text-anchor="middle" font-weight="700">
+        <rect x="300" y="8" width="120" height="34" rx="6" fill="#eef3ff" stroke="#2754d7"/><text x="360" y="30">tenant</text>
+        <rect x="20" y="86" width="120" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="80" y="108">notificacao</text>
+        <rect x="190" y="86" width="120" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="250" y="108">usuario</text>
+        <rect x="400" y="86" width="120" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="460" y="108">fluxo</text>
+        <rect x="190" y="166" width="120" height="34" rx="6" fill="#eef3ff" stroke="#2754d7"/><text x="250" y="188">processo</text>
+        <rect x="400" y="166" width="120" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="460" y="188">etapa</text>
+        <rect x="570" y="166" width="120" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="630" y="188">transicao</text>
+        <rect x="60" y="256" width="150" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="135" y="278">processo_historico</text>
+        <rect x="290" y="256" width="120" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="350" y="278">documento</text>
+      </g>
+      <g stroke="#667085" stroke-width="1.3" fill="none" marker-end="url(#e)">
+        <path d="M335 42C300 58 270 68 256 84"/><path d="M385 42C420 58 450 68 458 84"/>
+        <path d="M190 103H143"/><path d="M250 120V164"/>
+        <path d="M460 120V164"/><path d="M400 183H313"/><path d="M520 183H567"/>
+        <path d="M222 200C190 222 160 238 140 254"/><path d="M278 200C310 222 335 238 348 254"/>
+      </g>
+      <g font-size="10" fill="#667085" text-anchor="middle">
+        <text x="270" y="60">1 empresa : N usuários</text><text x="452" y="60">N fluxos</text>
+        <text x="167" y="96">avisos</text><text x="286" y="148">responsável</text>
+        <text x="500" y="148">1 fluxo : N etapas</text><text x="356" y="176">etapa atual</text>
+        <text x="544" y="176" dx="0">N</text>
+        <text x="156" y="238">histórico</text><text x="338" y="238">anexos</text>
+      </g>
+    </svg>
+    <figcaption>Figura 8 — Relações principais. As setas vão de quem é referenciado para quem o referencia. Por clareza, nem todas as ligações foram desenhadas: todas as tabelas de negócio apontam também para a empresa (<code>tenant</code>), e o processo aponta para o fluxo.</figcaption>
+  </figure>
+  <table>
+    <tr><th style="width:36mm">Tabela</th><th>Conteúdo e pontos importantes</th></tr>
+    <tr><td><code>tenant</code></td><td>Empresa cliente; flag <code>ativo</code>.</td></tr>
+    <tr><td><code>usuario</code></td><td>Nome, e-mail (único em todo o sistema), hash BCrypt da senha, papel, ativo.</td></tr>
+    <tr><td><code>fluxo</code></td><td>Nome e flag <code>ativo</code>.</td></tr>
+    <tr><td><code>etapa</code></td><td>Nome, ordem, <code>prazo_dias</code> (opcional), flags <code>inicial</code> e <code>final_</code>.</td></tr>
+    <tr><td><code>transicao</code></td><td>Par de etapas (de, para), único; define os movimentos permitidos.</td></tr>
+    <tr><td><code>processo</code></td><td>Número (único por empresa), título, descrição, fluxo, etapa atual, responsável, status, <code>prazo_etapa</code>, <code>prazo_alertado</code>, <code>campos_extras</code> (JSON livre em texto).</td></tr>
+    <tr><td><code>processo_historico</code></td><td>Ação (CRIADO, MOVIDO, COMENTARIO, ATRIBUIDO, CANCELADO), autor, etapas de origem e destino, comentário, data.</td></tr>
+    <tr><td><code>documento</code></td><td>Nome original, chave no S3, tipo, tamanho, quem enviou.</td></tr>
+    <tr><td><code>notificacao</code></td><td>Destinatário, título, mensagem, processo relacionado, lida.</td></tr>
+  </table>
+</section>
+
+<!-- ============================ 6 ============================ -->
+<section>
+  <h1>6. Referência da API</h1>
+  <p>Todas as rotas começam com <code>/api</code>. Fora as de autenticação, exigem o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. A documentação interativa fica em <code>/swagger-ui.html</code> (25 rotas).</p>
+  <table>
+    <tr><th style="width:15mm">Método</th><th style="width:62mm">Rota</th><th>Função</th><th style="width:24mm">Quem</th></tr>
+    <tr><td>POST</td><td><code>/auth/registrar-empresa</code></td><td>Cria empresa, administrador e fluxo padrão; devolve sessão</td><td>público</td></tr>
+    <tr><td>POST</td><td><code>/auth/login</code></td><td>Autentica e devolve o token</td><td>público</td></tr>
+    <tr><td>GET</td><td><code>/me</code></td><td>Dados do usuário logado</td><td>todos</td></tr>
+    <tr><td>GET</td><td><code>/usuarios</code></td><td>Lista usuários da empresa</td><td>todos</td></tr>
+    <tr><td>POST</td><td><code>/usuarios</code></td><td>Cria usuário</td><td>Admin</td></tr>
+    <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel ou ativo</td><td>Admin</td></tr>
+    <tr><td>GET</td><td><code>/fluxos</code>, <code>/fluxos/{id}</code></td><td>Lista e detalha fluxos com etapas e transições</td><td>todos</td></tr>
+    <tr><td>POST</td><td><code>/fluxos</code></td><td>Cria fluxo</td><td>Admin, Gestor</td></tr>
+    <tr><td>PATCH</td><td><code>/fluxos/{id}</code></td><td>Ativa ou desativa</td><td>Admin, Gestor</td></tr>
+    <tr><td>GET</td><td><code>/processos</code></td><td>Lista com filtros: <code>status</code>, <code>etapaId</code>, <code>responsavelId</code>, <code>busca</code>, <code>atrasados</code>, <code>meus</code>, <code>pagina</code>, <code>tamanho</code></td><td>todos</td></tr>
+    <tr><td>POST</td><td><code>/processos</code></td><td>Cria processo</td><td>todos</td></tr>
+    <tr><td>GET</td><td><code>/processos/{id}</code></td><td>Detalhe, próximas etapas possíveis e histórico</td><td>todos</td></tr>
+    <tr><td>POST</td><td><code>/processos/{id}/avancar</code></td><td>Move para outra etapa</td><td>ver seção 4</td></tr>
+    <tr><td>POST</td><td><code>/processos/{id}/comentarios</code></td><td>Adiciona comentário</td><td>todos</td></tr>
+    <tr><td>PUT</td><td><code>/processos/{id}/responsavel</code></td><td>Atribui ou remove responsável</td><td>ver seção 4</td></tr>
+    <tr><td>POST</td><td><code>/processos/{id}/cancelar</code></td><td>Cancela com motivo</td><td>Admin, Gestor</td></tr>
+    <tr><td>GET, POST</td><td><code>/processos/{id}/documentos</code></td><td>Lista e envia arquivo (multipart, campo <code>arquivo</code>)</td><td>todos</td></tr>
+    <tr><td>GET</td><td><code>/documentos/{id}/download</code></td><td>Baixa o arquivo</td><td>todos</td></tr>
+    <tr><td>DELETE</td><td><code>/documentos/{id}</code></td><td>Remove documento</td><td>ver seção 4</td></tr>
+    <tr><td>GET</td><td><code>/notificacoes</code>, <code>/notificacoes/nao-lidas</code></td><td>Últimas 50 e contador de não lidas</td><td>do próprio usuário</td></tr>
+    <tr><td>POST</td><td><code>/notificacoes/{id}/ler</code>, <code>/notificacoes/ler-todas</code></td><td>Marca como lida</td><td>do próprio usuário</td></tr>
+  </table>
+  <p>Erros seguem sempre o formato <code>{"status": 422, "erro": "mensagem"}</code>; falhas inesperadas devolvem uma mensagem genérica e o detalhe fica só no log do servidor.</p>
+</section>
+
+<!-- ============================ 7 ============================ -->
+<section>
+  <h1>7. Segurança</h1>
+  <h2>O que já está implementado</h2>
+  <ul>
+    <li><strong>Isolamento entre empresas:</strong> o <code>tenant_id</code> vem só do token; toda consulta filtra por ele; acesso a recurso de outra empresa dá 404. Há testes automáticos cobrindo processos, comentários, documentos, download e uso de fluxo alheio.</li>
+    <li><strong>Senhas:</strong> guardadas com BCrypt; nunca retornam pela API.</li>
+    <li><strong>Autenticação sem sessão:</strong> JWT assinado (HS256) com validade de 12 horas. O sistema se recusa a iniciar com segredo menor que 32 bytes.</li>
+    <li><strong>Acesso por padrão negado:</strong> só <code>/api/**</code> autenticada, login e documentação são liberados; qualquer outra rota é bloqueada.</li>
+    <li><strong>Arquivos:</strong> nome sanitizado, chave única no S3, criptografia no repouso, download intermediado pelo backend com cabeçalho <code>nosniff</code>.</li>
+    <li><strong>Validação de entrada:</strong> tamanhos, e-mail, senha mínima e campos obrigatórios validados na API.</li>
+    <li><strong>CORS</strong> restrito às origens configuradas; em produção, com Nginx servindo site e API no mesmo domínio, nem é necessário.</li>
+  </ul>
+
+  <h2>Limitações conhecidas</h2>
+  <div class="caixa aviso">
+    <p>Esta lista existe para que nada seja descoberto tarde demais. Itens marcados com <strong>(prioridade)</strong> devem ser resolvidos antes de qualquer uso real.</p>
+  </div>
+  <ol>
+    <li><strong>(prioridade) O token não pode ser revogado.</strong> Desativar um usuário ou mudar seu papel só passa a valer quando o token expira (até 12 horas), porque o filtro não consulta o banco a cada requisição. Quem foi desativado continua com o acesso que tinha nesse período.</li>
+    <li><strong>(prioridade) Sem limite de tentativas de login</strong>, sem recuperação de senha e sem autenticação em dois fatores.</li>
+    <li><strong>(prioridade) Segredo padrão de desenvolvimento.</strong> Existe um <code>JWT_SECRET</code> padrão para facilitar o uso local; em produção ele <em>precisa</em> ser trocado.</li>
+    <li>Upload sem lista de tipos permitidos e sem antivírus (limite de 25 MB por arquivo).</li>
+    <li>O token fica no <code>localStorage</code> do navegador. O React escapa o conteúdo, o que reduz o risco, mas uma falha de injeção de script exporia o token. Uma alternativa é cookie <code>HttpOnly</code>.</li>
+    <li>O e-mail é único em todo o sistema: uma pessoa não pode ter o mesmo e-mail em duas empresas.</li>
+    <li>O número do processo usa o identificador global, então não é sequencial por empresa (a primeira da empresa pode ser <code>2026-000137</code>).</li>
+    <li>Todos da empresa veem todos os processos; não há visibilidade por equipe ou por processo.</li>
+    <li>Não há ferramentas de LGPD (exportar ou excluir dados de uma pessoa), nem registro de auditoria de login.</li>
+  </ol>
+
+  <h2>Limitações funcionais</h2>
+  <ul>
+    <li>Fluxos não podem ser editados depois de criados (só ativados ou desativados); a tela monta apenas transições em sequência.</li>
+    <li>Os campos extras do processo são um JSON livre aceito pela API; ainda não há tela para defini-los por fluxo.</li>
+    <li>Prazos em dias corridos, sem calendário de feriados.</li>
+    <li>Listas de usuários, fluxos e notificações não têm paginação (notificações mostram as 50 mais recentes).</li>
+    <li>Data e hora do histórico aparecem no fuso do navegador.</li>
+  </ul>
+</section>
+
+<!-- ============================ 8 ============================ -->
+<section>
+  <h1>8. Infraestrutura e implantação</h1>
+  <h2>Execução local</h2>
+  <p>O <code>docker-compose.yml</code> sobe todo o ambiente com um comando (<code>docker compose up --build</code>):</p>
+  <table>
+    <tr><th style="width:28mm">Serviço</th><th>Função</th><th style="width:42mm">Endereço local</th></tr>
+    <tr><td>frontend</td><td>Nginx servindo o site e repassando <code>/api</code></td><td>localhost:3000</td></tr>
+    <tr><td>backend</td><td>API Spring Boot</td><td>localhost:8080 (Swagger em <code>/swagger-ui.html</code>)</td></tr>
+    <tr><td>mysql</td><td>Banco MySQL 8.4, com volume persistente</td><td>interno</td></tr>
+    <tr><td>s3</td><td>S3 simulado (<code>adobe/s3mock</code>) só para desenvolvimento</td><td>localhost:9090</td></tr>
+    <tr><td>mailpit</td><td>Captura os e-mails enviados</td><td>localhost:8025</td></tr>
+  </table>
+
+  <h2>Configuração por variáveis de ambiente</h2>
+  <table>
+    <tr><th style="width:44mm">Variável</th><th>Para quê</th></tr>
+    <tr><td><code>JWT_SECRET</code></td><td>Segredo de assinatura (mínimo 32 bytes). <strong>Obrigatório trocar em produção.</strong></td></tr>
+    <tr><td><code>DB_URL</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code></td><td>Conexão com o MySQL.</td></tr>
+    <tr><td><code>S3_BUCKET</code>, <code>S3_REGIAO</code></td><td>Bucket real. Sem <code>S3_ENDPOINT</code>, usa a AWS com credenciais da função (IAM Role).</td></tr>
+    <tr><td><code>MAIL_*</code></td><td>Servidor SMTP (por exemplo AWS SES) e remetente.</td></tr>
+    <tr><td><code>CORS_ORIGINS</code></td><td>Origens permitidas.</td></tr>
+    <tr><td><code>PRAZOS_CRON</code>, <code>PRAZOS_ANTECEDENCIA_DIAS</code></td><td>Horário do alerta de prazo e antecedência em dias.</td></tr>
+  </table>
+
+  <h2>Caminho sugerido para produção na AWS</h2>
+  <ul>
+    <li><strong>ECS Fargate</strong> para backend e frontend (imagens dos Dockerfiles), atrás de um balanceador com HTTPS.</li>
+    <li><strong>RDS MySQL</strong> com backups automáticos.</li>
+    <li><strong>S3</strong> com bloqueio de acesso público e versionamento; a função do ECS com permissão só nesse bucket.</li>
+    <li><strong>SES</strong> para o envio de e-mails e um domínio verificado.</li>
+    <li>Segredos no AWS Secrets Manager, logs no CloudWatch.</li>
+  </ul>
+  <p>A integração contínua (GitHub Actions) compila e testa o backend e compila o frontend a cada envio.</p>
+</section>
+
+<!-- ============================ 9 ============================ -->
+<section>
+  <h1>9. Qualidade e verificações</h1>
+  <h2>O que foi verificado</h2>
+  <table>
+    <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
+    <tr><td>8 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>Ciclo completo do processo: criar, avançar por todas as etapas, concluir, histórico</td><td class="ok">coberto por teste</td></tr>
+    <tr><td>Isolamento entre empresas (processo, comentário, documentos, download, fluxo alheio)</td><td class="ok">coberto por teste</td></tr>
+    <tr><td>Permissões por papel e transição fora do fluxo</td><td class="ok">coberto por teste</td></tr>
+    <tr><td>Upload e download, com nome malicioso sanitizado</td><td class="ok">coberto por teste</td></tr>
+    <tr><td>Alerta de prazo: dispara uma vez só</td><td class="ok">coberto por teste</td></tr>
+    <tr><td>Aplicação contra MySQL 8 e S3 simulado reais (teste ponta a ponta via HTTP)</td><td class="ok">executado, incluindo acentuação e isolamento</td></tr>
+    <tr><td>Interface em navegador automatizado, nos dois temas, e troca de tema com persistência</td><td class="ok">executado</td></tr>
+    <tr><td>Build do frontend com verificação de tipos</td><td class="ok">passa</td></tr>
+  </table>
+  <p>Esse teste com MySQL real encontrou dois defeitos que o H2 não revelava (parâmetro de codificação da conexão e health check de e-mail derrubando a aplicação); ambos já foram corrigidos.</p>
+
+  <h2>O que ainda não foi verificado</h2>
+  <ul>
+    <li>O <code>docker compose up --build</code> completo, com as imagens do backend e do frontend rodando em contêiner (as peças foram testadas separadamente).</li>
+    <li>AWS S3 e envio de e-mail reais (foram usados simuladores).</li>
+    <li>Desempenho e carga, e comportamento com muitas empresas e processos.</li>
+    <li>Navegadores além do Chromium, aparelhos móveis e acessibilidade formal.</li>
+    <li>Testes automáticos do frontend (hoje só há o build e verificação manual automatizada).</li>
+  </ul>
+
+  <h2>Histórico de versões</h2>
+  <table>
+    <tr><th style="width:22mm">Commit</th><th>Mudança</th></tr>
+    <tr><td><code>91d1473</code></td><td>Estrutura inicial: backend, frontend, Docker, CI, testes e README</td></tr>
+    <tr><td><code>591d047</code></td><td>Alternância de tema claro/escuro com botão de lua e sol</td></tr>
+    <tr><td><code>243ed8c</code></td><td>Refinamento visual profissional</td></tr>
+    <tr><td><code>4469f0f</code></td><td>Correção: alinhamento dos campos extras no detalhe do processo</td></tr>
+    <tr><td><code>6b83214</code></td><td>Título do processo também abre o detalhe na lista</td></tr>
+  </table>
+</section>
+
+<!-- ============================ 10 ============================ -->
+<section>
+  <h1>10. Próximos passos recomendados</h1>
+  <h2>Antes de qualquer uso real (segurança)</h2>
+  <ol>
+    <li>Validar o usuário a cada requisição (ou usar tokens curtos com renovação) para que desativar e mudar papel tenham efeito imediato.</li>
+    <li>Limite de tentativas de login e recuperação de senha por e-mail.</li>
+    <li>Trocar o segredo JWT e tirar valores padrão do ambiente de produção.</li>
+    <li>Lista de tipos de arquivo permitidos e verificação de vírus nos uploads.</li>
+  </ol>
+  <h2>Produto</h2>
+  <ol>
+    <li>Editor de fluxo com transições livres e edição de fluxos existentes.</li>
+    <li>Campos personalizados por fluxo, com tela de configuração.</li>
+    <li>Painel com indicadores (abertos, atrasados, tempo médio por etapa) e relatórios.</li>
+    <li>Prazos em dias úteis, com calendário de feriados por empresa.</li>
+    <li>Cobrança e planos para vender como SaaS, com limites por empresa.</li>
+  </ol>
+  <h2>Engenharia</h2>
+  <ol>
+    <li>Executar e validar o <code>docker compose</code> completo em CI.</li>
+    <li>Testes automáticos do frontend e testes de ponta a ponta.</li>
+    <li>Paginação nas listagens restantes e numeração de processo por empresa.</li>
+  </ol>
+
+  <h2>Apêndice — como acessar</h2>
+  <p>Não há usuário ou senha pré-definidos. Depois de subir o sistema, abra a aplicação, clique em <strong>Cadastrar minha empresa</strong> e crie o seu acesso; ele já nasce como Administrador. Os usuários e as empresas mostradas nas capturas deste relatório foram dados de demonstração criados num ambiente temporário e não fazem parte do código.</p>
+</section>
+
+</div>
+</body>
+</html>

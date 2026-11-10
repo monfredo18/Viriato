@@ -11,6 +11,8 @@ Sistema web multi-empresa (SaaS) para cadastrar, acompanhar e automatizar proces
 | Notificações | In-app (sininho) + e-mail (SMTP/AWS SES) |
 | Infra | Docker / Docker Compose |
 
+> 📄 **[Relatório completo do sistema (PDF)](docs/relatorio-viriato.pdf)**: como funciona, arquitetura, regras, segurança, limitações conhecidas e próximos passos. A fonte está em `docs/relatorio/` (regerar: `node docs/relatorio/gerar-pdf.js`).
+
 ## Rodando localmente
 
 ```bash
