@@ -1,7 +1,11 @@
 package br.com.viriato.fluxo;
 
 import br.com.viriato.comum.NaoEncontradoException;
+import br.com.viriato.cadastro.Entrega;
+import br.com.viriato.cadastro.EntregaRepository;
 import br.com.viriato.comum.NegocioException;
+import br.com.viriato.processo.ProcessoRepository;
+import br.com.viriato.processo.StatusProcesso;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -12,11 +16,16 @@ public class FluxoService {
     private final FluxoRepository fluxos;
     private final EtapaRepository etapas;
     private final TransicaoRepository transicoes;
+    private final EntregaRepository entregas;
+    private final ProcessoRepository processos;
 
-    public FluxoService(FluxoRepository fluxos, EtapaRepository etapas, TransicaoRepository transicoes) {
+    public FluxoService(FluxoRepository fluxos, EtapaRepository etapas, TransicaoRepository transicoes,
+                        EntregaRepository entregas, ProcessoRepository processos) {
         this.fluxos = fluxos;
         this.etapas = etapas;
         this.transicoes = transicoes;
+        this.entregas = entregas;
+        this.processos = processos;
     }
 
     public record EtapaReq(String nome, Integer prazoDias, boolean inicial, boolean finalEtapa) {}
@@ -92,6 +101,35 @@ public class FluxoService {
         Fluxo f = fluxos.findByIdAndTenantId(id, tenantId).orElseThrow(() -> new NaoEncontradoException("Fluxo"));
         f.setAtivo(ativo);
         return dto(fluxos.save(f), tenantId);
+    }
+
+    /**
+     * Apaga o fluxo com suas etapas e transições. Não apaga se alguma entrega ainda usa o fluxo
+     * nem se há processo em andamento nele. Processos já encerrados continuam existindo, sem fluxo.
+     */
+    @Transactional
+    public void apagar(Long id, Long tenantId) {
+        Fluxo f = fluxos.findByIdAndTenantId(id, tenantId).orElseThrow(() -> new NaoEncontradoException("Fluxo"));
+
+        List<Entrega> usando = entregas.findByTenantIdAndFluxoIdOrderByNome(tenantId, id);
+        if (!usando.isEmpty()) {
+            String nomes = usando.stream().limit(3).map(Entrega::getNome).reduce((a, b) -> a + ", " + b).orElse("");
+            throw new NegocioException("Não é possível apagar o fluxo \"" + f.getNome() + "\": " + usando.size()
+                    + " entrega(s) usam este fluxo (" + nomes + (usando.size() > 3 ? ", …" : "") + "). "
+                    + "Troque o fluxo delas ou apague-as antes.");
+        }
+        long emAndamento = processos.countByTenantIdAndFluxoIdAndStatus(tenantId, id, StatusProcesso.ABERTO);
+        if (emAndamento > 0) {
+            throw new NegocioException("Não é possível apagar o fluxo \"" + f.getNome() + "\": há " + emAndamento
+                    + " processo(s) em andamento nele. Conclua ou cancele esses processos, ou desative o fluxo em vez de apagar.");
+        }
+
+        processos.desvincularFluxo(tenantId, id);
+        transicoes.deleteAll(transicoes.findByFluxoIdAndTenantId(id, tenantId));
+        transicoes.flush();
+        etapas.deleteAll(etapas.findByFluxoIdAndTenantIdOrderByOrdem(id, tenantId));
+        etapas.flush();
+        fluxos.delete(f);
     }
 
     @Transactional

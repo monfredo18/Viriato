@@ -1,11 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ROTULO_PAPEL, type Papel, type Setor, type Usuario } from '../api'
+import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 
 /**
  * Todos veem a equipe (papel e setor). Administrador altera papel, situação e setor e adiciona
  * qualquer papel; gestor adiciona funcionários (só papel Usuário) e ativa/desativa funcionários
- * com papel Usuário, sem alterar papel nem setor.
+ * com papel Usuário, sem alterar papel nem setor. Administrador e gestor (este só os de papel Usuário)
+ * podem apagar funcionários.
  */
 export default function Usuarios() {
   const { usuario: eu, ehAdmin, podeGerenciar } = useAuth()
@@ -35,18 +37,23 @@ export default function Usuarios() {
   const patch = (id: number, data: object) => api.patch(`/usuarios/${id}`, data).then(carregar).catch((e) => setErro(e.message))
   const setoresAtivos = setores.filter((s) => s.ativo)
 
+  const apagar = (u: Usuario) => {
+    setErro('')
+    api.del(`/usuarios/${u.id}`).then(carregar).catch((e) => setErro(e.message))
+  }
+
   return (
     <>
       <h2>Usuários</h2>
       {!podeGerenciar && <p className="sub">Somente consulta. Quem pode alterar: administrador e gestor.</p>}
       {podeGerenciar && !ehAdmin && (
-        <p className="sub">Você pode adicionar funcionários e ativar ou desativar os de papel Usuário. Papel e setor só o administrador altera.</p>
+        <p className="sub">Você pode adicionar funcionários e ativar, desativar ou apagar os de papel Usuário. Papel e setor só o administrador altera.</p>
       )}
       {erro && <p className="erro">{erro}</p>}
       <div className="grade">
         <section className="cartao">
           <table>
-            <thead><tr><th>Nome</th><th>Papel</th><th>Setor</th><th>Situação</th></tr></thead>
+            <thead><tr><th>Nome</th><th>Papel</th><th>Setor</th><th>Situação</th>{podeGerenciar && <th></th>}</tr></thead>
             <tbody>
               {lista.map((u) => (
                 <tr key={u.id}>
@@ -77,6 +84,13 @@ export default function Usuarios() {
                       </label>
                     ) : <span className={`selo ${u.ativo ? 'aberto' : 'cancelado'}`}>{u.ativo ? 'Ativo' : 'Inativo'}</span>}
                   </td>
+                  {podeGerenciar && (
+                    <td>
+                      {u.id !== eu?.id && (ehAdmin || u.papel === 'USUARIO') && (
+                        <BotaoApagar nome={u.nome} aviso="O histórico dos processos em que ele atuou é mantido. Processos concluídos dele continuam existindo, sem responsável." apagar={() => apagar(u)} />
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

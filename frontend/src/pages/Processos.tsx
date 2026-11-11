@@ -158,7 +158,7 @@ function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => vo
             {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
         </label>
-        {clientes.length === 0 && <small className="aviso-campo">Nenhuma empresa cadastrada. O administrador cadastra em Cadastros → Empresas.</small>}
+        {clientes.length === 0 && <small className="aviso-campo">Nenhuma empresa cadastrada. Administrador ou gestor cadastra em Cadastros → Empresas.</small>}
 
         <label>Departamento
           <select required value={f.setorId} onChange={(e) => escolherSetor(e.target.value)}>

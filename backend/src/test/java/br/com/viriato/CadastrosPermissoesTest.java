@@ -78,13 +78,16 @@ class CadastrosPermissoesTest {
     }
 
     @Test
-    void somenteAdminCadastraEmpresas() throws Exception {
+    void adminEGestorCadastramEmpresas_usuarioSoVe() throws Exception {
         Cenario c = cenario();
         enviar(c.admin(), "/api/clientes", "{\"nome\":\"Construtora Alfa\"}").andExpect(status().isCreated());
-        enviar(c.gestor(), "/api/clientes", "{\"nome\":\"Outra\"}").andExpect(status().isForbidden());
+        long doGestor = corpo(enviar(c.gestor(), "/api/clientes", "{\"nome\":\"Beta Engenharia\"}")
+                .andExpect(status().isCreated())).get("id").asLong();
+        alterar(c.gestor(), "/api/clientes/" + doGestor, "{\"nome\":\"Beta Engenharia S/A\"}").andExpect(status().isOk());
         enviar(c.usuario(), "/api/clientes", "{\"nome\":\"Outra\"}").andExpect(status().isForbidden());
+        alterar(c.usuario(), "/api/clientes/" + doGestor, "{\"ativo\":false}").andExpect(status().isForbidden());
         // todos enxergam a lista
-        assertThat(consultar(c.usuario(), "/api/clientes")).hasSize(1);
+        assertThat(consultar(c.usuario(), "/api/clientes")).hasSize(2);
         // nome repetido (sem diferenciar maiúsculas) é recusado
         enviar(c.admin(), "/api/clientes", "{\"nome\":\"construtora alfa\"}").andExpect(status().isUnprocessableEntity());
     }

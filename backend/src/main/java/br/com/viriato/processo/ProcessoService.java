@@ -316,8 +316,8 @@ public class ProcessoService {
                            Map<Long, String> clientes, Map<Long, String> entregas, Map<Long, String> setores) {}
 
     private Lookups lookups(List<Processo> ps, Long tenantId) {
-        Set<Long> fluxoIds = ps.stream().map(Processo::getFluxoId).collect(Collectors.toSet());
-        Set<Long> etapaIds = ps.stream().map(Processo::getEtapaAtualId).collect(Collectors.toSet());
+        Set<Long> fluxoIds = ps.stream().map(Processo::getFluxoId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> etapaIds = ps.stream().map(Processo::getEtapaAtualId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<Long> userIds = ps.stream().map(Processo::getResponsavelId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<Long> clienteIds = ps.stream().map(Processo::getClienteId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<Long> entregaIds = ps.stream().map(Processo::getEntregaId).filter(Objects::nonNull).collect(Collectors.toSet());

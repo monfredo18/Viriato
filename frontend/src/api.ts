@@ -76,7 +76,7 @@ export interface Processo {
   id: number; numero: string; titulo: string; descricao: string | null
   clienteId: number | null; clienteNome: string | null; entregaId: number | null; entregaNome: string | null
   setorId: number | null; setorNome: string | null
-  fluxoId: number; fluxoNome: string; etapaAtualId: number; etapaAtual: string; etapaFinal: boolean
+  fluxoId: number | null; fluxoNome: string | null; etapaAtualId: number | null; etapaAtual: string | null; etapaFinal: boolean
   responsavelId: number | null; responsavelNome: string | null
   status: Status; prazoEtapa: string | null; atrasado: boolean
   camposExtras: Record<string, unknown>; criadoEm: string; atualizadoEm: string

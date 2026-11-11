@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Consulta liberada a qualquer usuário da empresa (o formulário de processo precisa das listas).
- * Alteração: empresas só ADMIN; setores e entregas ADMIN e GESTOR.
+ * Alteração (cadastrar, editar, apagar): empresas, setores e entregas, ADMIN e GESTOR.
  */
 @RestController
 @RequestMapping("/api")
@@ -37,16 +37,21 @@ public class CadastroController {
 
     @PostMapping("/clientes")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public ClienteDto criarCliente(@Valid @RequestBody NovoCliente r) {
         return service.criarCliente(Contexto.tenantId(), r.nome());
     }
 
     @PatchMapping("/clientes/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public ClienteDto atualizarCliente(@PathVariable Long id, @Valid @RequestBody AtualizaCliente r) {
         return service.atualizarCliente(Contexto.tenantId(), id, r.nome(), r.ativo());
     }
+
+    @DeleteMapping("/clientes/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public void apagarCliente(@PathVariable Long id) { service.apagarCliente(Contexto.tenantId(), id); }
 
     // ----- entregas -----
     @GetMapping("/entregas")
@@ -65,6 +70,11 @@ public class CadastroController {
         return service.atualizarEntrega(Contexto.tenantId(), id, r.nome(), r.fluxoId(), r.ativo());
     }
 
+    @DeleteMapping("/entregas/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public void apagarEntrega(@PathVariable Long id) { service.apagarEntrega(Contexto.tenantId(), id); }
+
     // ----- setores -----
     @GetMapping("/setores")
     public List<SetorDto> setores() { return service.listarSetores(Contexto.tenantId()); }
@@ -81,4 +91,9 @@ public class CadastroController {
     public SetorDto atualizarSetor(@PathVariable Long id, @Valid @RequestBody AtualizaSetor r) {
         return service.atualizarSetor(Contexto.tenantId(), id, r.nome(), r.ativo(), r.entregaIds());
     }
+
+    @DeleteMapping("/setores/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public void apagarSetor(@PathVariable Long id) { service.apagarSetor(Contexto.tenantId(), id); }
 }

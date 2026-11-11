@@ -35,6 +35,11 @@ public class FluxoController {
         return service.criar(Contexto.tenantId(), r.nome(), r.etapas(), r.transicoes());
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public void apagar(@PathVariable Long id) { service.apagar(id, Contexto.tenantId()); }
+
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public FluxoService.FluxoDto ativo(@PathVariable Long id, @RequestBody AtivoReq r) {
