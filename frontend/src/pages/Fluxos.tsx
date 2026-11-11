@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, type Fluxo } from '../api'
+import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 
 interface EtapaForm { nome: string; prazoDias: string; inicial: boolean; finalEtapa: boolean }
@@ -15,9 +16,15 @@ export default function Fluxos() {
   const [nome, setNome] = useState('')
   const [etapas, setEtapas] = useState<EtapaForm[]>(modelo())
   const [erro, setErro] = useState('')
+  const [erroLista, setErroLista] = useState('')
 
   const carregar = () => api.get<Fluxo[]>('/fluxos').then(setFluxos)
   useEffect(() => { carregar() }, [])
+
+  const apagarFluxo = (f: Fluxo) => {
+    setErroLista('')
+    api.del(`/fluxos/${f.id}`).then(carregar).catch((e) => setErroLista(e.message))
+  }
 
   const upd = (i: number, patch: Partial<EtapaForm>) => setEtapas(etapas.map((e, j) => (j === i ? { ...e, ...patch } : e)))
   const marcarInicial = (i: number) => setEtapas(etapas.map((e, j) => ({ ...e, inicial: j === i })))
@@ -49,9 +56,19 @@ export default function Fluxos() {
       <div className="grade">
         <section className="cartao">
           <h3>Fluxos existentes</h3>
+          {erroLista && <p className="erro">{erroLista}</p>}
           {fluxos.map((f) => (
             <div key={f.id} className="fluxo-item">
-              <b>{f.nome}</b> {!f.ativo && <span className="selo cancelado">inativo</span>}
+              <div className="fluxo-topo">
+                <span><b>{f.nome}</b> {!f.ativo && <span className="selo cancelado">inativo</span>}</span>
+                {podeGerenciar && (
+                  <BotaoApagar
+                    nome={f.nome}
+                    aviso="As etapas e transições do fluxo também são apagadas. Processos já concluídos ou cancelados continuam existindo, sem fluxo. Não apaga se uma entrega usa o fluxo ou se há processo em andamento nele."
+                    apagar={() => apagarFluxo(f)}
+                  />
+                )}
+              </div>
               <div className="trilha">{f.etapas.map((e) => e.nome).join(' → ')}</div>
               {podeGerenciar && (
                 <button className="link" onClick={() => api.patch(`/fluxos/${f.id}`, { ativo: !f.ativo }).then(carregar)}>

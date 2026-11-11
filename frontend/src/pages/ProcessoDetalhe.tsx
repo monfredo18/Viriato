@@ -70,8 +70,8 @@ export default function ProcessoDetalhe() {
             <dt>Empresa</dt><dd>{p.clienteNome ?? '—'}</dd>
             <dt>Entrega</dt><dd>{p.entregaNome ?? '—'}</dd>
             <dt>Setor</dt><dd>{p.setorNome ?? '—'}</dd>
-            <dt>Fluxo</dt><dd>{p.fluxoNome}</dd>
-            <dt>Etapa atual</dt><dd>{p.etapaAtual}</dd>
+            <dt>Fluxo</dt><dd>{p.fluxoNome ?? '—'}</dd>
+            <dt>Etapa atual</dt><dd>{p.etapaAtual ?? '—'}</dd>
             <dt>Prazo da etapa</dt><dd>{p.prazoEtapa ? new Date(p.prazoEtapa + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</dd>
             <dt>Responsável</dt>
             <dd>
