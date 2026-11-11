@@ -17,7 +17,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** Apagar empresas, setores, entregas e funcionários: quem pode e o que o sistema protege. */
+/**
+ * Apagar empresas, setores, entregas e funcionários: quem pode e o que o sistema protege.
+ * Regra: só processo EM ANDAMENTO bloqueia; processo concluído ou cancelado continua existindo,
+ * apenas sem o vínculo com o item apagado.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -81,6 +85,21 @@ class ApagarCadastrosTest {
                 + ",\"setorId\":" + c.setorGeralId() + ",\"responsavelId\":" + responsavelId + "}").andExpect(status().isCreated())).get("id").asLong();
     }
 
+    /** Leva o processo até a etapa final (concluído). */
+    private void concluir(Cenario c, long processoId) throws Exception {
+        for (int i = 0; i < 10; i++) {
+            JsonNode det = consultar(c.admin(), "/api/processos/" + processoId);
+            if (det.get("processo").get("status").asText().equals("CONCLUIDO")) return;
+            long proxima = det.get("proximasEtapas").get(0).get("id").asLong();
+            enviar(c.admin(), "/api/processos/" + processoId + "/avancar", "{\"etapaId\":" + proxima + "}").andExpect(status().isOk());
+        }
+        throw new AssertionError("processo não concluiu");
+    }
+
+    private JsonNode processo(Cenario c, long processoId) throws Exception {
+        return consultar(c.admin(), "/api/processos/" + processoId).get("processo");
+    }
+
     private long cliente(String token, String nome) throws Exception {
         return corpo(enviar(token, "/api/clientes", "{\"nome\":\"" + nome + "\"}").andExpect(status().isCreated())).get("id").asLong();
     }
@@ -88,26 +107,38 @@ class ApagarCadastrosTest {
     // ------------------------------------------------------------------ empresas
 
     @Test
-    void empresaSemProcessoApaga_comProcessoNao_usuarioNaoApaga() throws Exception {
+    void empresaComProcessoEmAndamentoNaoApaga_concluidoOuCanceladoNaoImpede() throws Exception {
         Cenario c = cenario();
         long livre = cliente(c.gestor(), "Sem processos");
-        long ocupada = cliente(c.admin(), "Com processos");
-        processo(c, ocupada, c.adminId());
-
         apagar(c.usuario(), "/api/clientes/" + livre).andExpect(status().isForbidden());
         apagar(c.gestor(), "/api/clientes/" + livre).andExpect(status().isNoContent());
-        assertThat(consultar(c.admin(), "/api/clientes")).hasSize(1);
 
+        long ocupada = cliente(c.admin(), "Com processos");
+        long p = processo(c, ocupada, c.adminId());
         var resp = corpo(apagar(c.admin(), "/api/clientes/" + ocupada).andExpect(status().isUnprocessableEntity()));
-        assertThat(resp.get("erro").asText()).contains("1 processo").contains("Desative o cadastro");
+        assertThat(resp.get("erro").asText()).contains("1 processo").contains("em andamento");
         assertThat(consultar(c.admin(), "/api/clientes")).hasSize(1);          // continua lá
+
+        concluir(c, p);                                                         // concluído deixa de bloquear
+        apagar(c.gestor(), "/api/clientes/" + ocupada).andExpect(status().isNoContent());
+        assertThat(consultar(c.admin(), "/api/clientes")).isEmpty();
+        JsonNode depois = processo(c, p);                                       // o processo continua, sem a empresa
+        assertThat(depois.get("status").asText()).isEqualTo("CONCLUIDO");
+        assertThat(depois.get("clienteNome").isNull()).isTrue();
+        assertThat(depois.get("titulo").asText()).isEqualTo("Atendimento geral — Com processos");
+
+        long cancelada = cliente(c.admin(), "Cancelada");                       // cancelado também não bloqueia
+        long p2 = processo(c, cancelada, c.adminId());
+        enviar(c.admin(), "/api/processos/" + p2 + "/cancelar", "{\"motivo\":\"desistiu\"}").andExpect(status().isOk());
+        apagar(c.admin(), "/api/clientes/" + cancelada).andExpect(status().isNoContent());
+        assertThat(processo(c, p2).get("status").asText()).isEqualTo("CANCELADO");
         apagar(c.admin(), "/api/clientes/999999").andExpect(status().isNotFound());
     }
 
     // ------------------------------------------------------------------ entregas
 
     @Test
-    void entregaApagadaSaiDosSetores_comProcessoNaoApaga() throws Exception {
+    void entregaApagadaSaiDosSetores_soProcessoEmAndamentoBloqueia() throws Exception {
         Cenario c = cenario();
         long extra = corpo(enviar(c.gestor(), "/api/entregas", "{\"nome\":\"Laudo\",\"fluxoId\":" + c.fluxoId() + "}")
                 .andExpect(status().isCreated())).get("id").asLong();
@@ -124,16 +155,23 @@ class ApagarCadastrosTest {
         }
         assertThat(consultar(c.admin(), "/api/entregas")).hasSize(1);
 
-        processo(c, cliente(c.admin(), "Cliente"), c.adminId());                   // usa a entrega padrão
+        long p = processo(c, cliente(c.admin(), "Cliente"), c.adminId());          // usa a entrega padrão
         var resp = corpo(apagar(c.admin(), "/api/entregas/" + c.entregaPadraoId()).andExpect(status().isUnprocessableEntity()));
-        assertThat(resp.get("erro").asText()).contains("processo");
+        assertThat(resp.get("erro").asText()).contains("1 processo").contains("em andamento");
         assertThat(consultar(c.admin(), "/api/entregas")).hasSize(1);
+
+        concluir(c, p);                                                             // concluído libera
+        apagar(c.gestor(), "/api/entregas/" + c.entregaPadraoId()).andExpect(status().isNoContent());
+        assertThat(consultar(c.admin(), "/api/entregas")).isEmpty();
+        JsonNode depois = processo(c, p);
+        assertThat(depois.get("entregaNome").isNull()).isTrue();
+        assertThat(depois.get("status").asText()).isEqualTo("CONCLUIDO");
     }
 
     // ------------------------------------------------------------------ setores
 
     @Test
-    void setorApagadoDeixaFuncionariosSemSetor_comProcessoNaoApaga() throws Exception {
+    void setorApagadoDeixaFuncionariosSemSetor_soProcessoEmAndamentoBloqueia() throws Exception {
         Cenario c = cenario();
         long setor = corpo(enviar(c.gestor(), "/api/setores", "{\"nome\":\"Financeiro\"}").andExpect(status().isCreated())).get("id").asLong();
         alterar(c.admin(), "/api/usuarios/" + c.usuarioId(), "{\"setorId\":" + setor + "}").andExpect(status().isOk());
@@ -145,10 +183,15 @@ class ApagarCadastrosTest {
             if (u.get("id").asLong() == c.usuarioId()) assertThat(u.get("setorNome").isNull()).isTrue();   // ficou sem setor
         }
 
-        processo(c, cliente(c.admin(), "Cliente"), c.adminId());                   // usa o setor Geral
+        long p = processo(c, cliente(c.admin(), "Cliente"), c.adminId());          // usa o setor Geral
         var resp = corpo(apagar(c.admin(), "/api/setores/" + c.setorGeralId()).andExpect(status().isUnprocessableEntity()));
-        assertThat(resp.get("erro").asText()).contains("processo");
+        assertThat(resp.get("erro").asText()).contains("1 processo").contains("em andamento");
         assertThat(consultar(c.admin(), "/api/setores")).hasSize(1);
+
+        concluir(c, p);
+        apagar(c.admin(), "/api/setores/" + c.setorGeralId()).andExpect(status().isNoContent());
+        assertThat(processo(c, p).get("setorNome").isNull()).isTrue();
+        assertThat(processo(c, p).get("status").asText()).isEqualTo("CONCLUIDO");
     }
 
     // ------------------------------------------------------------------ funcionários
@@ -172,15 +215,25 @@ class ApagarCadastrosTest {
     }
 
     @Test
-    void funcionarioResponsavelPorProcessoNaoApaga_atePassarOProcessoAdiante() throws Exception {
+    void funcionarioResponsavelPorProcessoEmAndamentoNaoApaga_encerradoNaoImpede() throws Exception {
         Cenario c = cenario();
         long p = processo(c, cliente(c.admin(), "Cliente"), c.usuarioId());
         var resp = corpo(apagar(c.gestor(), "/api/usuarios/" + c.usuarioId()).andExpect(status().isUnprocessableEntity()));
-        assertThat(resp.get("erro").asText()).contains("responsável").contains("1 processo");
+        assertThat(resp.get("erro").asText()).contains("responsável").contains("1 processo").contains("em andamento");
 
         mvc.perform(put("/api/processos/" + p + "/responsavel").header("Authorization", "Bearer " + c.gestor())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"responsavelId\":" + c.adminId() + "}")).andExpect(status().isOk());
         apagar(c.gestor(), "/api/usuarios/" + c.usuarioId()).andExpect(status().isNoContent());
+
+        // processo concluído: o responsável pode ser apagado sem precisar passar o processo adiante
+        long outro = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"Outro\",\"email\":\"outro-" + UUID.randomUUID()
+                + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated())).get("id").asLong();
+        long p2 = processo(c, cliente(c.admin(), "Outro cliente"), outro);
+        concluir(c, p2);
+        apagar(c.gestor(), "/api/usuarios/" + outro).andExpect(status().isNoContent());
+        JsonNode depois = processo(c, p2);
+        assertThat(depois.get("status").asText()).isEqualTo("CONCLUIDO");
+        assertThat(depois.get("responsavelNome").isNull()).isTrue();
     }
 
     @Test

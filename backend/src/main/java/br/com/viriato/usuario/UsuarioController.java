@@ -7,6 +7,7 @@ import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.comum.NegocioException;
 import br.com.viriato.notificacao.NotificacaoRepository;
 import br.com.viriato.processo.ProcessoRepository;
+import br.com.viriato.processo.StatusProcesso;
 import br.com.viriato.seguranca.Contexto;
 import br.com.viriato.seguranca.UsuarioLogado;
 import jakarta.validation.Valid;
@@ -29,8 +30,9 @@ import org.springframework.web.bind.annotation.*;
  * ADMIN adiciona funcionários com qualquer papel e altera papel, situação e setor.
  * GESTOR adiciona funcionários (apenas com papel USUARIO) e ativa/desativa/apaga funcionários com
  * papel USUARIO; não altera papel nem setor de ninguém.
- * Ninguém apaga a si mesmo, e quem é responsável por algum processo só pode ser apagado depois de
- * passar esses processos adiante (o histórico dos processos permanece).
+ * Ninguém apaga a si mesmo, e quem é responsável por processo EM ANDAMENTO só pode ser apagado depois
+ * de passar esses processos adiante; nos já encerrados ele sai da função de responsável. O histórico
+ * dos processos permanece.
  */
 @RestController
 @RequestMapping("/api/usuarios")
@@ -133,11 +135,12 @@ public class UsuarioController {
             throw new AccessDeniedException("Gestor só pode apagar funcionários com papel Usuário");
         }
         if (u.getId().equals(quem.id())) throw new NegocioException("Você não pode apagar a si mesmo");
-        long responsavel = processos.countByTenantIdAndResponsavelId(quem.tenantId(), u.getId());
+        long responsavel = processos.countByTenantIdAndResponsavelIdAndStatus(quem.tenantId(), u.getId(), StatusProcesso.ABERTO);
         if (responsavel > 0) {
-            throw new NegocioException(u.getNome() + " é responsável por " + responsavel + " processo(s). "
+            throw new NegocioException(u.getNome() + " é responsável por " + responsavel + " processo(s) em andamento. "
                     + "Passe-os para outra pessoa antes de apagar, ou apenas desative o funcionário.");
         }
+        processos.desvincularResponsavel(quem.tenantId(), u.getId());   // processos encerrados ficam sem responsável
         notificacoes.deleteByUsuarioIdAndTenantId(u.getId(), quem.tenantId());   // avisos dele não fazem mais sentido
         repo.delete(u);
     }
