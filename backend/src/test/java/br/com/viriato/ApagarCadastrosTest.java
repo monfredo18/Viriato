@@ -253,6 +253,66 @@ class ApagarCadastrosTest {
         assertThat(comentario.get("usuarioNome").isNull()).isTrue();                          // autor não existe mais
     }
 
+    // ------------------------------------------------------------------ fluxos
+
+    private long fluxo(String token, String nome) throws Exception {
+        return corpo(enviar(token, "/api/fluxos", "{\"nome\":\"" + nome + "\",\"etapas\":["
+                + "{\"nome\":\"Inicio\",\"prazoDias\":1,\"inicial\":true,\"finalEtapa\":false},"
+                + "{\"nome\":\"Fim\",\"inicial\":false,\"finalEtapa\":true}]}").andExpect(status().isCreated())).get("id").asLong();
+    }
+
+    @Test
+    void fluxoNaoApagaComEntregaOuProcessoEmAndamento_encerradoNaoImpede() throws Exception {
+        Cenario c = cenario();
+        long f2 = fluxo(c.gestor(), "Fluxo curto");
+        apagar(c.usuario(), "/api/fluxos/" + f2).andExpect(status().isForbidden());
+
+        // uma entrega usa o fluxo: não apaga
+        long entrega = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Curta\",\"fluxoId\":" + f2 + "}")
+                .andExpect(status().isCreated())).get("id").asLong();
+        long setor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Curto\",\"entregaIds\":[" + entrega + "]}")
+                .andExpect(status().isCreated())).get("id").asLong();
+        var porEntrega = corpo(apagar(c.admin(), "/api/fluxos/" + f2).andExpect(status().isUnprocessableEntity()));
+        assertThat(porEntrega.get("erro").asText()).contains("1 entrega").contains("Curta");
+
+        // processo em andamento nesse fluxo: não apaga, mesmo depois de tirar a entrega dele
+        long cliente = cliente(c.admin(), "Cliente");
+        long p = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + cliente + ",\"entregaId\":" + entrega
+                + ",\"setorId\":" + setor + ",\"responsavelId\":" + c.adminId() + "}").andExpect(status().isCreated())).get("id").asLong();
+        alterar(c.admin(), "/api/entregas/" + entrega, "{\"fluxoId\":" + c.fluxoId() + "}").andExpect(status().isOk());
+        var porProcesso = corpo(apagar(c.admin(), "/api/fluxos/" + f2).andExpect(status().isUnprocessableEntity()));
+        assertThat(porProcesso.get("erro").asText()).contains("1 processo").contains("em andamento");
+        assertThat(consultar(c.admin(), "/api/fluxos")).hasSize(2);
+
+        // processo concluído não impede: o fluxo sai e o processo continua, sem fluxo
+        concluir(c, p);
+        apagar(c.gestor(), "/api/fluxos/" + f2).andExpect(status().isNoContent());
+        assertThat(consultar(c.admin(), "/api/fluxos")).hasSize(1);
+        JsonNode det = consultar(c.admin(), "/api/processos/" + p);               // abrir o processo não pode quebrar
+        assertThat(det.get("processo").get("status").asText()).isEqualTo("CONCLUIDO");
+        assertThat(det.get("processo").get("fluxoNome").isNull()).isTrue();
+        assertThat(det.get("processo").get("etapaAtual").isNull()).isTrue();
+        boolean temMovimento = false;                                              // o histórico guarda os nomes das etapas
+        for (JsonNode h : det.get("historico")) if (h.get("acao").asText().equals("MOVIDO") && h.get("paraEtapa").asText().equals("Fim")) temMovimento = true;
+        assertThat(temMovimento).isTrue();
+        assertThat(consultar(c.admin(), "/api/processos").get("content")).hasSize(1);   // a lista também continua funcionando
+
+        // processo cancelado também não impede
+        long f3 = fluxo(c.admin(), "Fluxo cancelado");
+        long entrega3 = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Tres\",\"fluxoId\":" + f3 + "}").andExpect(status().isCreated())).get("id").asLong();
+        long setor3 = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Setor tres\",\"entregaIds\":[" + entrega3 + "]}").andExpect(status().isCreated())).get("id").asLong();
+        long p3 = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + cliente + ",\"entregaId\":" + entrega3
+                + ",\"setorId\":" + setor3 + ",\"responsavelId\":" + c.adminId() + "}").andExpect(status().isCreated())).get("id").asLong();
+        enviar(c.admin(), "/api/processos/" + p3 + "/cancelar", "{\"motivo\":\"x\"}").andExpect(status().isOk());
+        apagar(c.admin(), "/api/entregas/" + entrega3).andExpect(status().isNoContent());   // libera o fluxo
+        apagar(c.admin(), "/api/fluxos/" + f3).andExpect(status().isNoContent());
+        assertThat(consultar(c.admin(), "/api/processos/" + p3).get("processo").get("status").asText()).isEqualTo("CANCELADO");
+
+        // o fluxo da entrega padrão continua protegido; inexistente dá 404
+        apagar(c.admin(), "/api/fluxos/" + c.fluxoId()).andExpect(status().isUnprocessableEntity());
+        apagar(c.admin(), "/api/fluxos/999999").andExpect(status().isNotFound());
+    }
+
     // ------------------------------------------------------------------ isolamento
 
     @Test
@@ -264,6 +324,7 @@ class ApagarCadastrosTest {
         apagar(b.admin(), "/api/setores/" + a.setorGeralId()).andExpect(status().isNotFound());
         apagar(b.admin(), "/api/entregas/" + a.entregaPadraoId()).andExpect(status().isNotFound());
         apagar(b.admin(), "/api/usuarios/" + a.usuarioId()).andExpect(status().isNotFound());
+        apagar(b.admin(), "/api/fluxos/" + a.fluxoId()).andExpect(status().isNotFound());
         assertThat(consultar(a.admin(), "/api/clientes")).hasSize(1);
         assertThat(consultar(a.admin(), "/api/usuarios")).hasSize(3);
     }

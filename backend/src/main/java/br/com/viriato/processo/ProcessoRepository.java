@@ -16,6 +16,7 @@ public interface ProcessoRepository extends JpaRepository<Processo, Long>, JpaSp
     long countByTenantIdAndSetorIdAndStatus(Long tenantId, Long setorId, StatusProcesso status);
     long countByTenantIdAndEntregaIdAndStatus(Long tenantId, Long entregaId, StatusProcesso status);
     long countByTenantIdAndResponsavelIdAndStatus(Long tenantId, Long responsavelId, StatusProcesso status);
+    long countByTenantIdAndFluxoIdAndStatus(Long tenantId, Long fluxoId, StatusProcesso status);
 
     // Ao apagar um cadastro, os processos já encerrados continuam existindo, só sem o vínculo.
     @Modifying(flushAutomatically = true, clearAutomatically = true)
@@ -29,6 +30,10 @@ public interface ProcessoRepository extends JpaRepository<Processo, Long>, JpaSp
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update Processo p set p.entregaId = null where p.tenantId = :t and p.entregaId = :id")
     int desvincularEntrega(Long t, Long id);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Processo p set p.fluxoId = null, p.etapaAtualId = null where p.tenantId = :t and p.fluxoId = :id")
+    int desvincularFluxo(Long t, Long id);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update Processo p set p.responsavelId = null where p.tenantId = :t and p.responsavelId = :id")
