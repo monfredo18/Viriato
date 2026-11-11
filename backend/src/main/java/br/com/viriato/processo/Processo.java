@@ -17,6 +17,9 @@ public class Processo {
     private String titulo;
     private String descricao;
     @Column(name = "fluxo_id") private Long fluxoId;
+    @Column(name = "cliente_id") private Long clienteId;
+    @Column(name = "entrega_id") private Long entregaId;
+    @Column(name = "setor_id") private Long setorId;
     @Column(name = "etapa_atual_id") private Long etapaAtualId;
     @Column(name = "responsavel_id") private Long responsavelId;
     @Enumerated(EnumType.STRING) private StatusProcesso status = StatusProcesso.ABERTO;

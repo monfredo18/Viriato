@@ -2,9 +2,9 @@ package br.com.viriato.documento;
 
 import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.comum.NegocioException;
+import br.com.viriato.processo.Processo;
 import br.com.viriato.processo.ProcessoService;
 import br.com.viriato.seguranca.UsuarioLogado;
-import br.com.viriato.usuario.Papel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
@@ -37,7 +37,8 @@ public class DocumentoService {
 
     @Transactional
     public DocumentoDto enviar(UsuarioLogado quem, Long processoId, MultipartFile arquivo) throws IOException {
-        processos.buscar(processoId, quem.tenantId()); // garante que o processo é do tenant
+        Processo processo = processos.buscar(processoId, quem.tenantId()); // garante que o processo é do tenant
+        processos.exigirPodeMexer(quem, processo);
         if (arquivo == null || arquivo.isEmpty()) throw new NegocioException("Arquivo vazio");
 
         String nome = limparNome(arquivo.getOriginalFilename());
@@ -78,9 +79,7 @@ public class DocumentoService {
     @Transactional
     public void remover(UsuarioLogado quem, Long id) {
         Documento d = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Documento"));
-        if (quem.papel() == Papel.USUARIO && !quem.id().equals(d.getEnviadoPor())) {
-            throw new NegocioException("Apenas quem enviou ou um gestor pode remover o documento");
-        }
+        processos.exigirPodeMexer(quem, processos.buscar(d.getProcessoId(), quem.tenantId()));
         repo.delete(d);
         storage.remover(d.getChaveS3());
     }

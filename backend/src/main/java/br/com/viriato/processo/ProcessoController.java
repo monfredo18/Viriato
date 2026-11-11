@@ -20,10 +20,12 @@ public class ProcessoController {
 
     public ProcessoController(ProcessoService service) { this.service = service; }
 
-    public record NovoProcesso(@NotBlank @Size(max = 200) String titulo,
+    /** Empresa, entrega, setor e responsável são obrigatórios. */
+    public record NovoProcesso(@NotNull Long clienteId,
+                               @NotNull Long entregaId,
+                               @NotNull Long setorId,
+                               @NotNull Long responsavelId,
                                @Size(max = 10000) String descricao,
-                               @NotNull Long fluxoId,
-                               Long responsavelId,
                                Map<String, Object> camposExtras) {}
 
     public record AvancarReq(@NotNull Long etapaId, @Size(max = 2000) String comentario) {}
@@ -35,6 +37,9 @@ public class ProcessoController {
     public Page<ProcessoDto> listar(@RequestParam(required = false) StatusProcesso status,
                                     @RequestParam(required = false) Long etapaId,
                                     @RequestParam(required = false) Long responsavelId,
+                                    @RequestParam(required = false) Long clienteId,
+                                    @RequestParam(required = false) Long setorId,
+                                    @RequestParam(required = false) Long entregaId,
                                     @RequestParam(required = false) String busca,
                                     @RequestParam(defaultValue = "false") boolean atrasados,
                                     @RequestParam(defaultValue = "false") boolean meus,
@@ -44,13 +49,14 @@ public class ProcessoController {
         Long resp = meus ? u.id() : responsavelId;
         var page = PageRequest.of(Math.max(pagina, 0), Math.min(Math.max(tamanho, 1), 100),
                 Sort.by(Sort.Direction.DESC, "id"));
-        return service.listar(u.tenantId(), new ProcessoService.Filtro(status, etapaId, resp, busca, atrasados), page);
+        return service.listar(u.tenantId(), new ProcessoService.Filtro(status, etapaId, resp, clienteId, setorId, entregaId, busca, atrasados), page);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ProcessoDto criar(@Valid @RequestBody NovoProcesso r) {
-        return service.criar(Contexto.atual(), r.titulo(), r.descricao(), r.fluxoId(), r.responsavelId(), r.camposExtras());
+        return service.criar(Contexto.atual(), new ProcessoService.NovoProcesso(
+                r.clienteId(), r.entregaId(), r.setorId(), r.responsavelId(), r.descricao(), r.camposExtras()));
     }
 
     @GetMapping("/{id}")
