@@ -201,3 +201,7 @@ fieldset.caixas .chk { display: flex; margin: 0 0 .45rem; }
 small.bloco { display: block; }
 td .linha { margin: 0; }
 td button.link { margin-left: .4rem; }
+
+.aviso-campo { display: block; color: var(--aviso); margin: -.45rem 0 .8rem; }
+.dica-campo { display: block; margin: -.45rem 0 .8rem; }
+.modal select:disabled { opacity: .6; cursor: not-allowed; }
