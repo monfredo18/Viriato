@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Consulta liberada a qualquer usuário da empresa (o formulário de processo precisa das listas).
- * Alteração: empresas só ADMIN; setores e entregas ADMIN e GESTOR.
+ * Alteração (cadastrar, editar, apagar): empresas, setores e entregas, ADMIN e GESTOR.
  */
 @RestController
 @RequestMapping("/api")
@@ -37,13 +37,13 @@ public class CadastroController {
 
     @PostMapping("/clientes")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public ClienteDto criarCliente(@Valid @RequestBody NovoCliente r) {
         return service.criarCliente(Contexto.tenantId(), r.nome());
     }
 
     @PatchMapping("/clientes/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public ClienteDto atualizarCliente(@PathVariable Long id, @Valid @RequestBody AtualizaCliente r) {
         return service.atualizarCliente(Contexto.tenantId(), id, r.nome(), r.ativo());
     }
