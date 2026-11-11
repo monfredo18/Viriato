@@ -63,12 +63,19 @@ export const api = {
 export type Papel = 'ADMIN' | 'GESTOR' | 'USUARIO'
 export type Status = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO'
 
-export interface Usuario { id: number; nome: string; email: string; papel: Papel; ativo: boolean }
+export interface Usuario { id: number; nome: string; email: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null }
+export const ROTULO_PAPEL: Record<Papel, string> = { ADMIN: 'Administrador', GESTOR: 'Gestor', USUARIO: 'Usuário' }
+export interface Cliente { id: number; nome: string; ativo: boolean }
+export interface EntregaResumo { id: number; nome: string; ativo: boolean }
+export interface Setor { id: number; nome: string; ativo: boolean; entregas: EntregaResumo[] }
+export interface Entrega { id: number; nome: string; fluxoId: number; fluxoNome: string; ativo: boolean }
 export interface Sessao { token: string; usuario: Usuario; empresa: string }
 export interface Etapa { id: number; nome: string; ordem: number; prazoDias: number | null; inicial: boolean; finalEtapa: boolean }
 export interface Fluxo { id: number; nome: string; ativo: boolean; etapas: Etapa[]; transicoes: { de: number; para: number }[] }
 export interface Processo {
   id: number; numero: string; titulo: string; descricao: string | null
+  clienteId: number | null; clienteNome: string | null; entregaId: number | null; entregaNome: string | null
+  setorId: number | null; setorNome: string | null
   fluxoId: number; fluxoNome: string; etapaAtualId: number; etapaAtual: string; etapaFinal: boolean
   responsavelId: number | null; responsavelNome: string | null
   status: Status; prazoEtapa: string | null; atrasado: boolean

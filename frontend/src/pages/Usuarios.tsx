@@ -1,22 +1,30 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, type Papel, type Usuario } from '../api'
+import { api, ROTULO_PAPEL, type Papel, type Setor, type Usuario } from '../api'
 import { useAuth } from '../auth'
 
+/**
+ * Todos veem a equipe (papel e setor). Administrador altera papel, situação e setor e adiciona
+ * qualquer papel; gestor adiciona funcionários (só papel Usuário) e ajusta o setor.
+ */
 export default function Usuarios() {
-  const { usuario: eu } = useAuth()
+  const { usuario: eu, ehAdmin, podeGerenciar } = useAuth()
   const [lista, setLista] = useState<Usuario[]>([])
-  const [f, setF] = useState({ nome: '', email: '', senha: '', papel: 'USUARIO' as Papel })
+  const [setores, setSetores] = useState<Setor[]>([])
+  const [f, setF] = useState({ nome: '', email: '', senha: '', papel: 'USUARIO' as Papel, setorId: '' })
   const [erro, setErro] = useState('')
 
   const carregar = () => api.get<Usuario[]>('/usuarios').then(setLista)
-  useEffect(() => { carregar() }, [])
+  useEffect(() => {
+    carregar()
+    api.get<Setor[]>('/setores').then(setSetores)
+  }, [])
 
   const criar = async (e: FormEvent) => {
     e.preventDefault()
     setErro('')
     try {
-      await api.post('/usuarios', f)
-      setF({ nome: '', email: '', senha: '', papel: 'USUARIO' })
+      await api.post('/usuarios', { ...f, setorId: f.setorId ? Number(f.setorId) : null })
+      setF({ nome: '', email: '', senha: '', papel: 'USUARIO', setorId: '' })
       carregar()
     } catch (err) {
       setErro((err as Error).message)
@@ -24,43 +32,74 @@ export default function Usuarios() {
   }
 
   const patch = (id: number, data: object) => api.patch(`/usuarios/${id}`, data).then(carregar).catch((e) => setErro(e.message))
+  const setoresAtivos = setores.filter((s) => s.ativo)
 
   return (
     <>
       <h2>Usuários</h2>
+      {!podeGerenciar && <p className="sub">Somente consulta. Quem pode alterar: administrador e gestor.</p>}
       {erro && <p className="erro">{erro}</p>}
       <div className="grade">
         <section className="cartao">
           <table>
-            <thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Ativo</th></tr></thead>
+            <thead><tr><th>Nome</th><th>Papel</th><th>Setor</th><th>Situação</th></tr></thead>
             <tbody>
               {lista.map((u) => (
                 <tr key={u.id}>
-                  <td>{u.nome}</td>
-                  <td>{u.email}</td>
+                  <td>{u.nome}<small className="bloco">{u.email}</small></td>
                   <td>
-                    <select value={u.papel} disabled={u.id === eu?.id} onChange={(e) => patch(u.id, { papel: e.target.value })}>
-                      <option value="ADMIN">Admin</option><option value="GESTOR">Gestor</option><option value="USUARIO">Usuário</option>
-                    </select>
+                    {ehAdmin ? (
+                      <select value={u.papel} disabled={u.id === eu?.id} onChange={(e) => patch(u.id, { papel: e.target.value })}>
+                        {(Object.keys(ROTULO_PAPEL) as Papel[]).map((p) => <option key={p} value={p}>{ROTULO_PAPEL[p]}</option>)}
+                      </select>
+                    ) : ROTULO_PAPEL[u.papel]}
                   </td>
-                  <td><input type="checkbox" checked={u.ativo} disabled={u.id === eu?.id} onChange={(e) => patch(u.id, { ativo: e.target.checked })} /></td>
+                  <td>
+                    {podeGerenciar ? (
+                      <select
+                        value={u.setorId ?? ''}
+                        onChange={(e) => patch(u.id, e.target.value ? { setorId: Number(e.target.value) } : { removerSetor: true })}
+                      >
+                        <option value="">— sem setor —</option>
+                        {setores.filter((s) => s.ativo || s.id === u.setorId).map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                      </select>
+                    ) : (u.setorNome ?? '—')}
+                  </td>
+                  <td>
+                    {ehAdmin ? (
+                      <label className="chk">
+                        <input type="checkbox" checked={u.ativo} disabled={u.id === eu?.id} onChange={(e) => patch(u.id, { ativo: e.target.checked })} />
+                        {u.ativo ? 'Ativo' : 'Inativo'}
+                      </label>
+                    ) : <span className={`selo ${u.ativo ? 'aberto' : 'cancelado'}`}>{u.ativo ? 'Ativo' : 'Inativo'}</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </section>
-        <form className="cartao" onSubmit={criar}>
-          <h3>Novo usuário</h3>
-          <label>Nome<input required value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></label>
-          <label>E-mail<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
-          <label>Senha inicial<input type="password" required minLength={8} value={f.senha} onChange={(e) => setF({ ...f, senha: e.target.value })} /></label>
-          <label>Papel
-            <select value={f.papel} onChange={(e) => setF({ ...f, papel: e.target.value as Papel })}>
-              <option value="USUARIO">Usuário</option><option value="GESTOR">Gestor</option><option value="ADMIN">Admin</option>
-            </select>
-          </label>
-          <button className="primario">Criar usuário</button>
-        </form>
+
+        {podeGerenciar && (
+          <form className="cartao" onSubmit={criar}>
+            <h3>Novo funcionário</h3>
+            <label>Nome<input required value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></label>
+            <label>E-mail<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
+            <label>Senha inicial<input type="password" required minLength={8} value={f.senha} onChange={(e) => setF({ ...f, senha: e.target.value })} /></label>
+            <label>Papel
+              <select value={f.papel} disabled={!ehAdmin} onChange={(e) => setF({ ...f, papel: e.target.value as Papel })}>
+                {(ehAdmin ? (Object.keys(ROTULO_PAPEL) as Papel[]) : (['USUARIO'] as Papel[])).map((p) => <option key={p} value={p}>{ROTULO_PAPEL[p]}</option>)}
+              </select>
+            </label>
+            <label>Setor
+              <select value={f.setorId} onChange={(e) => setF({ ...f, setorId: e.target.value })}>
+                <option value="">— sem setor —</option>
+                {setoresAtivos.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+              </select>
+            </label>
+            {!ehAdmin && <small>Gestores adicionam funcionários com papel Usuário.</small>}
+            <button className="primario">Adicionar funcionário</button>
+          </form>
+        )}
       </div>
     </>
   )

@@ -6,6 +6,7 @@ import Logo from './Logo'
 import Login from './pages/Login'
 import Processos from './pages/Processos'
 import ProcessoDetalhe from './pages/ProcessoDetalhe'
+import Cadastros from './pages/Cadastros'
 import Fluxos from './pages/Fluxos'
 import Usuarios from './pages/Usuarios'
 
@@ -13,15 +14,16 @@ const iniciais = (nome?: string) =>
   (nome ?? '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
 
 function Layout() {
-  const { usuario, empresa, sair, podeGerenciar, ehAdmin } = useAuth()
+  const { usuario, empresa, sair } = useAuth()
   return (
     <>
       <header className="topo">
         <span className="marca"><Logo /> Viriato</span>
         <nav>
           <NavLink to="/processos">Processos</NavLink>
-          {podeGerenciar && <NavLink to="/fluxos">Fluxos</NavLink>}
-          {ehAdmin && <NavLink to="/usuarios">Usuários</NavLink>}
+          <NavLink to="/cadastros">Cadastros</NavLink>
+          <NavLink to="/fluxos">Fluxos</NavLink>
+          <NavLink to="/usuarios">Usuários</NavLink>
         </nav>
         <span className="espaco" />
         <BotaoTema />
@@ -39,8 +41,9 @@ function Layout() {
         <Routes>
           <Route path="/processos" element={<Processos />} />
           <Route path="/processos/:id" element={<ProcessoDetalhe />} />
-          <Route path="/fluxos" element={podeGerenciar ? <Fluxos /> : <Navigate to="/processos" />} />
-          <Route path="/usuarios" element={ehAdmin ? <Usuarios /> : <Navigate to="/processos" />} />
+          <Route path="/cadastros" element={<Cadastros />} />
+          <Route path="/fluxos" element={<Fluxos />} />
+          <Route path="/usuarios" element={<Usuarios />} />
           <Route path="*" element={<Navigate to="/processos" />} />
         </Routes>
       </main>

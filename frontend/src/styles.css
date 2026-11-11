@@ -186,3 +186,18 @@ dt { color: var(--suave); } dd { margin: 0; }
 .tema-btn:hover:not(:disabled) { color: var(--cor); background: var(--destaque); }
 .tema-btn svg { width: 1.15rem; height: 1.15rem; }
 .tema-flutuante { position: fixed; top: 1rem; right: 1rem; z-index: 10; }
+
+/* ---------- abas, chips e caixas de seleção (cadastros) ---------- */
+.abas { display: flex; gap: .25rem; border-bottom: 1px solid var(--borda); margin-bottom: 1.1rem; }
+.abas button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--suave); padding: .55rem .95rem; margin-bottom: -1px; }
+.abas button:hover:not(:disabled) { background: var(--destaque); border-color: transparent; color: var(--texto); }
+.abas button.ativa { color: var(--cor); border-bottom-color: var(--cor); }
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.chip { background: var(--cor-fundo); color: var(--cor); border-radius: 99px; padding: .08rem .6rem; font-size: .8rem; font-weight: 550; }
+.chip.inativo { background: var(--selo-neutro-bg); color: var(--selo-neutro-fg); text-decoration: line-through; }
+fieldset.caixas { border: 1px solid var(--borda-forte); border-radius: 8px; padding: .6rem .8rem .3rem; margin: 0 0 .85rem; max-height: 220px; overflow: auto; }
+fieldset.caixas legend { font-size: .82rem; font-weight: 550; color: var(--suave); padding: 0 .3rem; }
+fieldset.caixas .chk { display: flex; margin: 0 0 .45rem; }
+small.bloco { display: block; }
+td .linha { margin: 0; }
+td button.link { margin-left: .4rem; }
