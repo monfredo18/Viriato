@@ -65,7 +65,7 @@ Todos enxergam tudo (processos, cadastros, fluxos e equipe); o que muda é quem 
 | Empresas atendidas | cadastra e altera | só consulta | só consulta |
 | Setores e entregas | cadastra e altera | cadastra e altera | só consulta |
 | Fluxos | cria e desativa | cria e desativa | só consulta |
-| Funcionários | adiciona (qualquer papel), altera papel, setor e situação | adiciona (só papel Usuário), ajusta setor | só consulta |
+| Funcionários | adiciona (qualquer papel), altera papel, setor e situação | adiciona (só papel Usuário) e ativa/desativa os de papel Usuário; não altera papel nem setor | só consulta |
 | Processos | mexe em qualquer um | mexe em qualquer um | abre processos; só mexe nos que é o responsável |
 
 ### Prazos

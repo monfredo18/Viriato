@@ -54,7 +54,7 @@
   <h1>Relatório do Sistema</h1>
   <p class="sub">Controle de processos multi-empresa: como o sistema funciona, como foi construído e quais são seus limites atuais.</p>
   <table class="meta">
-    <tr><td>Versão do código</td><td>commit <code>fbbca98</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
+    <tr><td>Versão do código</td><td>commit <code>a704418</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
     <tr><td>Data</td><td>11 de novembro de 2026</td></tr>
     <tr><td>Estágio</td><td>MVP funcional, ainda não preparado para produção</td></tr>
     <tr><td>Repositório</td><td>github.com/monfredo18/Viriato</td></tr>
@@ -227,7 +227,7 @@
     <li>registra no histórico a ação <em>Criado</em> e avisa o responsável, se for outra pessoa.</li>
   </ol>
   <figure><img src="img/novo-processo.png" alt="Formulário de novo processo"><figcaption>Figura 5 — Novo processo: a entrega só libera depois do departamento e mostra apenas o que ele faz.</figcaption></figure>
-  <p>A lista de processos mostra empresa, entrega e setor, e tem busca por empresa, entrega ou número, filtros por situação, empresa e setor, <em>Meus</em> (onde sou responsável) e <em>Atrasados</em>, com paginação. Um processo é considerado <strong>atrasado</strong> quando está aberto e o prazo da etapa já passou; isso é calculado na hora da consulta.</p>
+  <p>A lista de processos mostra, nesta ordem, número, empresa, setor, entrega, prazo, responsável e situação (a etapa atual aparece no detalhe), e tem busca por empresa, entrega ou número, filtros por situação, empresa e setor, <em>Meus</em> (onde sou responsável) e <em>Atrasados</em>, com paginação. Um processo é considerado <strong>atrasado</strong> quando está aberto e o prazo da etapa já passou; isso é calculado na hora da consulta.</p>
   <figure><img src="img/processos-claro.png" alt="Lista de processos"><figcaption>Figura 6 — Lista de processos com empresa, entrega, setor, filtros e selos de situação (tema claro).</figcaption></figure>
   <figure><img src="img/processos-escuro.png" alt="Lista de processos no tema escuro"><figcaption>Figura 7 — A mesma tela no tema escuro, escolhido pelo botão de sol/lua no topo.</figcaption></figure>
 
@@ -265,8 +265,9 @@
     <tr><td>Cadastrar e alterar setores e entregas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Criar e ativar/desativar fluxos</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Adicionar funcionários</td><td class="c ok">com qualquer papel</td><td class="c">só com papel Usuário</td><td class="c no">não</td></tr>
-    <tr><td>Alterar o setor de um funcionário</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
-    <tr><td>Alterar papel ou ativar/desativar funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
+    <tr><td>Alterar o setor de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
+    <tr><td>Alterar o papel de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
+    <tr><td>Ativar ou desativar funcionário</td><td class="c ok">qualquer um</td><td class="c">só os de papel Usuário</td><td class="c no">não</td></tr>
   </table>
   <p>Detalhes de comportamento:</p>
   <ul>
@@ -275,6 +276,7 @@
     <li>O administrador não consegue desativar nem rebaixar a si mesmo, para evitar ficar sem acesso.</li>
     <li>Recursos de outra empresa respondem 404, como se não existissem.</li>
     <li>O usuário comum pode abrir um processo e atribuí-lo a qualquer colega ativo; a partir daí, só o responsável (ou um gestor) mexe nele.</li>
+    <li>O gestor ativa e desativa apenas funcionários com papel Usuário; não mexe na situação do administrador nem de outros gestores. Um funcionário desativado deixa de conseguir entrar.</li>
   </ul>
   <figure><img src="img/somente-consulta.png" alt="Processo de outra pessoa em modo consulta"><figcaption>Figura 10 — Um usuário comum diante do processo de outra pessoa: vê tudo, sem botões de ação.</figcaption></figure>
 
@@ -344,7 +346,7 @@
     <tr><td>GET</td><td><code>/me</code></td><td>Dados do usuário logado</td><td>todos</td></tr>
     <tr><td>GET</td><td><code>/usuarios</code></td><td>Lista usuários da empresa</td><td>todos</td></tr>
     <tr><td>POST</td><td><code>/usuarios</code></td><td>Adiciona funcionário (com setor opcional)</td><td>Admin (qualquer papel); Gestor (só Usuário)</td></tr>
-    <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel, ativo ou setor</td><td>Admin (tudo); Gestor (só setor)</td></tr>
+    <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel, ativo ou setor</td><td>Admin (tudo); Gestor (só <code>ativo</code>, e só de quem é Usuário)</td></tr>
     <tr><td>GET</td><td><code>/clientes</code>, <code>/setores</code>, <code>/entregas</code></td><td>Listas de empresas atendidas, setores (com suas entregas) e entregas (com o fluxo)</td><td>todos</td></tr>
     <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (nome, ativo)</td><td>Admin</td></tr>
     <tr><td>POST, PATCH</td><td><code>/setores</code>, <code>/setores/{id}</code></td><td>Cria e altera setor (nome, ativo, lista de entregas)</td><td>Admin, Gestor</td></tr>
@@ -396,7 +398,7 @@
     <li>O número do processo usa o identificador global, então não é sequencial por empresa (a primeira da empresa pode ser <code>2026-000137</code>).</li>
     <li>Todos da empresa veem todos os processos, por decisão de projeto; não há visibilidade restrita por equipe ou setor.</li>
     <li>O responsável pode ser qualquer usuário ativo, não necessariamente do setor do processo.</li>
-    <li>O gestor pode ajustar o setor de qualquer funcionário, inclusive do administrador.</li>
+    <li>O gestor escolhe o setor do funcionário ao adicioná-lo, mas depois só o administrador consegue alterá-lo.</li>
     <li>Não há ferramentas de LGPD (exportar ou excluir dados de uma pessoa), nem registro de auditoria de login.</li>
   </ol>
 
@@ -463,7 +465,7 @@
     <tr><td>Upload e download, com nome malicioso sanitizado</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Alerta de prazo: dispara uma vez só</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Migrações V1 a V3 e a aplicação contra MySQL 8 e S3 simulado reais (teste ponta a ponta via HTTP)</td><td class="ok">executado, incluindo acentuação, permissões e isolamento</td></tr>
-    <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, dois temas</td><td class="ok">executado (27 verificações)</td></tr>
+    <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, colunas da lista, situação de funcionários, dois temas</td><td class="ok">executado (42 verificações)</td></tr>
     <tr><td>Build do frontend com verificação de tipos</td><td class="ok">passa</td></tr>
   </table>
   <p>Esse teste com MySQL real encontrou dois defeitos que o H2 não revelava (parâmetro de codificação da conexão e health check de e-mail derrubando a aplicação); ambos já foram corrigidos.</p>
@@ -490,6 +492,10 @@
     <tr><td><code>7d99fcd</code></td><td>Backend: processo com empresa, entrega, setor e responsável</td></tr>
     <tr><td><code>0317dd6</code></td><td>Frontend: cadastros, equipe com setor e modo consulta</td></tr>
     <tr><td><code>fbbca98</code></td><td>Frontend: formulário e lista de processos com o novo modelo</td></tr>
+    <tr><td><code>cb8de0b</code></td><td>Relatório e README atualizados para cadastros e permissões</td></tr>
+    <tr><td><code>1e64e8b</code></td><td>Backend: gestor altera a situação do funcionário, não o setor</td></tr>
+    <tr><td><code>f3281e9</code></td><td>Frontend: tela de usuários conforme a nova regra do gestor</td></tr>
+    <tr><td><code>a704418</code></td><td>Frontend: colunas da lista de processos na ordem pedida</td></tr>
   </table>
 </section>
 
