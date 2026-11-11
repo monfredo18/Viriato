@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { api, type Cliente, type Entrega, type Fluxo, type Setor } from '../api'
+import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 
 type Aba = 'empresas' | 'setores' | 'entregas'
@@ -50,18 +51,6 @@ function NomeEditavel({ nome, pode, salvar }: { nome: string; pode: boolean; sal
   )
 }
 
-/** Apaga depois de confirmar; se o item estiver em uso, o servidor recusa e a mensagem aparece na tela. */
-function Apagar({ nome, aviso = '', apagar }: { nome: string; aviso?: string; apagar: () => void }) {
-  return (
-    <button
-      className="link perigo-txt"
-      onClick={() => confirm(`Apagar "${nome}"? Esta ação não pode ser desfeita.${aviso ? `\n\n${aviso}` : ''}`) && apagar()}
-    >
-      apagar
-    </button>
-  )
-}
-
 function Situacao({ ativo, pode, alternar }: { ativo: boolean; pode: boolean; alternar: () => void }) {
   if (!pode) return <span className={`selo ${ativo ? 'aberto' : 'cancelado'}`}>{ativo ? 'Ativo' : 'Inativo'}</span>
   return (
@@ -101,7 +90,7 @@ function Empresas({ pode }: { pode: boolean }) {
               <tr key={c.id}>
                 <td><NomeEditavel nome={c.nome} pode={pode} salvar={(n) => agir(() => api.patch(`/clientes/${c.id}`, { nome: n }))} /></td>
                 <td><Situacao ativo={c.ativo} pode={pode} alternar={() => agir(() => api.patch(`/clientes/${c.id}`, { ativo: !c.ativo }))} /></td>
-                {pode && <td><Apagar nome={c.nome} apagar={() => { setErro(''); agir(() => api.del(`/clientes/${c.id}`)) }} /></td>}
+                {pode && <td><BotaoApagar nome={c.nome} aviso="Processos já concluídos ou cancelados dela continuam existindo, sem o vínculo com a empresa." apagar={() => { setErro(''); agir(() => api.del(`/clientes/${c.id}`)) }} /></td>}
               </tr>
             ))}
             {lista.length === 0 && <tr><td colSpan={pode ? 3 : 2} className="vazio">Nenhuma empresa cadastrada.</td></tr>}
@@ -165,7 +154,7 @@ function Entregas({ pode }: { pode: boolean }) {
                   ) : e.fluxoNome}
                 </td>
                 <td><Situacao ativo={e.ativo} pode={pode} alternar={() => agir(() => api.patch(`/entregas/${e.id}`, { ativo: !e.ativo }))} /></td>
-                {pode && <td><Apagar nome={e.nome} aviso="Ela também sai da lista dos setores que a faziam." apagar={() => { setErro(''); agir(() => api.del(`/entregas/${e.id}`)) }} /></td>}
+                {pode && <td><BotaoApagar nome={e.nome} aviso="Ela sai da lista dos setores que a faziam. Processos já concluídos ou cancelados continuam existindo, sem o vínculo com a entrega." apagar={() => { setErro(''); agir(() => api.del(`/entregas/${e.id}`)) }} /></td>}
               </tr>
             ))}
             {lista.length === 0 && <tr><td colSpan={pode ? 4 : 3} className="vazio">Nenhuma entrega cadastrada.</td></tr>}
@@ -233,7 +222,7 @@ function Setores({ pode }: { pode: boolean }) {
                   </div>
                 </td>
                 <td><Situacao ativo={s.ativo} pode={pode} alternar={() => agir(() => api.patch(`/setores/${s.id}`, { ativo: !s.ativo }))} /></td>
-                {pode && <td><Apagar nome={s.nome} aviso="Os funcionários deste setor ficarão sem setor." apagar={() => { setErro(''); agir(() => api.del(`/setores/${s.id}`)) }} /></td>}
+                {pode && <td><BotaoApagar nome={s.nome} aviso="Os funcionários deste setor ficarão sem setor. Processos já concluídos ou cancelados continuam existindo, sem o vínculo com o setor." apagar={() => { setErro(''); agir(() => api.del(`/setores/${s.id}`)) }} /></td>}
               </tr>
             ))}
             {lista.length === 0 && <tr><td colSpan={pode ? 4 : 3} className="vazio">Nenhum setor cadastrado.</td></tr>}

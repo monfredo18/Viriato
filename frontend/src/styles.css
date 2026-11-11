@@ -206,3 +206,8 @@ td button.link { margin-left: .4rem; }
 .dica-campo { display: block; margin: -.45rem 0 .8rem; }
 .modal select:disabled { opacity: .6; cursor: not-allowed; }
 form.cartao small { display: block; margin: -.2rem 0 .8rem; }
+
+/* botão X (apagar) */
+.btn-x { display: inline-grid; place-items: center; width: 1.8rem; height: 1.8rem; padding: 0; border: none; border-radius: 50%; background: none; color: var(--suave); }
+.btn-x svg { width: .95rem; height: .95rem; }
+.btn-x:hover:not(:disabled) { background: var(--selo-atraso-bg); color: var(--perigo); border: none; }

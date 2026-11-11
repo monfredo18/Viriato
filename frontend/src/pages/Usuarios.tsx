@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ROTULO_PAPEL, type Papel, type Setor, type Usuario } from '../api'
+import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 
 /**
@@ -37,7 +38,6 @@ export default function Usuarios() {
   const setoresAtivos = setores.filter((s) => s.ativo)
 
   const apagar = (u: Usuario) => {
-    if (!confirm(`Apagar o funcionário "${u.nome}"? Esta ação não pode ser desfeita.\n\nO histórico dos processos em que ele atuou é mantido.`)) return
     setErro('')
     api.del(`/usuarios/${u.id}`).then(carregar).catch((e) => setErro(e.message))
   }
@@ -87,7 +87,7 @@ export default function Usuarios() {
                   {podeGerenciar && (
                     <td>
                       {u.id !== eu?.id && (ehAdmin || u.papel === 'USUARIO') && (
-                        <button className="link perigo-txt" onClick={() => apagar(u)}>apagar</button>
+                        <BotaoApagar nome={u.nome} aviso="O histórico dos processos em que ele atuou é mantido. Processos concluídos dele continuam existindo, sem responsável." apagar={() => apagar(u)} />
                       )}
                     </td>
                   )}
