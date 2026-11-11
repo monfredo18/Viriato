@@ -5,7 +5,7 @@ import { useAuth } from '../auth'
 type Aba = 'empresas' | 'setores' | 'entregas'
 
 export default function Cadastros() {
-  const { ehAdmin, podeGerenciar } = useAuth()
+  const { podeGerenciar } = useAuth()
   const [aba, setAba] = useState<Aba>('empresas')
 
   return (
@@ -18,7 +18,7 @@ export default function Cadastros() {
         <button role="tab" aria-selected={aba === 'setores'} className={aba === 'setores' ? 'ativa' : ''} onClick={() => setAba('setores')}>Setores</button>
         <button role="tab" aria-selected={aba === 'entregas'} className={aba === 'entregas' ? 'ativa' : ''} onClick={() => setAba('entregas')}>Entregas</button>
       </div>
-      {aba === 'empresas' && <Empresas pode={ehAdmin} />}
+      {aba === 'empresas' && <Empresas pode={podeGerenciar} />}
       {aba === 'setores' && <Setores pode={podeGerenciar} />}
       {aba === 'entregas' && <Entregas pode={podeGerenciar} />}
     </>
@@ -47,6 +47,18 @@ function NomeEditavel({ nome, pode, salvar }: { nome: string; pode: boolean; sal
       <button className="primario">Salvar</button>
       <button type="button" onClick={() => setEditando(false)}>Cancelar</button>
     </form>
+  )
+}
+
+/** Apaga depois de confirmar; se o item estiver em uso, o servidor recusa e a mensagem aparece na tela. */
+function Apagar({ nome, aviso = '', apagar }: { nome: string; aviso?: string; apagar: () => void }) {
+  return (
+    <button
+      className="link perigo-txt"
+      onClick={() => confirm(`Apagar "${nome}"? Esta ação não pode ser desfeita.${aviso ? `\n\n${aviso}` : ''}`) && apagar()}
+    >
+      apagar
+    </button>
   )
 }
 
@@ -80,18 +92,19 @@ function Empresas({ pode }: { pode: boolean }) {
     <div className="grade">
       <section className="cartao">
         <h3>Empresas atendidas</h3>
-        <Aviso pode={pode} quem="administrador" />
+        <Aviso pode={pode} quem="administrador e gestor" />
         {erro && <p className="erro">{erro}</p>}
         <table>
-          <thead><tr><th>Nome</th><th>Situação</th></tr></thead>
+          <thead><tr><th>Nome</th><th>Situação</th>{pode && <th></th>}</tr></thead>
           <tbody>
             {lista.map((c) => (
               <tr key={c.id}>
                 <td><NomeEditavel nome={c.nome} pode={pode} salvar={(n) => agir(() => api.patch(`/clientes/${c.id}`, { nome: n }))} /></td>
                 <td><Situacao ativo={c.ativo} pode={pode} alternar={() => agir(() => api.patch(`/clientes/${c.id}`, { ativo: !c.ativo }))} /></td>
+                {pode && <td><Apagar nome={c.nome} apagar={() => { setErro(''); agir(() => api.del(`/clientes/${c.id}`)) }} /></td>}
               </tr>
             ))}
-            {lista.length === 0 && <tr><td colSpan={2} className="vazio">Nenhuma empresa cadastrada.</td></tr>}
+            {lista.length === 0 && <tr><td colSpan={pode ? 3 : 2} className="vazio">Nenhuma empresa cadastrada.</td></tr>}
           </tbody>
         </table>
       </section>
@@ -139,7 +152,7 @@ function Entregas({ pode }: { pode: boolean }) {
         <Aviso pode={pode} quem="administrador e gestor" />
         {erro && <p className="erro">{erro}</p>}
         <table>
-          <thead><tr><th>Entrega</th><th>Fluxo</th><th>Situação</th></tr></thead>
+          <thead><tr><th>Entrega</th><th>Fluxo</th><th>Situação</th>{pode && <th></th>}</tr></thead>
           <tbody>
             {lista.map((e) => (
               <tr key={e.id}>
@@ -152,9 +165,10 @@ function Entregas({ pode }: { pode: boolean }) {
                   ) : e.fluxoNome}
                 </td>
                 <td><Situacao ativo={e.ativo} pode={pode} alternar={() => agir(() => api.patch(`/entregas/${e.id}`, { ativo: !e.ativo }))} /></td>
+                {pode && <td><Apagar nome={e.nome} aviso="Ela também sai da lista dos setores que a faziam." apagar={() => { setErro(''); agir(() => api.del(`/entregas/${e.id}`)) }} /></td>}
               </tr>
             ))}
-            {lista.length === 0 && <tr><td colSpan={3} className="vazio">Nenhuma entrega cadastrada.</td></tr>}
+            {lista.length === 0 && <tr><td colSpan={pode ? 4 : 3} className="vazio">Nenhuma entrega cadastrada.</td></tr>}
           </tbody>
         </table>
       </section>
@@ -204,7 +218,7 @@ function Setores({ pode }: { pode: boolean }) {
         <Aviso pode={pode} quem="administrador e gestor" />
         {erro && <p className="erro">{erro}</p>}
         <table>
-          <thead><tr><th>Setor</th><th>Entregas</th><th>Situação</th></tr></thead>
+          <thead><tr><th>Setor</th><th>Entregas</th><th>Situação</th>{pode && <th></th>}</tr></thead>
           <tbody>
             {lista.map((s) => (
               <tr key={s.id}>
@@ -219,9 +233,10 @@ function Setores({ pode }: { pode: boolean }) {
                   </div>
                 </td>
                 <td><Situacao ativo={s.ativo} pode={pode} alternar={() => agir(() => api.patch(`/setores/${s.id}`, { ativo: !s.ativo }))} /></td>
+                {pode && <td><Apagar nome={s.nome} aviso="Os funcionários deste setor ficarão sem setor." apagar={() => { setErro(''); agir(() => api.del(`/setores/${s.id}`)) }} /></td>}
               </tr>
             ))}
-            {lista.length === 0 && <tr><td colSpan={3} className="vazio">Nenhum setor cadastrado.</td></tr>}
+            {lista.length === 0 && <tr><td colSpan={pode ? 4 : 3} className="vazio">Nenhum setor cadastrado.</td></tr>}
           </tbody>
         </table>
       </section>

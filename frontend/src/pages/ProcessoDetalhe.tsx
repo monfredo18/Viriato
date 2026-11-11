@@ -142,7 +142,7 @@ export default function ProcessoDetalhe() {
               {h.acao === 'MOVIDO' && <> {h.deEtapa} → {h.paraEtapa}</>}
               {h.acao === 'CRIADO' && <> em {h.paraEtapa}</>}
               {h.comentario && <div>{h.comentario}</div>}
-              <small>{h.usuarioNome ?? 'sistema'} · {new Date(h.criadoEm).toLocaleString('pt-BR')}</small>
+              <small>{h.usuarioNome ?? 'usuário removido'} · {new Date(h.criadoEm).toLocaleString('pt-BR')}</small>
             </li>
           ))}
         </ul>

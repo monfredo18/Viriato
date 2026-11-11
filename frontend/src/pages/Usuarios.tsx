@@ -5,7 +5,8 @@ import { useAuth } from '../auth'
 /**
  * Todos veem a equipe (papel e setor). Administrador altera papel, situação e setor e adiciona
  * qualquer papel; gestor adiciona funcionários (só papel Usuário) e ativa/desativa funcionários
- * com papel Usuário, sem alterar papel nem setor.
+ * com papel Usuário, sem alterar papel nem setor. Administrador e gestor (este só os de papel Usuário)
+ * podem apagar funcionários.
  */
 export default function Usuarios() {
   const { usuario: eu, ehAdmin, podeGerenciar } = useAuth()
@@ -35,6 +36,12 @@ export default function Usuarios() {
   const patch = (id: number, data: object) => api.patch(`/usuarios/${id}`, data).then(carregar).catch((e) => setErro(e.message))
   const setoresAtivos = setores.filter((s) => s.ativo)
 
+  const apagar = (u: Usuario) => {
+    if (!confirm(`Apagar o funcionário "${u.nome}"? Esta ação não pode ser desfeita.\n\nO histórico dos processos em que ele atuou é mantido.`)) return
+    setErro('')
+    api.del(`/usuarios/${u.id}`).then(carregar).catch((e) => setErro(e.message))
+  }
+
   return (
     <>
       <h2>Usuários</h2>
@@ -46,7 +53,7 @@ export default function Usuarios() {
       <div className="grade">
         <section className="cartao">
           <table>
-            <thead><tr><th>Nome</th><th>Papel</th><th>Setor</th><th>Situação</th></tr></thead>
+            <thead><tr><th>Nome</th><th>Papel</th><th>Setor</th><th>Situação</th>{podeGerenciar && <th></th>}</tr></thead>
             <tbody>
               {lista.map((u) => (
                 <tr key={u.id}>
@@ -77,6 +84,13 @@ export default function Usuarios() {
                       </label>
                     ) : <span className={`selo ${u.ativo ? 'aberto' : 'cancelado'}`}>{u.ativo ? 'Ativo' : 'Inativo'}</span>}
                   </td>
+                  {podeGerenciar && (
+                    <td>
+                      {u.id !== eu?.id && (ehAdmin || u.papel === 'USUARIO') && (
+                        <button className="link perigo-txt" onClick={() => apagar(u)}>apagar</button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
