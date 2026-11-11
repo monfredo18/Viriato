@@ -205,3 +205,4 @@ td button.link { margin-left: .4rem; }
 .aviso-campo { display: block; color: var(--aviso); margin: -.45rem 0 .8rem; }
 .dica-campo { display: block; margin: -.45rem 0 .8rem; }
 .modal select:disabled { opacity: .6; cursor: not-allowed; }
+form.cartao small { display: block; margin: -.2rem 0 .8rem; }
