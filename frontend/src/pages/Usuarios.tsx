@@ -4,7 +4,8 @@ import { useAuth } from '../auth'
 
 /**
  * Todos veem a equipe (papel e setor). Administrador altera papel, situação e setor e adiciona
- * qualquer papel; gestor adiciona funcionários (só papel Usuário) e ajusta o setor.
+ * qualquer papel; gestor adiciona funcionários (só papel Usuário) e ativa/desativa funcionários
+ * com papel Usuário, sem alterar papel nem setor.
  */
 export default function Usuarios() {
   const { usuario: eu, ehAdmin, podeGerenciar } = useAuth()
@@ -38,6 +39,9 @@ export default function Usuarios() {
     <>
       <h2>Usuários</h2>
       {!podeGerenciar && <p className="sub">Somente consulta. Quem pode alterar: administrador e gestor.</p>}
+      {podeGerenciar && !ehAdmin && (
+        <p className="sub">Você pode adicionar funcionários e ativar ou desativar os de papel Usuário. Papel e setor só o administrador altera.</p>
+      )}
       {erro && <p className="erro">{erro}</p>}
       <div className="grade">
         <section className="cartao">
@@ -55,7 +59,7 @@ export default function Usuarios() {
                     ) : ROTULO_PAPEL[u.papel]}
                   </td>
                   <td>
-                    {podeGerenciar ? (
+                    {ehAdmin ? (
                       <select
                         value={u.setorId ?? ''}
                         onChange={(e) => patch(u.id, e.target.value ? { setorId: Number(e.target.value) } : { removerSetor: true })}
@@ -66,7 +70,7 @@ export default function Usuarios() {
                     ) : (u.setorNome ?? '—')}
                   </td>
                   <td>
-                    {ehAdmin ? (
+                    {ehAdmin || (podeGerenciar && u.papel === 'USUARIO') ? (
                       <label className="chk">
                         <input type="checkbox" checked={u.ativo} disabled={u.id === eu?.id} onChange={(e) => patch(u.id, { ativo: e.target.checked })} />
                         {u.ativo ? 'Ativo' : 'Inativo'}

@@ -76,22 +76,21 @@ export default function Processos() {
       {erro && <p className="erro">{erro}</p>}
       <div className="tabela-wrap"><table>
         <thead>
-          <tr><th>Número</th><th>Empresa</th><th>Entrega</th><th>Setor</th><th>Etapa</th><th>Responsável</th><th>Prazo</th><th>Situação</th></tr>
+          <tr><th>Número</th><th>Empresa</th><th>Setor</th><th>Entrega</th><th>Prazo</th><th>Responsável</th><th>Situação</th></tr>
         </thead>
         <tbody>
           {dados?.content.map((p) => (
             <tr key={p.id}>
               <td><Link to={`/processos/${p.id}`}>{p.numero}</Link></td>
               <td><Link to={`/processos/${p.id}`} className="titulo-link">{p.clienteNome ?? '—'}</Link></td>
-              <td>{p.entregaNome ?? p.titulo}</td>
               <td>{p.setorNome ?? '—'}</td>
-              <td>{p.etapaAtual}</td>
-              <td>{p.responsavelNome ?? '—'}</td>
+              <td>{p.entregaNome ?? p.titulo}</td>
               <td>{fmtData(p.prazoEtapa)}</td>
+              <td>{p.responsavelNome ?? '—'}</td>
               <td><Selo p={p} /></td>
             </tr>
           ))}
-          {dados && dados.content.length === 0 && <tr><td colSpan={8} className="vazio">Nenhum processo encontrado.</td></tr>}
+          {dados && dados.content.length === 0 && <tr><td colSpan={7} className="vazio">Nenhum processo encontrado.</td></tr>}
         </tbody>
       </table></div>
 
