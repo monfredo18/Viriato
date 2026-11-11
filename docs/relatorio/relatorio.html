@@ -54,7 +54,7 @@
   <h1>Relatório do Sistema</h1>
   <p class="sub">Controle de processos multi-empresa: como o sistema funciona, como foi construído e quais são seus limites atuais.</p>
   <table class="meta">
-    <tr><td>Versão do código</td><td>commit <code>a704418</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
+    <tr><td>Versão do código</td><td>commit <code>b5010d9</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
     <tr><td>Data</td><td>11 de novembro de 2026</td></tr>
     <tr><td>Estágio</td><td>MVP funcional, ainda não preparado para produção</td></tr>
     <tr><td>Repositório</td><td>github.com/monfredo18/Viriato</td></tr>
@@ -158,7 +158,7 @@
   <p>Esta seção percorre a jornada de uso, da primeira tela até o encerramento de um processo.</p>
 
   <h2>3.1 Primeiro acesso: cadastro da empresa</h2>
-  <p>Na tela de login, <em>Cadastrar minha empresa</em> pede o nome da empresa, o nome do usuário, e-mail e senha (mínimo de 8 caracteres). Numa única operação o sistema cria a empresa, o primeiro usuário como <strong>Administrador</strong>, um <strong>fluxo padrão</strong>, o setor <strong>Geral</strong> e a entrega <strong>Atendimento geral</strong>, e já devolve a sessão. As empresas atendidas, o administrador cadastra depois. Não existe usuário ou senha pré-cadastrados.</p>
+  <p>Na tela de login, <em>Cadastrar minha empresa</em> pede o nome da empresa, o nome do usuário, e-mail e senha (mínimo de 8 caracteres). Numa única operação o sistema cria a empresa, o primeiro usuário como <strong>Administrador</strong>, um <strong>fluxo padrão</strong>, o setor <strong>Geral</strong> e a entrega <strong>Atendimento geral</strong>, e já devolve a sessão. As empresas atendidas são cadastradas depois pelo administrador ou pelo gestor. Não existe usuário ou senha pré-cadastrados.</p>
   <figure><img src="img/login.png" alt="Tela de login"><figcaption>Figura 2 — Tela de login, com o botão de tema no canto superior direito.</figcaption></figure>
 
   <h2>3.2 Login e sessão</h2>
@@ -204,11 +204,11 @@
   <h2>3.4 Cadastros: empresas, setores e entregas</h2>
   <p>A página <em>Cadastros</em> reúne três listas, todas por empresa do sistema:</p>
   <ul>
-    <li><strong>Empresas atendidas:</strong> para quem os processos são feitos. Só o administrador cadastra e altera.</li>
+    <li><strong>Empresas atendidas:</strong> para quem os processos são feitos. Administrador e gestor cadastram, alteram e apagam.</li>
     <li><strong>Entregas:</strong> o que pode ser entregue. Cada entrega escolhe o fluxo que seus processos vão seguir.</li>
     <li><strong>Setores:</strong> departamentos. Cada setor marca quais entregas ele faz.</li>
   </ul>
-  <p>Setores e entregas são mantidos pelo administrador e pelo gestor. Nada é apagado: itens podem ser desativados, e deixam de aparecer para novos processos sem afetar os que já existem. Os nomes não se repetem dentro da empresa.</p>
+  <p>Setores e entregas também são mantidos pelo administrador e pelo gestor. Qualquer item pode ser <strong>desativado</strong> (deixa de aparecer para novos processos, sem afetar os que já existem) ou <strong>apagado</strong>, conforme as regras da seção 4. Os nomes não se repetem dentro da empresa.</p>
   <figure><img src="img/cadastros-setores.png" alt="Cadastro de setores"><figcaption>Figura 4 — Setores e as entregas que cada um faz; o botão <em>escolher</em> altera a lista.</figcaption></figure>
 
   <h2>3.5 Abrir e acompanhar processos</h2>
@@ -261,20 +261,25 @@
     <tr><td>Abrir processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
     <tr><td>Movimentar, comentar, anexar e remover anexo, reatribuir</td><td class="c ok">em qualquer processo</td><td class="c ok">em qualquer processo</td><td class="c">só nos processos em que é o responsável</td></tr>
     <tr><td>Cancelar processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
-    <tr><td>Cadastrar e alterar empresas atendidas</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
+    <tr><td>Cadastrar e alterar empresas atendidas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar setores e entregas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
+    <tr><td>Apagar empresas, setores e entregas</td><td class="c ok">sim, se não houver processo ligado</td><td class="c ok">sim, se não houver processo ligado</td><td class="c no">não</td></tr>
     <tr><td>Criar e ativar/desativar fluxos</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Adicionar funcionários</td><td class="c ok">com qualquer papel</td><td class="c">só com papel Usuário</td><td class="c no">não</td></tr>
     <tr><td>Alterar o setor de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Alterar o papel de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Ativar ou desativar funcionário</td><td class="c ok">qualquer um</td><td class="c">só os de papel Usuário</td><td class="c no">não</td></tr>
+    <tr><td>Apagar funcionário</td><td class="c ok">qualquer um, menos a si mesmo</td><td class="c">só os de papel Usuário</td><td class="c no">não</td></tr>
   </table>
   <p>Detalhes de comportamento:</p>
   <ul>
     <li>Na tela, quem não pode alterar algo não vê o botão nem o formulário; a página mostra o aviso <em>Somente consulta</em>. Além disso, o servidor recusa a ação mesmo que alguém tente chamá-la direto pela API.</li>
-    <li>Recusas por papel (por exemplo gestor cadastrar empresa) devolvem HTTP 403. Recusas por regra de negócio (usuário comum mexer em processo alheio) devolvem HTTP 422 com uma mensagem em português.</li>
+    <li>Recusas por papel (por exemplo usuário comum cadastrar empresa) devolvem HTTP 403. Recusas por regra de negócio (usuário comum mexer em processo alheio) devolvem HTTP 422 com uma mensagem em português.</li>
     <li>O administrador não consegue desativar nem rebaixar a si mesmo, para evitar ficar sem acesso.</li>
     <li>Recursos de outra empresa respondem 404, como se não existissem.</li>
+    <li><strong>Apagar nunca leva processos junto.</strong> Empresa, setor ou entrega que algum processo usa não é apagada: o sistema recusa, informa quantos processos estão ligados e orienta a desativar. Apagar uma entrega a remove da lista dos setores; apagar um setor deixa os funcionários dele sem setor.</li>
+    <li>Um funcionário responsável por processos só é apagado depois que esses processos forem passados a outra pessoa. Os avisos dele são removidos; o histórico dos processos permanece, com o autor indicado como <em>usuário removido</em>. Quem foi apagado deixa de conseguir entrar.</li>
+    <li>Na tela, apagar sempre pede confirmação, e a ação não pode ser desfeita.</li>
     <li>O usuário comum pode abrir um processo e atribuí-lo a qualquer colega ativo; a partir daí, só o responsável (ou um gestor) mexe nele.</li>
     <li>O gestor ativa e desativa apenas funcionários com papel Usuário; não mexe na situação do administrador nem de outros gestores. Um funcionário desativado deixa de conseguir entrar.</li>
   </ul>
@@ -338,7 +343,7 @@
 <!-- ============================ 6 ============================ -->
 <section>
   <h1>6. Referência da API</h1>
-  <p>Todas as rotas começam com <code>/api</code>. Fora as de autenticação, exigem o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. A documentação interativa fica em <code>/swagger-ui.html</code> (34 rotas).</p>
+  <p>Todas as rotas começam com <code>/api</code>. Fora as de autenticação, exigem o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. A documentação interativa fica em <code>/swagger-ui.html</code> (38 rotas).</p>
   <table>
     <tr><th style="width:17mm">Método</th><th style="width:56mm">Rota</th><th>Função</th><th style="width:40mm">Quem</th></tr>
     <tr><td>POST</td><td><code>/auth/registrar-empresa</code></td><td>Cria empresa, administrador e fluxo padrão; devolve sessão</td><td>público</td></tr>
@@ -348,7 +353,9 @@
     <tr><td>POST</td><td><code>/usuarios</code></td><td>Adiciona funcionário (com setor opcional)</td><td>Admin (qualquer papel); Gestor (só Usuário)</td></tr>
     <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel, ativo ou setor</td><td>Admin (tudo); Gestor (só <code>ativo</code>, e só de quem é Usuário)</td></tr>
     <tr><td>GET</td><td><code>/clientes</code>, <code>/setores</code>, <code>/entregas</code></td><td>Listas de empresas atendidas, setores (com suas entregas) e entregas (com o fluxo)</td><td>todos</td></tr>
-    <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (nome, ativo)</td><td>Admin</td></tr>
+    <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (nome, ativo)</td><td>Admin, Gestor</td></tr>
+    <tr><td>DELETE</td><td><code>/clientes/{id}</code>, <code>/setores/{id}</code>, <code>/entregas/{id}</code></td><td>Apaga o cadastro (recusa se houver processo ligado)</td><td>Admin, Gestor</td></tr>
+    <tr><td>DELETE</td><td><code>/usuarios/{id}</code></td><td>Apaga funcionário (recusa se for responsável por processo ou se for o próprio usuário)</td><td>Admin; Gestor (só Usuário)</td></tr>
     <tr><td>POST, PATCH</td><td><code>/setores</code>, <code>/setores/{id}</code></td><td>Cria e altera setor (nome, ativo, lista de entregas)</td><td>Admin, Gestor</td></tr>
     <tr><td>POST, PATCH</td><td><code>/entregas</code>, <code>/entregas/{id}</code></td><td>Cria e altera entrega (nome, fluxo, ativo)</td><td>Admin, Gestor</td></tr>
     <tr><td>GET</td><td><code>/fluxos</code>, <code>/fluxos/{id}</code></td><td>Lista e detalha fluxos com etapas e transições</td><td>todos</td></tr>
@@ -389,7 +396,7 @@
     <p>Esta lista existe para que nada seja descoberto tarde demais. Itens marcados com <strong>(prioridade)</strong> devem ser resolvidos antes de qualquer uso real.</p>
   </div>
   <ol>
-    <li><strong>(prioridade) O token não pode ser revogado.</strong> Desativar um usuário ou mudar seu papel só passa a valer quando o token expira (até 12 horas), porque o filtro não consulta o banco a cada requisição. Quem foi desativado continua com o acesso que tinha nesse período.</li>
+    <li><strong>(prioridade) O token não pode ser revogado.</strong> Desativar ou apagar um usuário, ou mudar seu papel, só passa a valer quando o token expira (até 12 horas), porque o filtro não consulta o banco a cada requisição. Quem foi desativado continua com o acesso que tinha nesse período.</li>
     <li><strong>(prioridade) Sem limite de tentativas de login</strong>, sem recuperação de senha e sem autenticação em dois fatores.</li>
     <li><strong>(prioridade) Segredo padrão de desenvolvimento.</strong> Existe um <code>JWT_SECRET</code> padrão para facilitar o uso local; em produção ele <em>precisa</em> ser trocado.</li>
     <li>Upload sem lista de tipos permitidos e sem antivírus (limite de 25 MB por arquivo).</li>
@@ -404,7 +411,7 @@
 
   <h2>Limitações funcionais</h2>
   <ul>
-    <li>Empresas atendidas, setores e entregas não podem ser excluídos, só desativados.</li>
+    <li>Apagar um funcionário não remove a sessão que ele já tenha aberta: ela continua válida até o token expirar (limitação 1 da seção 7).</li>
     <li>Fluxos não podem ser editados depois de criados (só ativados ou desativados); a tela monta apenas transições em sequência.</li>
     <li>Os campos extras do processo são um JSON livre aceito pela API; ainda não há tela para preenchê-los.</li>
     <li>Processos criados antes da versão com empresa, entrega e setor continuam existindo, mas mostram esses campos em branco.</li>
@@ -456,16 +463,17 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>20 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>27 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Ciclo completo do processo: criar, avançar por todas as etapas, concluir, histórico</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Isolamento entre empresas (processo, comentário, documentos, download, fluxo alheio)</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Permissões por papel e transição fora do fluxo</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Cadastros: quem altera empresas, setores, entregas e funcionários; entrega só aceita se o setor a faz</td><td class="ok">coberto por teste</td></tr>
+    <tr><td>Apagar empresas, setores, entregas e funcionários: permissões, proteção do que está em uso, histórico preservado, isolamento entre empresas</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Usuário comum vê tudo, mas não mexe em processo alheio (movimentar, comentar, anexar, remover, reatribuir, cancelar)</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Upload e download, com nome malicioso sanitizado</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Alerta de prazo: dispara uma vez só</td><td class="ok">coberto por teste</td></tr>
-    <tr><td>Migrações V1 a V3 e a aplicação contra MySQL 8 e S3 simulado reais (teste ponta a ponta via HTTP)</td><td class="ok">executado, incluindo acentuação, permissões e isolamento</td></tr>
-    <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, colunas da lista, situação de funcionários, dois temas</td><td class="ok">executado (42 verificações)</td></tr>
+    <tr><td>Migrações V1 a V3 e a aplicação contra MySQL 8 e S3 simulado reais (teste ponta a ponta via HTTP), incluindo as exclusões com chaves estrangeiras</td><td class="ok">executado, incluindo acentuação, permissões e isolamento</td></tr>
+    <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, colunas da lista, situação de funcionários, apagar cadastros com confirmação e recusa de item em uso, dois temas</td><td class="ok">executado (61 verificações)</td></tr>
     <tr><td>Build do frontend com verificação de tipos</td><td class="ok">passa</td></tr>
   </table>
   <p>Esse teste com MySQL real encontrou dois defeitos que o H2 não revelava (parâmetro de codificação da conexão e health check de e-mail derrubando a aplicação); ambos já foram corrigidos.</p>
@@ -496,6 +504,10 @@
     <tr><td><code>1e64e8b</code></td><td>Backend: gestor altera a situação do funcionário, não o setor</td></tr>
     <tr><td><code>f3281e9</code></td><td>Frontend: tela de usuários conforme a nova regra do gestor</td></tr>
     <tr><td><code>a704418</code></td><td>Frontend: colunas da lista de processos na ordem pedida</td></tr>
+    <tr><td><code>343c1f0</code></td><td>Relatório e README conforme a regra do gestor e as colunas</td></tr>
+    <tr><td><code>5864164</code></td><td>Backend: gestor também cadastra e altera empresas</td></tr>
+    <tr><td><code>1ddd42c</code></td><td>Backend: apagar empresas, setores, entregas e funcionários</td></tr>
+    <tr><td><code>b5010d9</code></td><td>Frontend: gestor cadastra empresas; botão apagar com confirmação</td></tr>
   </table>
 </section>
 

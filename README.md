@@ -57,15 +57,21 @@ backend/src/main/java/br/com/viriato/
 - Cada **setor** define quais entregas faz; cada **entrega** define o fluxo (etapas) do processo.
 - Novo processo = empresa + departamento + entrega + responsável. Ao escolher o departamento, só aparecem as entregas que ele faz.
 
+### Apagar cadastros
+Nada é apagado em cascata:
+- **Empresa, setor ou entrega** com algum processo ligado não é apagado (o sistema informa quantos e sugere desativar).
+- Apagar uma **entrega** tira ela da lista dos setores; apagar um **setor** deixa seus funcionários sem setor.
+- **Funcionário** responsável por algum processo só é apagado depois de passar os processos adiante; ninguém apaga a si mesmo. O histórico dos processos permanece (o autor aparece como "usuário removido").
+
 ### Papéis
 Todos enxergam tudo (processos, cadastros, fluxos e equipe); o que muda é quem altera.
 
 | | Administrador | Gestor | Usuário |
 |---|---|---|---|
-| Empresas atendidas | cadastra e altera | só consulta | só consulta |
-| Setores e entregas | cadastra e altera | cadastra e altera | só consulta |
+| Empresas atendidas | cadastra, altera e apaga | cadastra, altera e apaga | só consulta |
+| Setores e entregas | cadastra, altera e apaga | cadastra, altera e apaga | só consulta |
 | Fluxos | cria e desativa | cria e desativa | só consulta |
-| Funcionários | adiciona (qualquer papel), altera papel, setor e situação | adiciona (só papel Usuário) e ativa/desativa os de papel Usuário; não altera papel nem setor | só consulta |
+| Funcionários | adiciona (qualquer papel), altera papel, setor e situação, apaga (menos a si mesmo) | adiciona (só papel Usuário), ativa/desativa e apaga os de papel Usuário; não altera papel nem setor | só consulta |
 | Processos | mexe em qualquer um | mexe em qualquer um | abre processos; só mexe nos que é o responsável |
 
 ### Prazos
