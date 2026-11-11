@@ -52,8 +52,21 @@ backend/src/main/java/br/com/viriato/
 - Toda consulta filtra por `tenant_id`; recurso de outra empresa responde **404**.
 - Coberto por testes (`FluxoCompletoTest`).
 
+### Cadastros e processos
+- **Empresas atendidas** (para quem o processo é feito), **setores** e **entregas** são cadastros da empresa.
+- Cada **setor** define quais entregas faz; cada **entrega** define o fluxo (etapas) do processo.
+- Novo processo = empresa + departamento + entrega + responsável. Ao escolher o departamento, só aparecem as entregas que ele faz.
+
 ### Papéis
-`ADMIN` (usuários e fluxos), `GESTOR` (fluxos, atribuições, cancelamento), `USUARIO` (opera processos pelos quais é responsável).
+Todos enxergam tudo (processos, cadastros, fluxos e equipe); o que muda é quem altera.
+
+| | Administrador | Gestor | Usuário |
+|---|---|---|---|
+| Empresas atendidas | cadastra e altera | só consulta | só consulta |
+| Setores e entregas | cadastra e altera | cadastra e altera | só consulta |
+| Fluxos | cria e desativa | cria e desativa | só consulta |
+| Funcionários | adiciona (qualquer papel), altera papel, setor e situação | adiciona (só papel Usuário), ajusta setor | só consulta |
+| Processos | mexe em qualquer um | mexe em qualquer um | abre processos; só mexe nos que é o responsável |
 
 ### Prazos
 Cada etapa pode ter `prazo_dias`. Um job diário (`PRAZOS_CRON`, padrão 08:00 America/Sao_Paulo) avisa o responsável sobre prazos vencendo/vencidos, **uma vez por etapa**.
