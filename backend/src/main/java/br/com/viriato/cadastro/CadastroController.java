@@ -48,6 +48,11 @@ public class CadastroController {
         return service.atualizarCliente(Contexto.tenantId(), id, r.nome(), r.ativo());
     }
 
+    @DeleteMapping("/clientes/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public void apagarCliente(@PathVariable Long id) { service.apagarCliente(Contexto.tenantId(), id); }
+
     // ----- entregas -----
     @GetMapping("/entregas")
     public List<EntregaDto> entregas() { return service.listarEntregas(Contexto.tenantId()); }
@@ -65,6 +70,11 @@ public class CadastroController {
         return service.atualizarEntrega(Contexto.tenantId(), id, r.nome(), r.fluxoId(), r.ativo());
     }
 
+    @DeleteMapping("/entregas/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public void apagarEntrega(@PathVariable Long id) { service.apagarEntrega(Contexto.tenantId(), id); }
+
     // ----- setores -----
     @GetMapping("/setores")
     public List<SetorDto> setores() { return service.listarSetores(Contexto.tenantId()); }
@@ -81,4 +91,9 @@ public class CadastroController {
     public SetorDto atualizarSetor(@PathVariable Long id, @Valid @RequestBody AtualizaSetor r) {
         return service.atualizarSetor(Contexto.tenantId(), id, r.nome(), r.ativo(), r.entregaIds());
     }
+
+    @DeleteMapping("/setores/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public void apagarSetor(@PathVariable Long id) { service.apagarSetor(Contexto.tenantId(), id); }
 }

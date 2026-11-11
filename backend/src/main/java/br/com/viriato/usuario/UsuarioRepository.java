@@ -9,5 +9,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     boolean existsByEmailIgnoreCase(String email);
     Optional<Usuario> findByIdAndTenantId(Long id, Long tenantId);
     List<Usuario> findByTenantIdOrderByNome(Long tenantId);
+    List<Usuario> findByTenantIdAndSetorId(Long tenantId, Long setorId);
     List<Usuario> findByTenantIdAndPapelInAndAtivoTrue(Long tenantId, List<Papel> papeis);
 }

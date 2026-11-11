@@ -5,6 +5,8 @@ import br.com.viriato.cadastro.Setor;
 import br.com.viriato.cadastro.SetorRepository;
 import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.comum.NegocioException;
+import br.com.viriato.notificacao.NotificacaoRepository;
+import br.com.viriato.processo.ProcessoRepository;
 import br.com.viriato.seguranca.Contexto;
 import br.com.viriato.seguranca.UsuarioLogado;
 import jakarta.validation.Valid;
@@ -19,13 +21,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * Qualquer usuário da empresa vê a lista (nome, papel e setor), somente leitura.
  * ADMIN adiciona funcionários com qualquer papel e altera papel, situação e setor.
- * GESTOR adiciona funcionários (apenas com papel USUARIO) e ativa/desativa funcionários com papel
- * USUARIO; não altera papel nem setor de ninguém.
+ * GESTOR adiciona funcionários (apenas com papel USUARIO) e ativa/desativa/apaga funcionários com
+ * papel USUARIO; não altera papel nem setor de ninguém.
+ * Ninguém apaga a si mesmo, e quem é responsável por algum processo só pode ser apagado depois de
+ * passar esses processos adiante (o histórico dos processos permanece).
  */
 @RestController
 @RequestMapping("/api/usuarios")
@@ -34,13 +39,17 @@ public class UsuarioController {
     private final SetorRepository setores;
     private final CadastroService cadastros;
     private final PasswordEncoder encoder;
+    private final ProcessoRepository processos;
+    private final NotificacaoRepository notificacoes;
 
     public UsuarioController(UsuarioRepository repo, SetorRepository setores, CadastroService cadastros,
-                             PasswordEncoder encoder) {
+                             PasswordEncoder encoder, ProcessoRepository processos, NotificacaoRepository notificacoes) {
         this.repo = repo;
         this.setores = setores;
         this.cadastros = cadastros;
         this.encoder = encoder;
+        this.processos = processos;
+        this.notificacoes = notificacoes;
     }
 
     public record NovoUsuario(@NotBlank @Size(max = 150) String nome,
@@ -111,5 +120,25 @@ public class UsuarioController {
         String nomeSetor = salvo.getSetorId() == null ? null
                 : setores.findByIdAndTenantId(salvo.getSetorId(), quem.tenantId()).map(Setor::getNome).orElse(null);
         return UsuarioDto.de(salvo, nomeSetor);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @Transactional
+    public void apagar(@PathVariable Long id) {
+        UsuarioLogado quem = Contexto.atual();
+        Usuario u = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Usuário"));
+        if (quem.papel() == Papel.GESTOR && u.getPapel() != Papel.USUARIO) {
+            throw new AccessDeniedException("Gestor só pode apagar funcionários com papel Usuário");
+        }
+        if (u.getId().equals(quem.id())) throw new NegocioException("Você não pode apagar a si mesmo");
+        long responsavel = processos.countByTenantIdAndResponsavelId(quem.tenantId(), u.getId());
+        if (responsavel > 0) {
+            throw new NegocioException(u.getNome() + " é responsável por " + responsavel + " processo(s). "
+                    + "Passe-os para outra pessoa antes de apagar, ou apenas desative o funcionário.");
+        }
+        notificacoes.deleteByUsuarioIdAndTenantId(u.getId(), quem.tenantId());   // avisos dele não fazem mais sentido
+        repo.delete(u);
     }
 }

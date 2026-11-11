@@ -4,6 +4,9 @@ import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.comum.NegocioException;
 import br.com.viriato.fluxo.Fluxo;
 import br.com.viriato.fluxo.FluxoRepository;
+import br.com.viriato.processo.ProcessoRepository;
+import br.com.viriato.usuario.Usuario;
+import br.com.viriato.usuario.UsuarioRepository;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -20,13 +23,18 @@ public class CadastroService {
     private final SetorRepository setores;
     private final EntregaRepository entregas;
     private final FluxoRepository fluxos;
+    private final ProcessoRepository processos;
+    private final UsuarioRepository usuarios;
 
     public CadastroService(ClienteRepository clientes, SetorRepository setores,
-                           EntregaRepository entregas, FluxoRepository fluxos) {
+                           EntregaRepository entregas, FluxoRepository fluxos,
+                           ProcessoRepository processos, UsuarioRepository usuarios) {
         this.clientes = clientes;
         this.setores = setores;
         this.entregas = entregas;
         this.fluxos = fluxos;
+        this.processos = processos;
+        this.usuarios = usuarios;
     }
 
     // ---------- DTOs ----------
@@ -120,6 +128,48 @@ public class CadastroService {
         if (ativo != null) s.setAtivo(ativo);
         if (entregaIds != null) s.setEntregas(entregasDaEmpresa(tid, entregaIds));
         return dto(setores.save(s));
+    }
+
+    // ---------- apagar ----------
+    // Regra: nunca apaga processos em cascata. Item em uso por algum processo não é apagado;
+    // a mensagem orienta a desativar.
+
+    @Transactional
+    public void apagarCliente(Long tid, Long id) {
+        Cliente c = clientes.findByIdAndTenantId(id, tid).orElseThrow(() -> new NaoEncontradoException("Empresa"));
+        exigirSemProcessos(processos.countByTenantIdAndClienteId(tid, id), "a empresa \"" + c.getNome() + "\"");
+        clientes.delete(c);
+    }
+
+    @Transactional
+    public void apagarEntrega(Long tid, Long id) {
+        Entrega e = entregas.findByIdAndTenantId(id, tid).orElseThrow(() -> new NaoEncontradoException("Entrega"));
+        exigirSemProcessos(processos.countByTenantIdAndEntregaId(tid, id), "a entrega \"" + e.getNome() + "\"");
+        // tira a entrega da lista de cada setor que a fazia
+        for (Setor s : setores.findByTenantIdOrderByNome(tid)) {
+            if (s.getEntregas().remove(e)) setores.save(s);
+        }
+        entregas.delete(e);
+    }
+
+    /** Apagar o setor deixa seus funcionários sem setor (eles continuam existindo). */
+    @Transactional
+    public void apagarSetor(Long tid, Long id) {
+        Setor s = setores.findByIdAndTenantId(id, tid).orElseThrow(() -> new NaoEncontradoException("Setor"));
+        exigirSemProcessos(processos.countByTenantIdAndSetorId(tid, id), "o setor \"" + s.getNome() + "\"");
+        for (Usuario u : usuarios.findByTenantIdAndSetorId(tid, id)) {
+            u.setSetorId(null);
+            usuarios.save(u);
+        }
+        usuarios.flush();
+        setores.delete(s);
+    }
+
+    private void exigirSemProcessos(long quantos, String oQue) {
+        if (quantos > 0) {
+            throw new NegocioException("Não é possível apagar " + oQue + ": há " + quantos + " processo(s) ligado(s) a este cadastro. "
+                    + "Desative o cadastro em vez de apagar.");
+        }
     }
 
     // ---------- consultas usadas por outros módulos ----------
