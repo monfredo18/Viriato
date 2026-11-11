@@ -17,6 +17,7 @@ public class Usuario {
     @Column(name = "senha_hash") private String senhaHash;
     @Enumerated(EnumType.STRING) private Papel papel;
     private boolean ativo = true;
+    @Column(name = "setor_id") private Long setorId;
     @Column(name = "criado_em", insertable = false, updatable = false)
     private Instant criadoEm;
 }
