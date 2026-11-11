@@ -127,23 +127,46 @@ class CadastrosPermissoesTest {
     }
 
     @Test
-    void gestorAjustaSetorMasNaoPapelNemSituacao_usuarioSoVeComSetor() throws Exception {
+    void gestorAlteraSituacaoDeUsuarioMasNaoSetorNemPapel_usuarioSoVe() throws Exception {
         Cenario c = cenario();
-        JsonNode lista = consultar(c.usuario(), "/api/usuarios"); // o usuário comum enxerga a equipe
-        long idFunc = 0;
-        for (JsonNode u : lista) if (u.get("nome").asText().equals("Func")) idFunc = u.get("id").asLong();
+        long idFunc = 0, idAdmin = 0, idGestor = 0;
+        for (JsonNode u : consultar(c.usuario(), "/api/usuarios")) { // o usuário comum enxerga a equipe
+            switch (u.get("nome").asText()) {
+                case "Func" -> idFunc = u.get("id").asLong();
+                case "Adm" -> idAdmin = u.get("id").asLong();
+                case "Gestor" -> idGestor = u.get("id").asLong();
+                default -> { }
+            }
+        }
+        String emailFunc = null;
+        for (JsonNode u : consultar(c.admin(), "/api/usuarios")) if (u.get("id").asLong() == idFunc) emailFunc = u.get("email").asText();
 
-        alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"setorId\":" + c.setorGeralId() + "}").andExpect(status().isOk());
+        // gestor desativa e reativa um funcionário (papel Usuário)
+        alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"ativo\":false}").andExpect(status().isOk());
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)       // desativado não entra
+                .content("{\"email\":\"" + emailFunc + "\",\"senha\":\"senha12345\"}")).andExpect(status().isUnauthorized());
+        alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"ativo\":true}").andExpect(status().isOk());
+        login(emailFunc);
+
+        // mas não mexe no setor (nem para trocar, nem para remover) nem no papel
+        alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"setorId\":" + c.setorGeralId() + "}").andExpect(status().isForbidden());
+        alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"removerSetor\":true}").andExpect(status().isForbidden());
         alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"papel\":\"GESTOR\"}").andExpect(status().isForbidden());
-        alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"ativo\":false}").andExpect(status().isForbidden());
+
+        // e não desativa quem não é Usuário (administrador ou outro gestor)
+        alterar(c.gestor(), "/api/usuarios/" + idAdmin, "{\"ativo\":false}").andExpect(status().isForbidden());
+        alterar(c.gestor(), "/api/usuarios/" + idGestor, "{\"ativo\":false}").andExpect(status().isForbidden());
+
+        // usuário comum não altera nada
+        alterar(c.usuario(), "/api/usuarios/" + idFunc, "{\"ativo\":false}").andExpect(status().isForbidden());
         alterar(c.usuario(), "/api/usuarios/" + idFunc, "{\"setorId\":" + c.setorGeralId() + "}").andExpect(status().isForbidden());
 
+        // o administrador define o setor e o papel
+        alterar(c.admin(), "/api/usuarios/" + idFunc, "{\"setorId\":" + c.setorGeralId() + "}").andExpect(status().isOk());
         JsonNode func = null;
         for (JsonNode u : consultar(c.usuario(), "/api/usuarios")) if (u.get("id").asLong() == idFunc) func = u;
         assertThat(func.get("setorNome").asText()).isEqualTo("Geral");
         assertThat(func.get("papel").asText()).isEqualTo("USUARIO");
-
-        // o admin pode mudar o papel
         alterar(c.admin(), "/api/usuarios/" + idFunc, "{\"papel\":\"GESTOR\"}").andExpect(status().isOk());
     }
 

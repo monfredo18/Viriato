@@ -24,7 +24,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Qualquer usuário da empresa vê a lista (nome, papel e setor), somente leitura.
  * ADMIN adiciona funcionários com qualquer papel e altera papel, situação e setor.
- * GESTOR adiciona funcionários, mas apenas com papel USUARIO, e pode ajustar o setor.
+ * GESTOR adiciona funcionários (apenas com papel USUARIO) e ativa/desativa funcionários com papel
+ * USUARIO; não altera papel nem setor de ninguém.
  */
 @RestController
 @RequestMapping("/api/usuarios")
@@ -86,11 +87,15 @@ public class UsuarioController {
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public UsuarioDto atualizar(@PathVariable Long id, @RequestBody AtualizaUsuario req) {
         UsuarioLogado quem = Contexto.atual();
-        boolean mexeEmPapelOuSituacao = req.papel() != null || req.ativo() != null;
-        if (quem.papel() == Papel.GESTOR && mexeEmPapelOuSituacao) {
-            throw new AccessDeniedException("Gestor só pode ajustar o setor do funcionário");
+        boolean mexeEmPapelOuSetor = req.papel() != null || req.setorId() != null || Boolean.TRUE.equals(req.removerSetor());
+        if (quem.papel() == Papel.GESTOR && mexeEmPapelOuSetor) {
+            throw new AccessDeniedException("Gestor só pode alterar a situação do funcionário");
         }
         Usuario u = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Usuário"));
+        if (quem.papel() == Papel.GESTOR && req.ativo() != null && u.getPapel() != Papel.USUARIO) {
+            // evita que um gestor tire do ar o administrador ou outro gestor
+            throw new AccessDeniedException("Gestor só pode alterar a situação de funcionários com papel Usuário");
+        }
         boolean ehEle = u.getId().equals(quem.id());
         if (ehEle && (Boolean.FALSE.equals(req.ativo()) || (req.papel() != null && req.papel() != Papel.ADMIN))) {
             throw new NegocioException("Você não pode desativar ou rebaixar a si mesmo");
