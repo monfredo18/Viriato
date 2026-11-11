@@ -11,7 +11,7 @@ const fmtTam = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1
 
 export default function ProcessoDetalhe() {
   const { id } = useParams()
-  const { podeGerenciar } = useAuth()
+  const { podeGerenciar, usuario } = useAuth()
   const [d, setD] = useState<Detalhe | null>(null)
   const [docs, setDocs] = useState<Documento[]>([])
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
@@ -50,6 +50,8 @@ export default function ProcessoDetalhe() {
   if (!d) return erro ? <p className="erro">{erro}</p> : <p>Carregando…</p>
   const p = d.processo
   const aberto = p.status === 'ABERTO'
+  // Administrador e gestor mexem em qualquer processo; o usuário comum só nos seus.
+  const podeMexer = podeGerenciar || p.responsavelId === usuario?.id
 
   return (
     <>
@@ -59,17 +61,21 @@ export default function ProcessoDetalhe() {
         <Selo p={p} />
       </div>
       {erro && <p className="erro">{erro}</p>}
+      {!podeMexer && aberto && <p className="sub">Somente consulta: só o responsável (ou um gestor) altera este processo.</p>}
 
       <div className="grade">
         <section className="cartao">
           <h3>Dados</h3>
           <dl>
+            <dt>Empresa</dt><dd>{p.clienteNome ?? '—'}</dd>
+            <dt>Entrega</dt><dd>{p.entregaNome ?? '—'}</dd>
+            <dt>Setor</dt><dd>{p.setorNome ?? '—'}</dd>
             <dt>Fluxo</dt><dd>{p.fluxoNome}</dd>
             <dt>Etapa atual</dt><dd>{p.etapaAtual}</dd>
             <dt>Prazo da etapa</dt><dd>{p.prazoEtapa ? new Date(p.prazoEtapa + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</dd>
             <dt>Responsável</dt>
             <dd>
-              {aberto ? (
+              {aberto && podeMexer ? (
                 <select value={p.responsavelId ?? ''} onChange={(e) => acao(() => api.put(`/processos/${p.id}/responsavel`, { responsavelId: e.target.value ? Number(e.target.value) : null }))}>
                   <option value="">— ninguém —</option>
                   {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
@@ -82,7 +88,7 @@ export default function ProcessoDetalhe() {
             <dl>{Object.entries(p.camposExtras).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{String(v)}</dd></Fragment>)}</dl>
           )}
 
-          {aberto && (
+          {aberto && podeMexer && (
             <div className="acoes-processo">
               {d.proximasEtapas.map((e) => (
                 <button key={e.id} className="primario" onClick={() => acao(() => api.post(`/processos/${p.id}/avancar`, { etapaId: e.id, comentario: comentario || null }).then(() => setComentario('')))}>
@@ -109,13 +115,13 @@ export default function ProcessoDetalhe() {
             acao(() => api.upload(`/processos/${p.id}/documentos`, form))
             e.target.value = ''
           }} />
-          <button onClick={() => input.current?.click()}>⬆ Enviar arquivo</button>
+          {podeMexer && <button onClick={() => input.current?.click()}>⬆ Enviar arquivo</button>}
           <ul className="docs">
             {docs.map((x) => (
               <li key={x.id}>
                 <button className="link" onClick={() => api.download(`/documentos/${x.id}/download`, x.nome).catch((e) => setErro(e.message))}>{x.nome}</button>
                 <small> {fmtTam(x.tamanho)}</small>
-                <button className="link perigo-txt" onClick={() => confirm('Remover documento?') && acao(() => api.del(`/documentos/${x.id}`))}>remover</button>
+                {podeMexer && <button className="link perigo-txt" onClick={() => confirm('Remover documento?') && acao(() => api.del(`/documentos/${x.id}`))}>remover</button>}
               </li>
             ))}
             {docs.length === 0 && <li className="vazio">Nenhum documento.</li>}
@@ -125,10 +131,10 @@ export default function ProcessoDetalhe() {
 
       <section className="cartao">
         <h3>Histórico</h3>
-        <form className="linha" onSubmit={(e) => { e.preventDefault(); if (comentario.trim()) acao(() => api.post(`/processos/${p.id}/comentarios`, { texto: comentario }).then(() => setComentario(''))) }}>
+        {podeMexer && <form className="linha" onSubmit={(e) => { e.preventDefault(); if (comentario.trim()) acao(() => api.post(`/processos/${p.id}/comentarios`, { texto: comentario }).then(() => setComentario(''))) }}>
           <input placeholder="Escreva um comentário (também vai junto ao avançar a etapa)…" value={comentario} onChange={(e) => setComentario(e.target.value)} maxLength={2000} />
           <button>Comentar</button>
-        </form>
+        </form>}
         <ul className="historico">
           {d.historico.map((h) => (
             <li key={h.id}>

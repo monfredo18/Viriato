@@ -53,7 +53,7 @@ class FluxoCompletoTest {
     @Autowired PrazoScheduler scheduler;
     @Autowired ProcessoRepository processos;
 
-    record Empresa(String token, long usuarioId, long fluxoId) {}
+    record Empresa(String token, long usuarioId, long fluxoId, long clienteId, long setorId, long entregaId) {}
 
     private JsonNode corpo(ResultActions r) throws Exception {
         return json.readTree(r.andReturn().getResponse().getContentAsString());
@@ -68,15 +68,21 @@ class FluxoCompletoTest {
         String token = res.get("token").asText();
         var fluxos = corpo(mvc.perform(get("/api/fluxos").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk()));
-        return new Empresa(token, res.get("usuario").get("id").asLong(), fluxos.get(0).get("id").asLong());
+        long clienteId = corpo(mvc.perform(post("/api/clientes").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Cliente Teste\"}"))
+                .andExpect(status().isCreated())).get("id").asLong();
+        var setor = corpo(mvc.perform(get("/api/setores").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())).get(0);
+        return new Empresa(token, res.get("usuario").get("id").asLong(), fluxos.get(0).get("id").asLong(), clienteId,
+                setor.get("id").asLong(), setor.get("entregas").get(0).get("id").asLong());
     }
 
     private JsonNode criarProcesso(Empresa e, String titulo) throws Exception {
         return corpo(mvc.perform(post("/api/processos").header("Authorization", "Bearer " + e.token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                            {"titulo":"%s","fluxoId":%d,"responsavelId":%d,"camposExtras":{"cliente":"ACME"}}"""
-                                .formatted(titulo, e.fluxoId(), e.usuarioId())))
+                            {"clienteId":%d,"entregaId":%d,"setorId":%d,"responsavelId":%d,"descricao":"%s","camposExtras":{"cliente":"ACME"}}"""
+                                .formatted(e.clienteId(), e.entregaId(), e.setorId(), e.usuarioId(), titulo)))
                 .andExpect(status().isCreated()));
     }
 
@@ -138,10 +144,11 @@ class FluxoCompletoTest {
         var lista = corpo(mvc.perform(get("/api/processos").header("Authorization", "Bearer " + b.token()))
                 .andExpect(status().isOk()));
         assertThat(lista.get("content")).isEmpty();
-        // B tampouco consegue abrir processo usando o fluxo de A
+        // B tampouco consegue abrir processo usando empresa, entrega e setor de A
         mvc.perform(post("/api/processos").header("Authorization", "Bearer " + b.token())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"titulo\":\"x\",\"fluxoId\":" + a.fluxoId() + "}")).andExpect(status().isNotFound());
+                .content("{\"clienteId\":" + a.clienteId() + ",\"entregaId\":" + a.entregaId() + ",\"setorId\":" + a.setorId()
+                        + ",\"responsavelId\":" + b.usuarioId() + "}")).andExpect(status().isUnprocessableEntity());
     }
 
     @Test

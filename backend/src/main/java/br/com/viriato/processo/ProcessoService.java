@@ -1,5 +1,12 @@
 package br.com.viriato.processo;
 
+import br.com.viriato.cadastro.CadastroService;
+import br.com.viriato.cadastro.Cliente;
+import br.com.viriato.cadastro.ClienteRepository;
+import br.com.viriato.cadastro.Entrega;
+import br.com.viriato.cadastro.EntregaRepository;
+import br.com.viriato.cadastro.Setor;
+import br.com.viriato.cadastro.SetorRepository;
 import br.com.viriato.comum.Datas;
 import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.comum.NegocioException;
@@ -37,11 +44,17 @@ public class ProcessoService {
     private final TransicaoRepository transicoes;
     private final UsuarioRepository usuarios;
     private final NotificacaoService notificacoes;
+    private final CadastroService cadastros;
+    private final ClienteRepository clientes;
+    private final EntregaRepository entregasRepo;
+    private final SetorRepository setoresRepo;
     private final ObjectMapper json;
 
     public ProcessoService(ProcessoRepository processos, ProcessoHistoricoRepository historicos,
                            FluxoRepository fluxos, EtapaRepository etapas, TransicaoRepository transicoes,
-                           UsuarioRepository usuarios, NotificacaoService notificacoes, ObjectMapper json) {
+                           UsuarioRepository usuarios, NotificacaoService notificacoes, CadastroService cadastros,
+                           ClienteRepository clientes, EntregaRepository entregasRepo, SetorRepository setoresRepo,
+                           ObjectMapper json) {
         this.processos = processos;
         this.historicos = historicos;
         this.fluxos = fluxos;
@@ -49,28 +62,49 @@ public class ProcessoService {
         this.transicoes = transicoes;
         this.usuarios = usuarios;
         this.notificacoes = notificacoes;
+        this.cadastros = cadastros;
+        this.clientes = clientes;
+        this.entregasRepo = entregasRepo;
+        this.setoresRepo = setoresRepo;
         this.json = json;
     }
 
-    public record Filtro(StatusProcesso status, Long etapaId, Long responsavelId, String busca, boolean atrasados) {}
+    public record Filtro(StatusProcesso status, Long etapaId, Long responsavelId, Long clienteId, Long setorId,
+                         Long entregaId, String busca, boolean atrasados) {}
+
+    /** Dados do formulário de novo processo: empresa, entrega, setor e responsável. */
+    public record NovoProcesso(Long clienteId, Long entregaId, Long setorId, Long responsavelId,
+                               String descricao, Map<String, Object> camposExtras) {}
 
     // ---------- criação ----------
 
     @Transactional
-    public ProcessoDto criar(UsuarioLogado quem, String titulo, String descricao, Long fluxoId,
-                             Long responsavelId, Map<String, Object> extras) {
+    public ProcessoDto criar(UsuarioLogado quem, NovoProcesso n) {
         Long tid = quem.tenantId();
-        Fluxo fluxo = fluxos.findByIdAndTenantId(fluxoId, tid).orElseThrow(() -> new NaoEncontradoException("Fluxo"));
-        if (!fluxo.isAtivo()) throw new NegocioException("Fluxo inativo");
-        Etapa inicial = etapas.findFirstByFluxoIdAndTenantIdAndInicialTrue(fluxoId, tid)
+        Cliente cliente = cadastros.clienteAtivo(tid, n.clienteId());
+        Setor setor = cadastros.setorAtivo(tid, n.setorId());
+        Entrega entrega = cadastros.entregaDoSetor(tid, setor, n.entregaId());
+        Fluxo fluxo = fluxos.findByIdAndTenantId(entrega.getFluxoId(), tid)
+                .orElseThrow(() -> new NegocioException("A entrega não tem um fluxo válido"));
+        if (!fluxo.isAtivo()) throw new NegocioException("O fluxo desta entrega está inativo");
+        Etapa inicial = etapas.findFirstByFluxoIdAndTenantIdAndInicialTrue(fluxo.getId(), tid)
                 .orElseThrow(() -> new NegocioException("Fluxo sem etapa inicial"));
-        if (responsavelId != null) exigirUsuarioAtivo(responsavelId, tid);
+        exigirUsuarioAtivo(n.responsavelId(), tid);
+        Long fluxoId = fluxo.getId();
+        Long responsavelId = n.responsavelId();
+        String titulo = entrega.getNome() + " — " + cliente.getNome();
+        if (titulo.length() > 200) titulo = titulo.substring(0, 200);
+        String descricao = n.descricao();
+        Map<String, Object> extras = n.camposExtras();
 
         Processo p = new Processo();
         p.setTenantId(tid);
         p.setNumero("TMP-" + UUID.randomUUID().toString().substring(0, 8));
-        p.setTitulo(titulo.trim());
+        p.setTitulo(titulo);
         p.setDescricao(descricao);
+        p.setClienteId(cliente.getId());
+        p.setEntregaId(entrega.getId());
+        p.setSetorId(setor.getId());
         p.setFluxoId(fluxoId);
         p.setEtapaAtualId(inicial.getId());
         p.setResponsavelId(responsavelId);
@@ -99,6 +133,9 @@ public class ProcessoService {
             if (f.status() != null) ps.add(cb.equal(root.get("status"), f.status()));
             if (f.etapaId() != null) ps.add(cb.equal(root.get("etapaAtualId"), f.etapaId()));
             if (f.responsavelId() != null) ps.add(cb.equal(root.get("responsavelId"), f.responsavelId()));
+            if (f.clienteId() != null) ps.add(cb.equal(root.get("clienteId"), f.clienteId()));
+            if (f.setorId() != null) ps.add(cb.equal(root.get("setorId"), f.setorId()));
+            if (f.entregaId() != null) ps.add(cb.equal(root.get("entregaId"), f.entregaId()));
             if (f.atrasados()) {
                 ps.add(cb.equal(root.get("status"), StatusProcesso.ABERTO));
                 ps.add(cb.lessThan(root.get("prazoEtapa"), Datas.hoje()));
@@ -133,7 +170,7 @@ public class ProcessoService {
     public ProcessoDto avancar(UsuarioLogado quem, Long id, Long etapaDestinoId, String comentario) {
         Processo p = buscar(id, quem.tenantId());
         exigirAberto(p);
-        exigirPodeOperar(quem, p);
+        exigirPodeMexer(quem, p);
         Etapa destino = etapas.findByIdAndTenantId(etapaDestinoId, quem.tenantId())
                 .orElseThrow(() -> new NaoEncontradoException("Etapa"));
         if (!transicoes.existsByDeEtapaAndParaEtapaAndTenantId(p.getEtapaAtualId(), destino.getId(), quem.tenantId())) {
@@ -163,6 +200,7 @@ public class ProcessoService {
     @Transactional
     public void comentar(UsuarioLogado quem, Long id, String texto) {
         Processo p = buscar(id, quem.tenantId());
+        exigirPodeMexer(quem, p);
         registrar(p, quem.id(), "COMENTARIO", null, null, texto);
         if (p.getResponsavelId() != null && !p.getResponsavelId().equals(quem.id())) {
             notificacoes.notificar(quem.tenantId(), p.getResponsavelId(), "Novo comentário em " + p.getNumero(),
@@ -213,10 +251,14 @@ public class ProcessoService {
         if (p.getStatus() != StatusProcesso.ABERTO) throw new NegocioException("Processo não está aberto");
     }
 
-    private void exigirPodeOperar(UsuarioLogado quem, Processo p) {
+    /**
+     * Administrador e gestor mexem em qualquer processo da empresa. O usuário comum enxerga todos,
+     * mas só mexe naqueles em que é o responsável.
+     */
+    public void exigirPodeMexer(UsuarioLogado quem, Processo p) {
         if (quem.papel() != Papel.USUARIO) return;
-        if (p.getResponsavelId() != null && !p.getResponsavelId().equals(quem.id())) {
-            throw new NegocioException("Apenas o responsável ou um gestor pode movimentar este processo");
+        if (!quem.id().equals(p.getResponsavelId())) {
+            throw new NegocioException("Você só pode mexer nos processos em que é o responsável");
         }
     }
 
@@ -270,17 +312,26 @@ public class ProcessoService {
         }
     }
 
-    private record Lookups(Map<Long, String> fluxos, Map<Long, Etapa> etapas, Map<Long, String> usuarios) {}
+    private record Lookups(Map<Long, String> fluxos, Map<Long, Etapa> etapas, Map<Long, String> usuarios,
+                           Map<Long, String> clientes, Map<Long, String> entregas, Map<Long, String> setores) {}
 
     private Lookups lookups(List<Processo> ps, Long tenantId) {
         Set<Long> fluxoIds = ps.stream().map(Processo::getFluxoId).collect(Collectors.toSet());
         Set<Long> etapaIds = ps.stream().map(Processo::getEtapaAtualId).collect(Collectors.toSet());
         Set<Long> userIds = ps.stream().map(Processo::getResponsavelId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> clienteIds = ps.stream().map(Processo::getClienteId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> entregaIds = ps.stream().map(Processo::getEntregaId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> setorIds = ps.stream().map(Processo::getSetorId).filter(Objects::nonNull).collect(Collectors.toSet());
         return new Lookups(
                 fluxos.findAllById(fluxoIds).stream().collect(Collectors.toMap(Fluxo::getId, Fluxo::getNome)),
                 etapas.findAllById(etapaIds).stream().collect(Collectors.toMap(Etapa::getId, Function.identity())),
-                usuarios.findAllById(userIds).stream().collect(Collectors.toMap(Usuario::getId, Usuario::getNome)));
+                usuarios.findAllById(userIds).stream().collect(Collectors.toMap(Usuario::getId, Usuario::getNome)),
+                clientes.findAllById(clienteIds).stream().collect(Collectors.toMap(Cliente::getId, Cliente::getNome)),
+                entregasRepo.findAllById(entregaIds).stream().collect(Collectors.toMap(Entrega::getId, Entrega::getNome)),
+                setoresRepo.findAllById(setorIds).stream().collect(Collectors.toMap(Setor::getId, Setor::getNome)));
     }
+
+    private static String nome(Map<Long, String> m, Long id) { return id == null ? null : m.get(id); }
 
     private ProcessoDto paraDto(Processo p) {
         return paraDto(p, lookups(List.of(p), p.getTenantId()));
@@ -291,6 +342,9 @@ public class ProcessoService {
         boolean atrasado = p.getStatus() == StatusProcesso.ABERTO && p.getPrazoEtapa() != null
                 && p.getPrazoEtapa().isBefore(Datas.hoje());
         return new ProcessoDto(p.getId(), p.getNumero(), p.getTitulo(), p.getDescricao(),
+                p.getClienteId(), nome(lk.clientes(), p.getClienteId()),
+                p.getEntregaId(), nome(lk.entregas(), p.getEntregaId()),
+                p.getSetorId(), nome(lk.setores(), p.getSetorId()),
                 p.getFluxoId(), lk.fluxos().get(p.getFluxoId()),
                 p.getEtapaAtualId(), e == null ? null : e.getNome(), e != null && e.isFinalEtapa(),
                 p.getResponsavelId(), p.getResponsavelId() == null ? null : lk.usuarios().get(p.getResponsavelId()),

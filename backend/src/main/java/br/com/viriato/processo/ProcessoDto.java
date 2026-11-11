@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 public record ProcessoDto(Long id, String numero, String titulo, String descricao,
+                          Long clienteId, String clienteNome, Long entregaId, String entregaNome,
+                          Long setorId, String setorNome,
                           Long fluxoId, String fluxoNome,
                           Long etapaAtualId, String etapaAtual, boolean etapaFinal,
                           Long responsavelId, String responsavelNome,

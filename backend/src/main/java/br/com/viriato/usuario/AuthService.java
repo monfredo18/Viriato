@@ -1,5 +1,6 @@
 package br.com.viriato.usuario;
 
+import br.com.viriato.cadastro.CadastroService;
 import br.com.viriato.comum.NegocioException;
 import br.com.viriato.fluxo.FluxoService;
 import br.com.viriato.seguranca.JwtService;
@@ -17,14 +18,16 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final JwtService jwt;
     private final FluxoService fluxos;
+    private final CadastroService cadastros;
 
     public AuthService(UsuarioRepository usuarios, TenantRepository tenants, PasswordEncoder encoder,
-                       JwtService jwt, FluxoService fluxos) {
+                       JwtService jwt, FluxoService fluxos, CadastroService cadastros) {
         this.usuarios = usuarios;
         this.tenants = tenants;
         this.encoder = encoder;
         this.jwt = jwt;
         this.fluxos = fluxos;
+        this.cadastros = cadastros;
     }
 
     public record Sessao(String token, UsuarioDto usuario, String empresa) {}
@@ -56,7 +59,8 @@ public class AuthService {
         u.setPapel(Papel.ADMIN);
         u = usuarios.save(u);
 
-        fluxos.criarFluxoPadrao(t.getId());
+        var fluxoPadrao = fluxos.criarFluxoPadrao(t.getId());
+        cadastros.criarPadroes(t.getId(), fluxoPadrao.id());
         return new Sessao(jwt.gerar(u), UsuarioDto.de(u), t.getNome());
     }
 }

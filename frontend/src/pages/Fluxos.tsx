@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, type Fluxo } from '../api'
+import { useAuth } from '../auth'
 
 interface EtapaForm { nome: string; prazoDias: string; inicial: boolean; finalEtapa: boolean }
 
@@ -9,6 +10,7 @@ const modelo = (): EtapaForm[] => [
 ]
 
 export default function Fluxos() {
+  const { podeGerenciar } = useAuth()
   const [fluxos, setFluxos] = useState<Fluxo[]>([])
   const [nome, setNome] = useState('')
   const [etapas, setEtapas] = useState<EtapaForm[]>(modelo())
@@ -39,7 +41,11 @@ export default function Fluxos() {
   return (
     <>
       <h2>Fluxos</h2>
-      <p className="sub">As etapas são conectadas em sequência (cada uma leva à próxima).</p>
+      <p className="sub">
+        {podeGerenciar
+          ? 'As etapas são conectadas em sequência (cada uma leva à próxima).'
+          : 'Somente consulta. Quem pode alterar: administrador e gestor.'}
+      </p>
       <div className="grade">
         <section className="cartao">
           <h3>Fluxos existentes</h3>
@@ -47,14 +53,16 @@ export default function Fluxos() {
             <div key={f.id} className="fluxo-item">
               <b>{f.nome}</b> {!f.ativo && <span className="selo cancelado">inativo</span>}
               <div className="trilha">{f.etapas.map((e) => e.nome).join(' → ')}</div>
-              <button className="link" onClick={() => api.patch(`/fluxos/${f.id}`, { ativo: !f.ativo }).then(carregar)}>
-                {f.ativo ? 'Desativar' : 'Reativar'}
-              </button>
+              {podeGerenciar && (
+                <button className="link" onClick={() => api.patch(`/fluxos/${f.id}`, { ativo: !f.ativo }).then(carregar)}>
+                  {f.ativo ? 'Desativar' : 'Reativar'}
+                </button>
+              )}
             </div>
           ))}
         </section>
 
-        <form className="cartao" onSubmit={criar}>
+        {podeGerenciar && <form className="cartao" onSubmit={criar}>
           <h3>Novo fluxo</h3>
           <label>Nome<input required value={nome} onChange={(e) => setNome(e.target.value)} /></label>
           {etapas.map((et, i) => (
@@ -69,7 +77,7 @@ export default function Fluxos() {
           <button type="button" onClick={() => setEtapas([...etapas.slice(0, -1), { nome: '', prazoDias: '', inicial: false, finalEtapa: false }, etapas[etapas.length - 1]])}>+ Etapa</button>
           {erro && <p className="erro">{erro}</p>}
           <button className="primario">Criar fluxo</button>
-        </form>
+        </form>}
       </div>
     </>
   )

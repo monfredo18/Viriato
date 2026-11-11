@@ -1,0 +1,17 @@
+package br.com.viriato.cadastro;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
+/** Empresa atendida: para quem o processo é feito. */
+@Entity
+@Table(name = "cliente")
+@Getter @Setter
+public class Cliente {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @Column(name = "tenant_id") private Long tenantId;
+    private String nome;
+    private boolean ativo = true;
+}
