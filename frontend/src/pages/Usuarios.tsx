@@ -47,7 +47,7 @@ export default function Usuarios() {
       <h2>Usuários</h2>
       {!podeGerenciar && <p className="sub">Somente consulta. Quem pode alterar: administrador e gestor.</p>}
       {podeGerenciar && !ehAdmin && (
-        <p className="sub">Você pode adicionar funcionários e ativar ou desativar os de papel Usuário. Papel e setor só o administrador altera.</p>
+        <p className="sub">Você pode adicionar funcionários e ativar, desativar ou apagar os de papel Usuário. Papel e setor só o administrador altera.</p>
       )}
       {erro && <p className="erro">{erro}</p>}
       <div className="grade">
