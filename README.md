@@ -58,10 +58,11 @@ backend/src/main/java/br/com/viriato/
 - Novo processo = empresa + departamento + entrega + responsável. Ao escolher o departamento, só aparecem as entregas que ele faz.
 
 ### Apagar cadastros
-Nada é apagado em cascata:
-- **Empresa, setor ou entrega** com algum processo ligado não é apagado (o sistema informa quantos e sugere desativar).
+O botão **X** apaga empresas, setores, entregas, fluxos e funcionários (sempre com confirmação). Os processos nunca são apagados:
+- **Só processo em andamento impede apagar.** Processo concluído ou cancelado não bloqueia; ele continua existindo, apenas sem o vínculo com o que foi apagado (aparece "—"; o título e o histórico permanecem).
 - Apagar uma **entrega** tira ela da lista dos setores; apagar um **setor** deixa seus funcionários sem setor.
-- **Funcionário** responsável por algum processo só é apagado depois de passar os processos adiante; ninguém apaga a si mesmo. O histórico dos processos permanece (o autor aparece como "usuário removido").
+- **Fluxo:** não apaga se alguma entrega usa o fluxo nem se há processo em andamento nele. As etapas e transições são apagadas junto.
+- **Funcionário:** responsável por processo em andamento só é apagado depois de passar o processo adiante; ninguém apaga a si mesmo. O histórico permanece (o autor aparece como "usuário removido").
 
 ### Papéis
 Todos enxergam tudo (processos, cadastros, fluxos e equipe); o que muda é quem altera.
@@ -70,7 +71,7 @@ Todos enxergam tudo (processos, cadastros, fluxos e equipe); o que muda é quem 
 |---|---|---|---|
 | Empresas atendidas | cadastra, altera e apaga | cadastra, altera e apaga | só consulta |
 | Setores e entregas | cadastra, altera e apaga | cadastra, altera e apaga | só consulta |
-| Fluxos | cria e desativa | cria e desativa | só consulta |
+| Fluxos | cria, desativa e apaga | cria, desativa e apaga | só consulta |
 | Funcionários | adiciona (qualquer papel), altera papel, setor e situação, apaga (menos a si mesmo) | adiciona (só papel Usuário), ativa/desativa e apaga os de papel Usuário; não altera papel nem setor | só consulta |
 | Processos | mexe em qualquer um | mexe em qualquer um | abre processos; só mexe nos que é o responsável |
 

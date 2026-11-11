@@ -54,7 +54,7 @@
   <h1>Relatório do Sistema</h1>
   <p class="sub">Controle de processos multi-empresa: como o sistema funciona, como foi construído e quais são seus limites atuais.</p>
   <table class="meta">
-    <tr><td>Versão do código</td><td>commit <code>b5010d9</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
+    <tr><td>Versão do código</td><td>commit <code>6930597</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
     <tr><td>Data</td><td>11 de novembro de 2026</td></tr>
     <tr><td>Estágio</td><td>MVP funcional, ainda não preparado para produção</td></tr>
     <tr><td>Repositório</td><td>github.com/monfredo18/Viriato</td></tr>
@@ -176,7 +176,7 @@
     <li>uma etapa final não pode ter saída;</li>
     <li>pela tela, as etapas são ligadas em sequência (cada uma leva à seguinte). A API já aceita transições arbitrárias.</li>
   </ul>
-  <p>Um fluxo pode ser desativado: deixa de aceitar novos processos, mas os que já existem continuam normalmente.</p>
+  <p>Um fluxo pode ser desativado (deixa de aceitar novos processos, mas os que já existem continuam normalmente) ou apagado, conforme as regras da seção 4.</p>
 
   <figure>
     <svg viewBox="0 0 700 182" width="100%" role="img" aria-label="Fluxo padrão e estados do processo">
@@ -263,13 +263,14 @@
     <tr><td>Cancelar processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar empresas atendidas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar setores e entregas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
-    <tr><td>Apagar empresas, setores e entregas</td><td class="c ok">sim, se não houver processo ligado</td><td class="c ok">sim, se não houver processo ligado</td><td class="c no">não</td></tr>
+    <tr><td>Apagar empresas, setores e entregas</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c no">não</td></tr>
+    <tr><td>Apagar fluxos</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c no">não</td></tr>
     <tr><td>Criar e ativar/desativar fluxos</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Adicionar funcionários</td><td class="c ok">com qualquer papel</td><td class="c">só com papel Usuário</td><td class="c no">não</td></tr>
     <tr><td>Alterar o setor de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Alterar o papel de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Ativar ou desativar funcionário</td><td class="c ok">qualquer um</td><td class="c">só os de papel Usuário</td><td class="c no">não</td></tr>
-    <tr><td>Apagar funcionário</td><td class="c ok">qualquer um, menos a si mesmo</td><td class="c">só os de papel Usuário</td><td class="c no">não</td></tr>
+    <tr><td>Apagar funcionário</td><td class="c ok">qualquer um, menos a si mesmo; se não for responsável por processo em andamento</td><td class="c">só os de papel Usuário</td><td class="c no">não</td></tr>
   </table>
   <p>Detalhes de comportamento:</p>
   <ul>
@@ -277,9 +278,11 @@
     <li>Recusas por papel (por exemplo usuário comum cadastrar empresa) devolvem HTTP 403. Recusas por regra de negócio (usuário comum mexer em processo alheio) devolvem HTTP 422 com uma mensagem em português.</li>
     <li>O administrador não consegue desativar nem rebaixar a si mesmo, para evitar ficar sem acesso.</li>
     <li>Recursos de outra empresa respondem 404, como se não existissem.</li>
-    <li><strong>Apagar nunca leva processos junto.</strong> Empresa, setor ou entrega que algum processo usa não é apagada: o sistema recusa, informa quantos processos estão ligados e orienta a desativar. Apagar uma entrega a remove da lista dos setores; apagar um setor deixa os funcionários dele sem setor.</li>
-    <li>Um funcionário responsável por processos só é apagado depois que esses processos forem passados a outra pessoa. Os avisos dele são removidos; o histórico dos processos permanece, com o autor indicado como <em>usuário removido</em>. Quem foi apagado deixa de conseguir entrar.</li>
-    <li>Na tela, apagar sempre pede confirmação, e a ação não pode ser desfeita.</li>
+    <li><strong>Apagar nunca leva processos junto.</strong> Só processo <em>em andamento</em> impede apagar uma empresa, um setor, uma entrega, um fluxo ou um funcionário: o sistema recusa, informa quantos processos estão ligados e orienta a concluí-los ou cancelá-los (ou a desativar o cadastro). Processos <em>concluídos ou cancelados</em> não bloqueiam; eles continuam existindo, apenas sem o vínculo com o item apagado (a lista mostra "—"; o título gerado e o histórico mantêm a informação).</li>
+    <li>Apagar uma entrega a remove da lista dos setores; apagar um setor deixa os funcionários dele sem setor.</li>
+    <li>Um fluxo não é apagado se alguma entrega ainda o usa (a mensagem cita as entregas) nem se há processo em andamento nele. Ao apagar, suas etapas e transições saem junto; os processos encerrados ficam sem fluxo e sem etapa atual, e o histórico, que guarda os nomes das etapas, continua legível.</li>
+    <li>Um funcionário responsável por processo em andamento só é apagado depois que esse processo for passado a outra pessoa; nos processos já encerrados ele simplesmente deixa de constar como responsável. Os avisos dele são removidos; o histórico permanece, com o autor indicado como <em>usuário removido</em>. Quem foi apagado deixa de conseguir entrar.</li>
+    <li>Na tela, o botão <strong>X</strong> sempre pede confirmação, e a ação não pode ser desfeita.</li>
     <li>O usuário comum pode abrir um processo e atribuí-lo a qualquer colega ativo; a partir daí, só o responsável (ou um gestor) mexe nele.</li>
     <li>O gestor ativa e desativa apenas funcionários com papel Usuário; não mexe na situação do administrador nem de outros gestores. Um funcionário desativado deixa de conseguir entrar.</li>
   </ul>
@@ -290,7 +293,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em três migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário) e <code>V3</code> (empresa, entrega e setor no processo).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em quatro migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) e <code>V4</code> (processo encerrado pode ficar sem fluxo).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -343,7 +346,7 @@
 <!-- ============================ 6 ============================ -->
 <section>
   <h1>6. Referência da API</h1>
-  <p>Todas as rotas começam com <code>/api</code>. Fora as de autenticação, exigem o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. A documentação interativa fica em <code>/swagger-ui.html</code> (38 rotas).</p>
+  <p>Todas as rotas começam com <code>/api</code>. Fora as de autenticação, exigem o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. A documentação interativa fica em <code>/swagger-ui.html</code> (39 rotas).</p>
   <table>
     <tr><th style="width:17mm">Método</th><th style="width:56mm">Rota</th><th>Função</th><th style="width:40mm">Quem</th></tr>
     <tr><td>POST</td><td><code>/auth/registrar-empresa</code></td><td>Cria empresa, administrador e fluxo padrão; devolve sessão</td><td>público</td></tr>
@@ -354,8 +357,9 @@
     <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel, ativo ou setor</td><td>Admin (tudo); Gestor (só <code>ativo</code>, e só de quem é Usuário)</td></tr>
     <tr><td>GET</td><td><code>/clientes</code>, <code>/setores</code>, <code>/entregas</code></td><td>Listas de empresas atendidas, setores (com suas entregas) e entregas (com o fluxo)</td><td>todos</td></tr>
     <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (nome, ativo)</td><td>Admin, Gestor</td></tr>
-    <tr><td>DELETE</td><td><code>/clientes/{id}</code>, <code>/setores/{id}</code>, <code>/entregas/{id}</code></td><td>Apaga o cadastro (recusa se houver processo ligado)</td><td>Admin, Gestor</td></tr>
-    <tr><td>DELETE</td><td><code>/usuarios/{id}</code></td><td>Apaga funcionário (recusa se for responsável por processo ou se for o próprio usuário)</td><td>Admin; Gestor (só Usuário)</td></tr>
+    <tr><td>DELETE</td><td><code>/clientes/{id}</code>, <code>/setores/{id}</code>, <code>/entregas/{id}</code></td><td>Apaga o cadastro (recusa se houver processo em andamento ligado)</td><td>Admin, Gestor</td></tr>
+    <tr><td>DELETE</td><td><code>/fluxos/{id}</code></td><td>Apaga o fluxo, com etapas e transições (recusa se uma entrega o usa ou se há processo em andamento nele)</td><td>Admin, Gestor</td></tr>
+    <tr><td>DELETE</td><td><code>/usuarios/{id}</code></td><td>Apaga funcionário (recusa se for responsável por processo em andamento ou se for o próprio usuário)</td><td>Admin; Gestor (só Usuário)</td></tr>
     <tr><td>POST, PATCH</td><td><code>/setores</code>, <code>/setores/{id}</code></td><td>Cria e altera setor (nome, ativo, lista de entregas)</td><td>Admin, Gestor</td></tr>
     <tr><td>POST, PATCH</td><td><code>/entregas</code>, <code>/entregas/{id}</code></td><td>Cria e altera entrega (nome, fluxo, ativo)</td><td>Admin, Gestor</td></tr>
     <tr><td>GET</td><td><code>/fluxos</code>, <code>/fluxos/{id}</code></td><td>Lista e detalha fluxos com etapas e transições</td><td>todos</td></tr>
@@ -412,6 +416,7 @@
   <h2>Limitações funcionais</h2>
   <ul>
     <li>Apagar um funcionário não remove a sessão que ele já tenha aberta: ela continua válida até o token expirar (limitação 1 da seção 7).</li>
+    <li>Os próprios processos não podem ser apagados (só concluídos ou cancelados); por isso um processo encerrado pode ficar com empresa, setor, entrega, fluxo ou responsável em branco depois que esses cadastros são apagados.</li>
     <li>Fluxos não podem ser editados depois de criados (só ativados ou desativados); a tela monta apenas transições em sequência.</li>
     <li>Os campos extras do processo são um JSON livre aceito pela API; ainda não há tela para preenchê-los.</li>
     <li>Processos criados antes da versão com empresa, entrega e setor continuam existindo, mas mostram esses campos em branco.</li>
@@ -463,7 +468,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>27 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>28 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Ciclo completo do processo: criar, avançar por todas as etapas, concluir, histórico</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Isolamento entre empresas (processo, comentário, documentos, download, fluxo alheio)</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Permissões por papel e transição fora do fluxo</td><td class="ok">coberto por teste</td></tr>
@@ -473,7 +478,7 @@
     <tr><td>Upload e download, com nome malicioso sanitizado</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Alerta de prazo: dispara uma vez só</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Migrações V1 a V3 e a aplicação contra MySQL 8 e S3 simulado reais (teste ponta a ponta via HTTP), incluindo as exclusões com chaves estrangeiras</td><td class="ok">executado, incluindo acentuação, permissões e isolamento</td></tr>
-    <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, colunas da lista, situação de funcionários, apagar cadastros com confirmação e recusa de item em uso, dois temas</td><td class="ok">executado (61 verificações)</td></tr>
+    <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, colunas da lista, situação de funcionários, apagar cadastros e fluxos pelo X com confirmação, recusa de item em uso, concluir processo e então apagar, dois temas</td><td class="ok">executado (65 verificações)</td></tr>
     <tr><td>Build do frontend com verificação de tipos</td><td class="ok">passa</td></tr>
   </table>
   <p>Esse teste com MySQL real encontrou dois defeitos que o H2 não revelava (parâmetro de codificação da conexão e health check de e-mail derrubando a aplicação); ambos já foram corrigidos.</p>
@@ -508,6 +513,12 @@
     <tr><td><code>5864164</code></td><td>Backend: gestor também cadastra e altera empresas</td></tr>
     <tr><td><code>1ddd42c</code></td><td>Backend: apagar empresas, setores, entregas e funcionários</td></tr>
     <tr><td><code>b5010d9</code></td><td>Frontend: gestor cadastra empresas; botão apagar com confirmação</td></tr>
+    <tr><td><code>72e95ef</code></td><td>Textos de ajuda da tela conforme as novas permissões</td></tr>
+    <tr><td><code>8f7fece</code></td><td>Relatório e README com empresas pelo gestor e apagar cadastros</td></tr>
+    <tr><td><code>d19009f</code></td><td>Backend: só processo em andamento impede apagar</td></tr>
+    <tr><td><code>20aa1c1</code></td><td>Backend: apagar fluxos (migração V4)</td></tr>
+    <tr><td><code>2015019</code></td><td>Frontend: botão X no lugar do texto apagar</td></tr>
+    <tr><td><code>6930597</code></td><td>Frontend: apagar fluxos pela tela</td></tr>
   </table>
 </section>
 
