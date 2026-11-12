@@ -48,6 +48,14 @@ public interface ProcessoRepository extends JpaRepository<Processo, Long>, JpaSp
     @Query("update Processo p set p.responsavelId = null, p.responsavelRemovidoNome = :nome where p.tenantId = :t and p.responsavelId = :id")
     int desvincularResponsavel(Long t, Long id, String nome);
 
+    /** Painel de indicadores: todos os em andamento mais os encerrados desde {@code desde}. */
+    @Query("select new br.com.viriato.indicador.LinhaProcesso(p.id, p.setorId, p.responsavelId, p.status, p.prazoEtapa, "
+            + "p.criadoEm, p.atualizadoEm, p.fluxoId) from Processo p where p.tenantId = :t "
+            + "and (:setor is null or p.setorId = :setor) "
+            + "and (p.status = br.com.viriato.processo.StatusProcesso.ABERTO or p.atualizadoEm >= :desde) "
+            + "and (:semRestritos = false or p.responsavelRemovidoNome is null)")
+    List<br.com.viriato.indicador.LinhaProcesso> paraIndicadores(Long t, Long setor, java.time.Instant desde, boolean semRestritos);
+
     /** Usado pelo agendador (varredura global de todos os tenants). */
     @Query("select p from Processo p where p.status = 'ABERTO' and p.prazoAlertado = false "
             + "and p.prazoEtapa is not null and p.prazoEtapa <= :limite and p.responsavelId is not null")
