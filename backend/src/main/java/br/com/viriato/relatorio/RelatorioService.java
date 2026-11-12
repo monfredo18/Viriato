@@ -119,7 +119,8 @@ public class RelatorioService {
                     nome(cl.get(p.getClienteId()), Cliente::getNome),
                     nome(st.get(p.getSetorId()), Setor::getNome),
                     nome(en.get(p.getEntregaId()), Entrega::getNome),
-                    nome(us.get(p.getResponsavelId()), Usuario::getNome),
+                    p.getResponsavelId() == null && p.getResponsavelRemovidoNome() != null ? p.getResponsavelRemovidoNome() + " (removido)"
+                            : nome(us.get(p.getResponsavelId()), Usuario::getNome),
                     p.getCriadoEm().atZone(Datas.ZONA).toLocalDate(),
                     encerrado ? p.getAtualizadoEm().atZone(Datas.ZONA).toLocalDate() : null,
                     rotulo(p.getStatus(), atrasado), atrasado));

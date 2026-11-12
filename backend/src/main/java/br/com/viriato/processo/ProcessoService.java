@@ -140,6 +140,8 @@ public class ProcessoService {
             ps.add(cb.equal(root.get("tenantId"), tenantId));
             // Só o administrador enxerga processos de todos os setores.
             if (restrito) ps.add(meuSetor == null ? cb.disjunction() : cb.equal(root.get("setorId"), meuSetor));
+            // Processos de funcionário apagado: só gestor do setor e administrador.
+            if (quem.papel() == Papel.USUARIO) ps.add(cb.isNull(root.get("responsavelRemovidoNome")));
             if (f.status() != null) ps.add(cb.equal(root.get("status"), f.status()));
             if (f.etapaId() != null) ps.add(cb.equal(root.get("etapaAtualId"), f.etapaId()));
             if (f.responsavelId() != null) ps.add(cb.equal(root.get("responsavelId"), f.responsavelId()));
@@ -250,6 +252,7 @@ public class ProcessoService {
         if (quem.papel() != Papel.ADMIN) {
             Long meuSetor = setorDe(quem);
             if (meuSetor == null || !meuSetor.equals(p.getSetorId())) throw new NaoEncontradoException("Processo");
+            if (quem.papel() == Papel.USUARIO && p.getResponsavelRemovidoNome() != null) throw new NaoEncontradoException("Processo");
         }
         return p;
     }
@@ -257,6 +260,45 @@ public class ProcessoService {
     /** Setor atual de quem está logado (lido do banco, não do token, para refletir mudanças). */
     private Long setorDe(UsuarioLogado quem) {
         return usuarios.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
+    }
+
+    /**
+     * Passa os processos EM ANDAMENTO (inclusive os atrasados) de um funcionário que será apagado para os
+     * herdeiros escolhidos, divididos igualmente, todos com o mesmo novo prazo. Cada herdeiro só recebe
+     * processos do próprio setor (o administrador pode herdar de qualquer setor). Devolve quantos passaram.
+     */
+    @Transactional
+    public int transferirEmAndamento(UsuarioLogado quem, Usuario removido, List<Long> herdeiroIds, LocalDate prazo) {
+        Long tid = quem.tenantId();
+        List<Processo> abertos = processos.findByTenantIdAndResponsavelIdAndStatusOrderById(tid, removido.getId(), StatusProcesso.ABERTO);
+        if (abertos.isEmpty()) return 0;
+        if (herdeiroIds == null || herdeiroIds.isEmpty()) throw new NegocioException("Escolha ao menos um funcionário para herdar os processos");
+        if (prazo == null) throw new NegocioException("Informe o novo prazo dos processos");
+        if (prazo.isBefore(Datas.hoje())) throw new NegocioException("O novo prazo não pode ser anterior a hoje");
+        List<Usuario> herdeiros = herdeiroIds.stream().distinct()
+                .map(id -> usuarios.findByIdAndTenantId(id, tid).filter(Usuario::isAtivo)
+                        .filter(u -> !u.getId().equals(removido.getId()))
+                        .orElseThrow(() -> new NegocioException("Um dos funcionários escolhidos não pode herdar os processos")))
+                .toList();
+        Map<Long, Integer> giro = new HashMap<>();   // revezamento por setor
+        String quando = prazo.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        for (Processo p : abertos) {
+            List<Usuario> elegiveis = herdeiros.stream()
+                    .filter(h -> h.getPapel() == Papel.ADMIN || Objects.equals(h.getSetorId(), p.getSetorId())).toList();
+            if (elegiveis.isEmpty()) {
+                throw new NegocioException("Nenhum dos funcionários escolhidos é do setor do processo " + p.getNumero() + " (" + p.getTitulo() + ")");
+            }
+            int vez = giro.getOrDefault(p.getSetorId(), 0);
+            Usuario herdeiro = elegiveis.get(vez % elegiveis.size());
+            giro.put(p.getSetorId(), vez + 1);
+            p.setResponsavelId(herdeiro.getId());
+            p.setPrazoEtapa(prazo);
+            p.setPrazoAlertado(false);
+            processos.save(p);
+            registrar(p, quem.id(), "ATRIBUIDO", null, null, "Responsável: " + herdeiro.getNome() + " (herdou de "
+                    + removido.getNome() + ", funcionário removido). Novo prazo: " + quando);
+        }
+        return abertos.size();
     }
 
     // ---------- auxiliares ----------
@@ -349,6 +391,12 @@ public class ProcessoService {
                 setoresRepo.findAllById(setorIds).stream().collect(Collectors.toMap(Setor::getId, Setor::getNome)));
     }
 
+    /** Nome do responsável; se ele foi apagado, o nome guardado na época, marcado como removido. */
+    private static String nomeResponsavel(Processo p, Lookups lk) {
+        if (p.getResponsavelId() != null) return lk.usuarios().get(p.getResponsavelId());
+        return p.getResponsavelRemovidoNome() == null ? null : p.getResponsavelRemovidoNome() + " (removido)";
+    }
+
     private static String nome(Map<Long, String> m, Long id) { return id == null ? null : m.get(id); }
 
     private ProcessoDto paraDto(Processo p) {
@@ -365,7 +413,7 @@ public class ProcessoService {
                 p.getSetorId(), nome(lk.setores(), p.getSetorId()),
                 p.getFluxoId(), lk.fluxos().get(p.getFluxoId()),
                 p.getEtapaAtualId(), e == null ? null : e.getNome(), e != null && e.isFinalEtapa(),
-                p.getResponsavelId(), p.getResponsavelId() == null ? null : lk.usuarios().get(p.getResponsavelId()),
+                p.getResponsavelId(), nomeResponsavel(p, lk),
                 p.getStatus(), p.getPrazoEtapa(), atrasado, ler(p.getCamposExtras()),
                 p.getCriadoEm(), p.getAtualizadoEm());
     }

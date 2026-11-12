@@ -40,9 +40,13 @@ public interface ProcessoRepository extends JpaRepository<Processo, Long>, JpaSp
     @Query("update Processo p set p.fluxoId = null, p.etapaAtualId = null where p.tenantId = :t and p.fluxoId = :id")
     int desvincularFluxo(Long t, Long id);
 
+    long countByTenantIdAndResponsavelIdAndStatusAndPrazoEtapaBefore(Long tenantId, Long responsavelId, StatusProcesso status, LocalDate antes);
+    List<Processo> findByTenantIdAndResponsavelIdAndStatusOrderById(Long tenantId, Long responsavelId, StatusProcesso status);
+
+    // Ao apagar um funcionário, os processos encerrados dele guardam o nome (e ficam restritos ao gestor do setor).
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update Processo p set p.responsavelId = null where p.tenantId = :t and p.responsavelId = :id")
-    int desvincularResponsavel(Long t, Long id);
+    @Query("update Processo p set p.responsavelId = null, p.responsavelRemovidoNome = :nome where p.tenantId = :t and p.responsavelId = :id")
+    int desvincularResponsavel(Long t, Long id, String nome);
 
     /** Usado pelo agendador (varredura global de todos os tenants). */
     @Query("select p from Processo p where p.status = 'ABERTO' and p.prazoAlertado = false "
