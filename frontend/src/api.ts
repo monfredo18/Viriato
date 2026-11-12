@@ -49,7 +49,11 @@ export const api = {
   /** Download autenticado: baixa como blob e dispara o salvamento. */
   async download(p: string, nome: string) {
     const res = await fetch(`/api${p}`, { headers: { Authorization: `Bearer ${tokenStore.get()}` } })
-    if (!res.ok) throw new ApiError(res.status, 'Falha ao baixar arquivo')
+    if (!res.ok) {
+      let msg = 'Falha ao baixar arquivo'
+      try { msg = (await res.json()).erro ?? msg } catch { /* sem corpo */ }
+      throw new ApiError(res.status, msg)
+    }
     const url = URL.createObjectURL(await res.blob())
     const a = document.createElement('a')
     a.href = url
