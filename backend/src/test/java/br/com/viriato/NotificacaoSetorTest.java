@@ -99,16 +99,17 @@ class NotificacaoSetorTest {
         assertThat(com.get("titulo").asText()).isEqualTo("Novo comentário - Ursula Eng");
         assertThat(com.get("mensagem").asText()).isEqualTo("Falta o laudo");
 
+        long u3 = usuario(c.admin(), "Ubirajara Eng", "u3-" + UUID.randomUUID() + "@t.com", "USUARIO", c.eng());
         mvc.perform(put("/api/processos/" + p + "/responsavel").header("Authorization", "Bearer " + c.admin()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"responsavelId\":" + c.u2Id() + "}")).andExpect(status().isOk());
-        assertThat(consultar(c.gestorEng(), "/api/notificacoes").get(0).get("titulo").asText()).isEqualTo("Processo atribuído a Ubiratan Fin - Adm Teste");
+                .content("{\"responsavelId\":" + u3 + "}")).andExpect(status().isOk());
+        assertThat(consultar(c.gestorEng(), "/api/notificacoes").get(0).get("titulo").asText()).isEqualTo("Processo atribuído a Ubirajara Eng - Adm Teste");
 
         enviar(c.admin(), "/api/processos/" + p + "/cancelar", "{\"motivo\":\"desistiu\"}").andExpect(status().isOk());
         assertThat(consultar(c.gestorEng(), "/api/notificacoes").get(0).get("titulo").asText()).isEqualTo("Processo cancelado - Adm Teste");
 
         assertThat(quantas(c.gestorFin())).isZero();                      // setor do processo é Engenharia
         assertThat(quantas(c.u1())).isZero();
-        assertThat(quantas(c.u2())).isZero();                             // nem o novo responsável, que é de outro setor
+        assertThat(quantas(c.u2())).isZero();                             // nem funcionário de outro setor
     }
 
     @Test

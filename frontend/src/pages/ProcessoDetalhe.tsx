@@ -78,7 +78,7 @@ export default function ProcessoDetalhe() {
               {aberto && podeMexer ? (
                 <select value={p.responsavelId ?? ''} onChange={(e) => acao(() => api.put(`/processos/${p.id}/responsavel`, { responsavelId: e.target.value ? Number(e.target.value) : null }))}>
                   <option value="">— ninguém —</option>
-                  {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                  {usuarios.filter((u) => u.papel === 'ADMIN' || u.setorId === p.setorId).map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
                 </select>
               ) : (p.responsavelNome ?? '—')}
             </dd>

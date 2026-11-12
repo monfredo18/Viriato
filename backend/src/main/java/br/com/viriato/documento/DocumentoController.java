@@ -22,7 +22,7 @@ public class DocumentoController {
 
     @GetMapping("/processos/{processoId}/documentos")
     public List<DocumentoService.DocumentoDto> listar(@PathVariable Long processoId) {
-        return service.listar(processoId, Contexto.tenantId());
+        return service.listar(Contexto.atual(), processoId);
     }
 
     @PostMapping(value = "/processos/{processoId}/documentos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -35,7 +35,7 @@ public class DocumentoController {
     /** O download passa pelo backend: valida tenant e permissão antes de entregar o arquivo. */
     @GetMapping("/documentos/{id}/download")
     public ResponseEntity<InputStreamResource> baixar(@PathVariable Long id) {
-        var a = service.baixar(id, Contexto.tenantId());
+        var a = service.baixar(Contexto.atual(), id);
         var d = a.documento();
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()

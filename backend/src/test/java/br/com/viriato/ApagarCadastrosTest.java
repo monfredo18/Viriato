@@ -71,8 +71,9 @@ class ApagarCadastrosTest {
                 .content("{\"empresa\":\"Emp\",\"nome\":\"Adm\",\"email\":\"adm-" + sfx + "@t.com\",\"senha\":\"senha12345\"}"))
                 .andExpect(status().isCreated()));
         String admin = reg.get("token").asText();
-        enviar(admin, "/api/usuarios", "{\"nome\":\"Gestor\",\"email\":\"ges-" + sfx + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\"}").andExpect(status().isCreated());
-        enviar(admin, "/api/usuarios", "{\"nome\":\"Func\",\"email\":\"usu-" + sfx + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated());
+        long setorGeral = consultar(admin, "/api/setores").get(0).get("id").asLong();
+        enviar(admin, "/api/usuarios", "{\"nome\":\"Gestor\",\"email\":\"ges-" + sfx + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\",\"setorId\":" + setorGeral + "}").andExpect(status().isCreated());
+        enviar(admin, "/api/usuarios", "{\"nome\":\"Func\",\"email\":\"usu-" + sfx + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + setorGeral + "}").andExpect(status().isCreated());
         JsonNode equipe = consultar(admin, "/api/usuarios");
         JsonNode geral = consultar(admin, "/api/setores").get(0);
         return new Cenario(admin, login("ges-" + sfx + "@t.com"), login("usu-" + sfx + "@t.com"),
@@ -230,7 +231,7 @@ class ApagarCadastrosTest {
 
         // processo concluído: o responsável pode ser apagado sem precisar passar o processo adiante
         long outro = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"Outro\",\"email\":\"outro-" + UUID.randomUUID()
-                + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated())).get("id").asLong();
+                + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + c.setorGeralId() + "}").andExpect(status().isCreated())).get("id").asLong();
         long p2 = processo(c, cliente(c.admin(), "Outro cliente"), outro);
         concluir(c, p2);
         apagar(c.gestor(), "/api/usuarios/" + outro).andExpect(status().isNoContent());

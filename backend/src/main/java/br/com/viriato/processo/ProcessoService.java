@@ -72,7 +72,11 @@ public class ProcessoService {
     public record Filtro(StatusProcesso status, Long etapaId, Long responsavelId, Long clienteId, Long setorId,
                          Long entregaId, String busca, boolean atrasados) {}
 
-    /** Dados do formulário de novo processo: empresa, entrega, setor e responsável. */
+    /**
+     * Dados do formulário de novo processo. Quem decide setor e responsável é o papel de quem cria:
+     * administrador informa os dois; gestor informa o responsável (o setor é o dele); usuário informa
+     * só empresa e entrega (o setor é o dele e o responsável é ele mesmo).
+     */
     public record NovoProcesso(Long clienteId, Long entregaId, Long setorId, Long responsavelId,
                                String descricao, Map<String, Object> camposExtras) {}
 
@@ -82,16 +86,22 @@ public class ProcessoService {
     public ProcessoDto criar(UsuarioLogado quem, NovoProcesso n) {
         Long tid = quem.tenantId();
         Cliente cliente = cadastros.clienteAtivo(tid, n.clienteId());
-        Setor setor = cadastros.setorAtivo(tid, n.setorId());
+        Long setorEscolhido = quem.papel() == Papel.ADMIN ? n.setorId() : setorDe(quem);
+        if (setorEscolhido == null) {
+            throw new NegocioException(quem.papel() == Papel.ADMIN ? "Informe o setor"
+                    : "Seu usuário não tem setor definido. Peça ao administrador para definir o seu setor.");
+        }
+        Setor setor = cadastros.setorAtivo(tid, setorEscolhido);
+        Long responsavelId = quem.papel() == Papel.USUARIO ? quem.id() : n.responsavelId();
+        if (responsavelId == null) throw new NegocioException("Informe o responsável");
         Entrega entrega = cadastros.entregaDoSetor(tid, setor, n.entregaId());
         Fluxo fluxo = fluxos.findByIdAndTenantId(entrega.getFluxoId(), tid)
                 .orElseThrow(() -> new NegocioException("A entrega não tem um fluxo válido"));
         if (!fluxo.isAtivo()) throw new NegocioException("O fluxo desta entrega está inativo");
         Etapa inicial = etapas.findFirstByFluxoIdAndTenantIdAndInicialTrue(fluxo.getId(), tid)
                 .orElseThrow(() -> new NegocioException("Fluxo sem etapa inicial"));
-        exigirUsuarioAtivo(n.responsavelId(), tid);
+        exigirResponsavelDoSetor(responsavelId, setor.getId(), tid);
         Long fluxoId = fluxo.getId();
-        Long responsavelId = n.responsavelId();
         String titulo = entrega.getNome() + " — " + cliente.getNome();
         if (titulo.length() > 200) titulo = titulo.substring(0, 200);
         String descricao = n.descricao();
@@ -121,10 +131,15 @@ public class ProcessoService {
     // ---------- consulta ----------
 
     @Transactional(readOnly = true)
-    public Page<ProcessoDto> listar(Long tenantId, Filtro f, Pageable page) {
+    public Page<ProcessoDto> listar(UsuarioLogado quem, Filtro f, Pageable page) {
+        Long tenantId = quem.tenantId();
+        boolean restrito = quem.papel() != Papel.ADMIN;
+        Long meuSetor = restrito ? setorDe(quem) : null;
         Specification<Processo> spec = (root, q, cb) -> {
             List<Predicate> ps = new ArrayList<>();
             ps.add(cb.equal(root.get("tenantId"), tenantId));
+            // Só o administrador enxerga processos de todos os setores.
+            if (restrito) ps.add(meuSetor == null ? cb.disjunction() : cb.equal(root.get("setorId"), meuSetor));
             if (f.status() != null) ps.add(cb.equal(root.get("status"), f.status()));
             if (f.etapaId() != null) ps.add(cb.equal(root.get("etapaAtualId"), f.etapaId()));
             if (f.responsavelId() != null) ps.add(cb.equal(root.get("responsavelId"), f.responsavelId()));
@@ -147,8 +162,9 @@ public class ProcessoService {
     }
 
     @Transactional(readOnly = true)
-    public Detalhe detalhe(Long id, Long tenantId) {
-        Processo p = buscar(id, tenantId);
+    public Detalhe detalhe(UsuarioLogado quem, Long id) {
+        Long tenantId = quem.tenantId();
+        Processo p = buscar(quem, id);
         List<EtapaDto> proximas = proximasEtapas(p);
         Map<Long, String> nomes = usuarios.findByTenantIdOrderByNome(tenantId).stream()
                 .collect(Collectors.toMap(Usuario::getId, Usuario::getNome));
@@ -163,7 +179,7 @@ public class ProcessoService {
 
     @Transactional
     public ProcessoDto avancar(UsuarioLogado quem, Long id, Long etapaDestinoId, String comentario) {
-        Processo p = buscar(id, quem.tenantId());
+        Processo p = buscar(quem, id);
         exigirAberto(p);
         exigirPodeMexer(quem, p);
         Etapa destino = etapas.findByIdAndTenantId(etapaDestinoId, quem.tenantId())
@@ -191,7 +207,7 @@ public class ProcessoService {
 
     @Transactional
     public void comentar(UsuarioLogado quem, Long id, String texto) {
-        Processo p = buscar(id, quem.tenantId());
+        Processo p = buscar(quem, id);
         exigirPodeMexer(quem, p);
         registrar(p, quem.id(), "COMENTARIO", null, null, texto);
         notificacoes.notificar(p, "Novo comentário", texto, quem.id());
@@ -199,13 +215,13 @@ public class ProcessoService {
 
     @Transactional
     public ProcessoDto atribuir(UsuarioLogado quem, Long id, Long responsavelId) {
-        Processo p = buscar(id, quem.tenantId());
+        Processo p = buscar(quem, id);
         exigirAberto(p);
         boolean gestor = quem.papel() != Papel.USUARIO;
         if (!gestor && !quem.id().equals(p.getResponsavelId())) {
             throw new NegocioException("Apenas o responsável atual ou um gestor pode reatribuir");
         }
-        if (responsavelId != null) exigirUsuarioAtivo(responsavelId, quem.tenantId());
+        if (responsavelId != null) exigirResponsavelDoSetor(responsavelId, p.getSetorId(), quem.tenantId());
         p.setResponsavelId(responsavelId);
         p.setPrazoAlertado(false);
         p = processos.save(p);
@@ -217,8 +233,8 @@ public class ProcessoService {
 
     @Transactional
     public ProcessoDto cancelar(UsuarioLogado quem, Long id, String motivo) {
+        Processo p = buscar(quem, id);   // antes da checagem de papel: processo de outro setor é sempre "não encontrado"
         if (quem.papel() == Papel.USUARIO) throw new NegocioException("Apenas gestores podem cancelar processos");
-        Processo p = buscar(id, quem.tenantId());
         exigirAberto(p);
         p.setStatus(StatusProcesso.CANCELADO);
         p.setPrazoEtapa(null);
@@ -228,8 +244,19 @@ public class ProcessoService {
         return paraDto(p);
     }
 
-    public Processo buscar(Long id, Long tenantId) {
-        return processos.findByIdAndTenantId(id, tenantId).orElseThrow(() -> new NaoEncontradoException("Processo"));
+    /** Processo de outro setor responde "não encontrado" a quem não é administrador. */
+    public Processo buscar(UsuarioLogado quem, Long id) {
+        Processo p = processos.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Processo"));
+        if (quem.papel() != Papel.ADMIN) {
+            Long meuSetor = setorDe(quem);
+            if (meuSetor == null || !meuSetor.equals(p.getSetorId())) throw new NaoEncontradoException("Processo");
+        }
+        return p;
+    }
+
+    /** Setor atual de quem está logado (lido do banco, não do token, para refletir mudanças). */
+    private Long setorDe(UsuarioLogado quem) {
+        return usuarios.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
     }
 
     // ---------- auxiliares ----------
@@ -239,8 +266,8 @@ public class ProcessoService {
     }
 
     /**
-     * Administrador e gestor mexem em qualquer processo da empresa. O usuário comum enxerga todos,
-     * mas só mexe naqueles em que é o responsável.
+     * Administrador e gestor mexem em qualquer processo que enxergam (o gestor, só do próprio setor).
+     * O usuário comum enxerga os do seu setor, mas só mexe naqueles em que é o responsável.
      */
     public void exigirPodeMexer(UsuarioLogado quem, Processo p) {
         if (quem.papel() != Papel.USUARIO) return;
@@ -249,9 +276,13 @@ public class ProcessoService {
         }
     }
 
-    private void exigirUsuarioAtivo(Long usuarioId, Long tenantId) {
-        usuarios.findByIdAndTenantId(usuarioId, tenantId).filter(Usuario::isAtivo)
+    /** O responsável precisa estar ativo e ser do setor do processo (o administrador pode ser responsável em qualquer um). */
+    private void exigirResponsavelDoSetor(Long usuarioId, Long setorId, Long tenantId) {
+        Usuario u = usuarios.findByIdAndTenantId(usuarioId, tenantId).filter(Usuario::isAtivo)
                 .orElseThrow(() -> new NegocioException("Responsável inválido"));
+        if (u.getPapel() != Papel.ADMIN && !Objects.equals(u.getSetorId(), setorId)) {
+            throw new NegocioException("O responsável precisa ser do setor do processo");
+        }
     }
 
     private LocalDate calcularPrazo(Etapa e) {

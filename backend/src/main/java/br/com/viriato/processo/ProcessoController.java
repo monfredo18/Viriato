@@ -20,11 +20,15 @@ public class ProcessoController {
 
     public ProcessoController(ProcessoService service) { this.service = service; }
 
-    /** Empresa, entrega, setor e responsável são obrigatórios. */
+    /**
+     * Empresa e entrega são sempre obrigatórias. Setor só vale para o administrador e responsável só para
+     * administrador e gestor; para os demais o servidor ignora esses campos e usa o setor de quem cria
+     * (e, para o usuário, ele mesmo como responsável).
+     */
     public record NovoProcesso(@NotNull Long clienteId,
                                @NotNull Long entregaId,
-                               @NotNull Long setorId,
-                               @NotNull Long responsavelId,
+                               Long setorId,
+                               Long responsavelId,
                                @Size(max = 10000) String descricao,
                                Map<String, Object> camposExtras) {}
 
@@ -49,7 +53,7 @@ public class ProcessoController {
         Long resp = meus ? u.id() : responsavelId;
         var page = PageRequest.of(Math.max(pagina, 0), Math.min(Math.max(tamanho, 1), 100),
                 Sort.by(Sort.Direction.DESC, "id"));
-        return service.listar(u.tenantId(), new ProcessoService.Filtro(status, etapaId, resp, clienteId, setorId, entregaId, busca, atrasados), page);
+        return service.listar(u, new ProcessoService.Filtro(status, etapaId, resp, clienteId, setorId, entregaId, busca, atrasados), page);
     }
 
     @PostMapping
@@ -60,7 +64,7 @@ public class ProcessoController {
     }
 
     @GetMapping("/{id}")
-    public Detalhe detalhe(@PathVariable Long id) { return service.detalhe(id, Contexto.tenantId()); }
+    public Detalhe detalhe(@PathVariable Long id) { return service.detalhe(Contexto.atual(), id); }
 
     @PostMapping("/{id}/avancar")
     public ProcessoDto avancar(@PathVariable Long id, @Valid @RequestBody AvancarReq r) {

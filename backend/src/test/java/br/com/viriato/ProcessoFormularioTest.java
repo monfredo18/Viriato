@@ -27,7 +27,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** Novo formulário (empresa, entrega, setor, responsável) e a regra "usuário só mexe no que é seu". */
+/** Formulário de novo processo por papel, visibilidade por setor e a regra "usuário só mexe no que é seu". */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -80,12 +80,13 @@ class ProcessoFormularioTest {
                 .content("{\"empresa\":\"Emp\",\"nome\":\"Adm\",\"email\":\"adm-" + sfx + "@t.com\",\"senha\":\"senha12345\"}"))
                 .andExpect(status().isCreated()));
         String admin = reg.get("token").asText();
-        enviar(admin, "/api/usuarios", "{\"nome\":\"Gestor\",\"email\":\"ges-" + sfx + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\"}")
+        JsonNode geral = consultar(admin, "/api/setores").get(0);
+        long setorGeral = geral.get("id").asLong();
+        enviar(admin, "/api/usuarios", "{\"nome\":\"Gestor\",\"email\":\"ges-" + sfx + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\",\"setorId\":" + setorGeral + "}")
                 .andExpect(status().isCreated());
         long usuarioId = corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"Func\",\"email\":\"usu-" + sfx
-                + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated())).get("id").asLong();
+                + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + setorGeral + "}").andExpect(status().isCreated())).get("id").asLong();
         long clienteId = corpo(enviar(admin, "/api/clientes", "{\"numero\":\"201\",\"nome\":\"Construtora Alfa\"}").andExpect(status().isCreated())).get("id").asLong();
-        JsonNode geral = consultar(admin, "/api/setores").get(0);
         long fluxoId = consultar(admin, "/api/fluxos").get(0).get("id").asLong();
         return new Cenario(admin, login("ges-" + sfx + "@t.com"), login("usu-" + sfx + "@t.com"),
                 reg.get("usuario").get("id").asLong(), usuarioId, clienteId, geral.get("id").asLong(),
@@ -119,8 +120,14 @@ class ProcessoFormularioTest {
         Cenario c = cenario();
         enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"setorId\":" + c.setorId()
                 + ",\"responsavelId\":" + c.usuarioId() + "}").andExpect(status().isBadRequest());   // sem entrega
+        enviar(c.admin(), "/api/processos", "{\"entregaId\":" + c.entregaId() + "}").andExpect(status().isBadRequest());   // sem empresa
+        // administrador e gestor precisam indicar o responsável; o administrador também o setor
         enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId()
-                + ",\"setorId\":" + c.setorId() + "}").andExpect(status().isBadRequest());           // sem responsável
+                + ",\"setorId\":" + c.setorId() + "}").andExpect(status().isUnprocessableEntity());
+        enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId()
+                + ",\"responsavelId\":" + c.usuarioId() + "}").andExpect(status().isUnprocessableEntity());
+        enviar(c.gestor(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId() + "}")
+                .andExpect(status().isUnprocessableEntity());
     }
 
     @Test
@@ -158,12 +165,12 @@ class ProcessoFormularioTest {
     }
 
     @Test
-    void usuarioComumVeTodosOsProcessosMasSoMexeNosSeus() throws Exception {
+    void usuarioComumVeOsProcessosDoSetorMasSoMexeNosSeus() throws Exception {
         Cenario c = cenario();
         long meu = criar(c.admin(), c, c.usuarioId());
         long doAdmin = criar(c.admin(), c, c.adminId());
 
-        // vê todos
+        // vê todos os do próprio setor
         assertThat(consultar(c.usuario(), "/api/processos").get("content")).hasSize(2);
         consultar(c.usuario(), "/api/processos/" + doAdmin);
 
@@ -199,6 +206,78 @@ class ProcessoFormularioTest {
         enviar(c.gestor(), "/api/processos/" + meu + "/comentarios", "{\"texto\":\"gestor\"}").andExpect(status().isCreated());
         long proximaAdmin = consultar(c.gestor(), "/api/processos/" + doAdmin).get("proximasEtapas").get(0).get("id").asLong();
         enviar(c.gestor(), "/api/processos/" + doAdmin + "/avancar", "{\"etapaId\":" + proximaAdmin + "}").andExpect(status().isOk());
+    }
+
+    @Test
+    void gestorInformaEmpresaEntregaEResponsavel_eUsuarioSoEmpresaEEntrega() throws Exception {
+        Cenario c = cenario();
+        // gestor: o setor é o dele, mesmo que tente mandar outro
+        long outroSetor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Outro\",\"entregaIds\":[" + c.entregaId() + "]}")
+                .andExpect(status().isCreated())).get("id").asLong();
+        var pg = corpo(enviar(c.gestor(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId()
+                + ",\"setorId\":" + outroSetor + ",\"responsavelId\":" + c.usuarioId() + "}").andExpect(status().isCreated()));
+        assertThat(pg.get("setorNome").asText()).isEqualTo("Geral");
+        assertThat(pg.get("responsavelNome").asText()).isEqualTo("Func");
+
+        // o responsável do gestor precisa ser do setor do processo
+        long deOutroSetor = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"De fora\",\"email\":\"fora-" + UUID.randomUUID()
+                + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + outroSetor + "}").andExpect(status().isCreated())).get("id").asLong();
+        var erro = corpo(enviar(c.gestor(), "/api/processos", corpoProcesso(c, deOutroSetor)).andExpect(status().isUnprocessableEntity()));
+        assertThat(erro.get("erro").asText()).contains("setor");
+
+        // usuário: só empresa e entrega; setor e responsável são os dele, ainda que tente indicar outros
+        var pu = corpo(enviar(c.usuario(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId() + "}")
+                .andExpect(status().isCreated()));
+        assertThat(pu.get("setorNome").asText()).isEqualTo("Geral");
+        assertThat(pu.get("responsavelNome").asText()).isEqualTo("Func");
+        var pu2 = corpo(enviar(c.usuario(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId()
+                + ",\"setorId\":" + outroSetor + ",\"responsavelId\":" + c.adminId() + "}").andExpect(status().isCreated()));
+        assertThat(pu2.get("setorNome").asText()).isEqualTo("Geral");
+        assertThat(pu2.get("responsavelNome").asText()).isEqualTo("Func");
+    }
+
+    @Test
+    void usuarioSemSetorNaoCriaProcesso() throws Exception {
+        Cenario c = cenario();
+        String sfx = UUID.randomUUID().toString();
+        enviar(c.admin(), "/api/usuarios", "{\"nome\":\"Sem setor\",\"email\":\"ss-" + sfx + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}")
+                .andExpect(status().isCreated());
+        String token = login("ss-" + sfx + "@t.com");
+        enviar(token, "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId() + "}")
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(consultar(token, "/api/processos").get("content")).isEmpty();
+    }
+
+    @Test
+    void soOAdminVeProcessosDeOutrosSetores() throws Exception {
+        Cenario c = cenario();
+        long meu = criar(c.admin(), c, c.usuarioId());                        // setor Geral
+        long outroSetor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Outro\",\"entregaIds\":[" + c.entregaId() + "]}")
+                .andExpect(status().isCreated())).get("id").asLong();
+        long fora = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"De fora\",\"email\":\"fora-" + UUID.randomUUID()
+                + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + outroSetor + "}").andExpect(status().isCreated())).get("id").asLong();
+        long doOutro = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId()
+                + ",\"setorId\":" + outroSetor + ",\"responsavelId\":" + fora + "}").andExpect(status().isCreated())).get("id").asLong();
+        var arq = new MockMultipartFile("arquivo", "x.pdf", "application/pdf", "x".getBytes());
+        long doc = corpo(mvc.perform(multipart("/api/processos/" + doOutro + "/documentos").file(arq)
+                .header("Authorization", "Bearer " + c.admin())).andExpect(status().isCreated())).get("id").asLong();
+
+        // o admin vê os dois setores
+        assertThat(consultar(c.admin(), "/api/processos").get("content")).hasSize(2);
+        for (String quem : new String[]{c.gestor(), c.usuario()}) {
+            var lista = consultar(quem, "/api/processos").get("content");
+            assertThat(lista).hasSize(1);
+            assertThat(lista.get(0).get("id").asLong()).isEqualTo(meu);
+            assertThat(consultar(quem, "/api/processos?setorId=" + outroSetor).get("content")).isEmpty();   // filtro não burla
+            mvc.perform(get("/api/processos/" + doOutro).header("Authorization", "Bearer " + quem)).andExpect(status().isNotFound());
+            enviar(quem, "/api/processos/" + doOutro + "/comentarios", "{\"texto\":\"oi\"}").andExpect(status().isNotFound());
+            enviar(quem, "/api/processos/" + doOutro + "/cancelar", "{\"motivo\":\"x\"}").andExpect(status().isNotFound());
+            mvc.perform(get("/api/processos/" + doOutro + "/documentos").header("Authorization", "Bearer " + quem)).andExpect(status().isNotFound());
+            mvc.perform(get("/api/documentos/" + doc + "/download").header("Authorization", "Bearer " + quem)).andExpect(status().isNotFound());
+        }
+        // o gestor também não passa o processo do próprio setor para quem é de outro setor
+        mvc.perform(put("/api/processos/" + meu + "/responsavel").header("Authorization", "Bearer " + c.gestor())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"responsavelId\":" + fora + "}")).andExpect(status().isUnprocessableEntity());
     }
 
     @Test

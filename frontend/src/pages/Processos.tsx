@@ -23,6 +23,8 @@ export default function Processos() {
   const [setores, setSetores] = useState<Setor[]>([])
   const [novo, setNovo] = useState(false)
   const [erro, setErro] = useState('')
+  const { usuario } = useAuth()
+  const ehAdmin = usuario?.papel === 'ADMIN'   // só o administrador enxerga mais de um setor
 
   const carregar = useCallback(() => {
     const q = new URLSearchParams({ pagina: String(pagina), tamanho: '15' })
@@ -65,10 +67,12 @@ export default function Processos() {
           <option value="">Todas as empresas</option>
           {clientes.map((c) => <option key={c.id} value={c.id}>{c.numero} — {c.nome}</option>)}
         </select>
-        <select value={setorId} onChange={(e) => { setSetorId(e.target.value); setPagina(0) }} aria-label="Departamento">
-          <option value="">Todos os setores</option>
-          {setores.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
-        </select>
+        {ehAdmin && (
+          <select value={setorId} onChange={(e) => { setSetorId(e.target.value); setPagina(0) }} aria-label="Departamento">
+            <option value="">Todos os setores</option>
+            {setores.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+          </select>
+        )}
         <label className="chk"><input type="checkbox" checked={meus} onChange={(e) => { setMeus(e.target.checked); setPagina(0) }} /> Meus</label>
         <label className="chk"><input type="checkbox" checked={atrasados} onChange={(e) => { setAtrasados(e.target.checked); setPagina(0) }} /> Atrasados</label>
       </div>
@@ -107,13 +111,19 @@ export default function Processos() {
   )
 }
 
+/**
+ * Campos do formulário por papel: administrador informa departamento, entrega e responsável; gestor informa
+ * entrega e responsável (o departamento é o dele); usuário informa só empresa e entrega (departamento e
+ * responsável são os dele). O servidor aplica as mesmas regras, o formulário apenas não pede o que não vale.
+ */
 function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => void }) {
   const { usuario } = useAuth()
+  const papel = usuario?.papel
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [setores, setSetores] = useState<Setor[]>([])
   const [entregas, setEntregas] = useState<Entrega[]>([])
-  const [usuarios, setUsuarios] = useState<Usuario[]>([])
-  const [f, setF] = useState({ clienteId: '', setorId: '', entregaId: '', responsavelId: String(usuario?.id ?? ''), descricao: '' })
+  const [usuarios, setUsuarios] = useState<Usuario[] | null>(null)
+  const [f, setF] = useState({ clienteId: '', setorId: '', entregaId: '', responsavelId: '', descricao: '' })
   const [erro, setErro] = useState('')
 
   useEffect(() => {
@@ -123,12 +133,16 @@ function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => vo
     api.get<Usuario[]>('/usuarios').then((l) => setUsuarios(l.filter((u) => u.ativo)))
   }, [])
 
-  // Ao escolher o setor, aparecem só as entregas que ele faz.
-  const setor = setores.find((x) => String(x.id) === f.setorId)
+  const meuSetorId = usuarios?.find((u) => u.id === usuario?.id)?.setorId ?? null
+  const escolheSetor = papel === 'ADMIN'
+  const escolheResponsavel = papel !== 'USUARIO'
+  const setorDoProcesso = escolheSetor ? Number(f.setorId) || null : meuSetorId
+  const setor = setores.find((x) => x.id === setorDoProcesso)
   const entregasDoSetor = (setor?.entregas ?? []).filter((e) => e.ativo)
   const entrega = entregas.find((e) => String(e.id) === f.entregaId)
-
-  const escolherSetor = (id: string) => setF({ ...f, setorId: id, entregaId: '' })
+  // O responsável é do setor do processo (o administrador pode ser responsável em qualquer um).
+  const candidatos = (usuarios ?? []).filter((u) => u.papel === 'ADMIN' || (setorDoProcesso !== null && u.setorId === setorDoProcesso))
+  const semSetor = !escolheSetor && usuarios !== null && meuSetorId === null
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault()
@@ -136,9 +150,9 @@ function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => vo
     try {
       await api.post('/processos', {
         clienteId: Number(f.clienteId),
-        setorId: Number(f.setorId),
         entregaId: Number(f.entregaId),
-        responsavelId: Number(f.responsavelId),
+        ...(escolheSetor ? { setorId: Number(f.setorId) } : {}),
+        ...(escolheResponsavel ? { responsavelId: Number(f.responsavelId) } : {}),
         descricao: f.descricao || null,
       })
       criado()
@@ -160,28 +174,33 @@ function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => vo
         </label>
         {clientes.length === 0 && <small className="aviso-campo">Nenhuma empresa cadastrada. Administrador ou gestor cadastra em Cadastros → Empresas.</small>}
 
-        <label>Departamento
-          <select required value={f.setorId} onChange={(e) => escolherSetor(e.target.value)}>
-            <option value="" disabled>Selecione o departamento…</option>
-            {setores.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
-          </select>
-        </label>
+        {escolheSetor && (
+          <label>Departamento
+            <select required value={f.setorId} onChange={(e) => setF({ ...f, setorId: e.target.value, entregaId: '', responsavelId: '' })}>
+              <option value="" disabled>Selecione o departamento…</option>
+              {setores.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+            </select>
+          </label>
+        )}
+        {semSetor && <small className="aviso-campo">Seu usuário não tem setor definido. Peça ao administrador para definir o seu setor.</small>}
 
         <label>O que vai entregar
           <select required value={f.entregaId} disabled={!setor} onChange={(e) => setF({ ...f, entregaId: e.target.value })}>
-            <option value="" disabled>{setor ? 'Selecione a entrega…' : 'Escolha o departamento primeiro'}</option>
+            <option value="" disabled>{setor ? 'Selecione a entrega…' : escolheSetor ? 'Escolha o departamento primeiro' : 'Carregando…'}</option>
             {entregasDoSetor.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
           </select>
         </label>
         {setor && entregasDoSetor.length === 0 && <small className="aviso-campo">Este setor ainda não tem entregas. Um gestor pode defini-las em Cadastros → Setores.</small>}
         {entrega && <small className="dica-campo">Fluxo: {entrega.fluxoNome}</small>}
 
-        <label>Responsável
-          <select required value={f.responsavelId} onChange={(e) => setF({ ...f, responsavelId: e.target.value })}>
-            <option value="" disabled>Selecione o responsável…</option>
-            {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}{u.setorNome ? ` — ${u.setorNome}` : ''}</option>)}
-          </select>
-        </label>
+        {escolheResponsavel && (
+          <label>Responsável
+            <select required value={f.responsavelId} disabled={!setor} onChange={(e) => setF({ ...f, responsavelId: e.target.value })}>
+              <option value="" disabled>{setor ? 'Selecione o responsável…' : escolheSetor ? 'Escolha o departamento primeiro' : 'Carregando…'}</option>
+              {candidatos.map((u) => <option key={u.id} value={u.id}>{u.nome}{u.setorNome ? ` — ${u.setorNome}` : ''}</option>)}
+            </select>
+          </label>
+        )}
 
         <label>Observações (opcional)
           <textarea rows={3} maxLength={10000} value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} />
@@ -190,7 +209,7 @@ function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => vo
         {erro && <p className="erro">{erro}</p>}
         <div className="acoes">
           <button type="button" onClick={fechar}>Cancelar</button>
-          <button className="primario">Criar processo</button>
+          <button className="primario" disabled={semSetor}>Criar processo</button>
         </div>
       </form>
     </div>
