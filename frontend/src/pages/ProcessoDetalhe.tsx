@@ -5,7 +5,7 @@ import { useAuth } from '../auth'
 import { Selo } from './Processos'
 
 const ROTULO: Record<string, string> = {
-  CRIADO: 'Criado', MOVIDO: 'Movimentado', COMENTARIO: 'Comentário', ATRIBUIDO: 'Atribuído', CANCELADO: 'Cancelado',
+  CRIADO: 'Criado', MOVIDO: 'Movimentado', COMENTARIO: 'Comentário', ATRIBUIDO: 'Atribuído', CANCELADO: 'Cancelado', REQUISITO: 'Requisito',
 }
 const fmtTam = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`)
 
@@ -18,6 +18,7 @@ export default function ProcessoDetalhe() {
   const [comentario, setComentario] = useState('')
   const [erro, setErro] = useState('')
   const input = useRef<HTMLInputElement>(null)
+  const requisitoAlvo = useRef<number | null>(null)   // requisito que o arquivo escolhido vai cumprir (se houver)
 
   const carregar = useCallback(async () => {
     try {
@@ -52,6 +53,9 @@ export default function ProcessoDetalhe() {
   const aberto = p.status === 'ABERTO'
   // Administrador e gestor mexem em qualquer processo; o usuário comum só nos seus.
   const podeMexer = podeGerenciar || p.responsavelId === usuario?.id
+  const pendentes = d.requisitos.filter((r) => !r.cumprido).length
+  // só avançar exige os requisitos; voltar para uma etapa anterior não
+  const bloqueia = (ordemDestino: number) => pendentes > 0 && d.etapaOrdem !== null && ordemDestino > d.etapaOrdem
 
   return (
     <>
@@ -88,10 +92,45 @@ export default function ProcessoDetalhe() {
             <dl>{Object.entries(p.camposExtras).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{String(v)}</dd></Fragment>)}</dl>
           )}
 
+          {aberto && d.requisitos.length > 0 && (
+            <div className="requisitos">
+              <h4>Requisitos para sair da etapa “{p.etapaAtual}”</h4>
+              <ul>
+                {d.requisitos.map((r) => (
+                  <li key={r.id} className={r.cumprido ? 'req-ok' : 'req-pendente'}>
+                    <span className="req-marca" aria-hidden="true">{r.cumprido ? '✓' : '●'}</span>
+                    <span className="req-texto">
+                      <b>{r.descricao}</b>
+                      <small>
+                        {r.tipo === 'DOCUMENTO' ? 'Anexar documento' : 'Confirmação do responsável'}
+                        {r.cumprido && <> · {r.tipo === 'DOCUMENTO' ? r.documentoNome : 'confirmado'}{r.cumpridoPor && <> por {r.cumpridoPor}</>}</>}
+                        {!r.cumprido && <> · pendente</>}
+                      </small>
+                    </span>
+                    {podeMexer && r.tipo === 'CONFIRMACAO' && (
+                      <button type="button" onClick={() => acao(() => api.put(`/processos/${p.id}/requisitos/${r.id}`, { cumprido: !r.cumprido }))}>
+                        {r.cumprido ? 'Desmarcar' : 'Confirmar'}
+                      </button>
+                    )}
+                    {podeMexer && r.tipo === 'DOCUMENTO' && (
+                      <button type="button" onClick={() => { requisitoAlvo.current = r.id; input.current?.click() }}>
+                        {r.cumprido ? 'Anexar outro' : 'Anexar'}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {pendentes > 0 && <small className="req-aviso">Faltam {pendentes} requisito(s): o processo só avança depois de cumpri-los.</small>}
+            </div>
+          )}
+
           {aberto && podeMexer && (
             <div className="acoes-processo">
               {d.proximasEtapas.map((e) => (
-                <button key={e.id} className="primario" onClick={() => acao(() => api.post(`/processos/${p.id}/avancar`, { etapaId: e.id, comentario: comentario || null }).then(() => setComentario('')))}>
+                <button key={e.id} className="primario"
+                  disabled={bloqueia(e.ordem)}
+                  title={bloqueia(e.ordem) ? 'Cumpra os requisitos da etapa para avançar' : undefined}
+                  onClick={() => acao(() => api.post(`/processos/${p.id}/avancar`, { etapaId: e.id, comentario: comentario || null }).then(() => setComentario('')))}>
                   {e.finalEtapa ? `Concluir (${e.nome})` : `Avançar para ${e.nome}`}
                 </button>
               ))}
@@ -112,7 +151,9 @@ export default function ProcessoDetalhe() {
             if (!f) return
             const form = new FormData()
             form.append('arquivo', f)
-            acao(() => api.upload(`/processos/${p.id}/documentos`, form))
+            const alvo = requisitoAlvo.current
+            requisitoAlvo.current = null
+            acao(() => api.upload(`/processos/${p.id}/documentos${alvo ? `?requisitoId=${alvo}` : ''}`, form))
             e.target.value = ''
           }} />
           {podeMexer && (
@@ -127,7 +168,7 @@ export default function ProcessoDetalhe() {
             {docs.map((x) => (
               <li key={x.id}>
                 <button className="link" onClick={() => api.download(`/documentos/${x.id}/download`, x.nome).catch((e) => setErro(e.message))}>{x.nome}</button>
-                <small> {fmtTam(x.tamanho)}</small>
+                <small> {fmtTam(x.tamanho)}{x.requisito && <> · requisito: {x.requisito}</>}</small>
                 {podeMexer && <button className="link perigo-txt" onClick={() => confirm('Remover documento?') && acao(() => api.del(`/documentos/${x.id}`))}>remover</button>}
               </li>
             ))}

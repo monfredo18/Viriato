@@ -75,7 +75,10 @@ export interface EntregaResumo { id: number; nome: string; ativo: boolean }
 export interface Setor { id: number; nome: string; ativo: boolean; entregas: EntregaResumo[] }
 export interface Entrega { id: number; nome: string; fluxoId: number; fluxoNome: string; ativo: boolean }
 export interface Sessao { token: string; usuario: Usuario; empresa: string }
-export interface Etapa { id: number; nome: string; ordem: number; prazoDias: number | null; inicial: boolean; finalEtapa: boolean }
+export type TipoRequisito = 'DOCUMENTO' | 'CONFIRMACAO'
+export interface Requisito { id: number; tipo: TipoRequisito; descricao: string }
+export interface RequisitoStatus extends Requisito { cumprido: boolean; cumpridoPor: string | null; cumpridoEm: string | null; documentoId: number | null; documentoNome: string | null }
+export interface Etapa { id: number; nome: string; ordem: number; prazoDias: number | null; inicial: boolean; finalEtapa: boolean; requisitos: Requisito[] }
 export interface Fluxo { id: number; nome: string; ativo: boolean; etapas: Etapa[]; transicoes: { de: number; para: number }[] }
 export interface Processo {
   id: number; numero: string; titulo: string; descricao: string | null
@@ -87,7 +90,7 @@ export interface Processo {
   camposExtras: Record<string, unknown>; criadoEm: string; atualizadoEm: string
 }
 export interface Historico { id: number; acao: string; usuarioNome: string | null; deEtapa: string | null; paraEtapa: string | null; comentario: string | null; criadoEm: string }
-export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historico: Historico[] }
+export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historico: Historico[]; requisitos: RequisitoStatus[]; etapaOrdem: number | null }
 export interface Pagina<T> { content: T[]; totalPages: number; number: number; totalElements: number }
-export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string }
+export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string; requisitoId: number | null; requisito: string | null }
 export interface Notificacao { id: number; titulo: string; mensagem: string | null; empresaNome: string | null; entregaNome: string | null; autorNome: string | null; processoId: number | null; lida: boolean; criadoEm: string }

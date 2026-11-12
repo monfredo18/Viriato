@@ -20,5 +20,5 @@ public record ProcessoDto(Long id, String numero, String titulo, String descrica
                                String comentario, Instant criadoEm) {}
 
     public record Detalhe(ProcessoDto processo, List<EtapaDto> proximasEtapas, List<HistoricoDto> historico,
-                          List<RequisitoService.RequisitoStatusDto> requisitos) {}
+                          List<RequisitoService.RequisitoStatusDto> requisitos, Integer etapaOrdem) {}
 }

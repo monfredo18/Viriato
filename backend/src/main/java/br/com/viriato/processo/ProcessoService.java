@@ -180,7 +180,8 @@ public class ProcessoService {
                 .map(h -> new HistoricoDto(h.getId(), h.getAcao(), nomes.get(h.getUsuarioId()), h.getDeEtapa(),
                         h.getParaEtapa(), h.getComentario(), h.getCriadoEm()))
                 .toList();
-        return new Detalhe(paraDto(p), proximas, hist, p.getStatus() == StatusProcesso.ABERTO ? requisitos.situacao(p) : List.of());
+        Integer ordem = p.getEtapaAtualId() == null ? null : etapas.findById(p.getEtapaAtualId()).map(Etapa::getOrdem).orElse(null);
+        return new Detalhe(paraDto(p), proximas, hist, p.getStatus() == StatusProcesso.ABERTO ? requisitos.situacao(p) : List.of(), ordem);
     }
 
     // ---------- operações ----------
