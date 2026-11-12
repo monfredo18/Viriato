@@ -55,7 +55,7 @@
   <h1>Relatório do Sistema</h1>
   <p class="sub">Controle de processos multi-empresa: como o sistema funciona, como foi construído e quais são seus limites atuais.</p>
   <table class="meta">
-    <tr><td>Versão do código</td><td>commit <code>cfb7f77</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
+    <tr><td>Versão do código</td><td>commit <code>f4f37be</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
     <tr><td>Data</td><td>12 de novembro de 2026</td></tr>
     <tr><td>Estágio</td><td>MVP funcional, ainda não preparado para produção</td></tr>
     <tr><td>Repositório</td><td>github.com/monfredo18/Viriato</td></tr>
@@ -76,12 +76,13 @@
   <ul>
     <li><strong>Cadastro self-service de empresa:</strong> quem se cadastra vira administrador e já recebe um fluxo padrão.</li>
     <li><strong>Usuários, setores e papéis:</strong> Administrador, Gestor e Usuário, com permissões diferentes; cada funcionário pertence a um setor.</li>
-    <li><strong>Cadastros:</strong> empresas atendidas, setores e entregas. Cada setor define quais entregas faz, e cada entrega define o fluxo.</li>
+    <li><strong>Cadastros:</strong> empresas atendidas (com número e nome), setores e entregas. Cada setor define quais entregas faz, e cada entrega define o fluxo.</li>
     <li><strong>Fluxos configuráveis:</strong> etapas com prazo em dias, etapa inicial e etapas finais.</li>
     <li><strong>Processos:</strong> abertos com empresa, departamento, entrega e responsável; busca e filtros, movimentação entre etapas respeitando as regras do fluxo, atribuição, comentários e cancelamento.</li>
     <li><strong>Histórico:</strong> cada ação fica registrada com autor, data e comentário.</li>
     <li><strong>Documentos:</strong> upload e download de arquivos por processo, guardados no AWS S3.</li>
     <li><strong>Prazos e notificações:</strong> aviso dentro do sistema (sininho) e por e-mail, com alerta automático de prazo vencendo ou vencido.</li>
+    <li><strong>Relatórios em PDF:</strong> lista dos processos com filtros por setor, responsável, empresa, período e situação, dentro do que o papel de cada pessoa permite.</li>
     <li><strong>Interface:</strong> visual sóbrio, em azul com detalhes em vermelho (o que exige atenção) e dourado (marca e filetes), nos temas claro e escuro, com botão de lua e sol.</li>
   </ul>
 
@@ -89,7 +90,7 @@
   <table>
     <tr><th style="width:30mm">Termo</th><th>Significado</th></tr>
     <tr><td>Sua empresa (tenant)</td><td>Quem usa o sistema. Todos os dados pertencem a uma empresa, e uma nunca vê os dados da outra.</td></tr>
-    <tr><td>Empresa atendida</td><td>Para quem o processo é feito (na tela, "Empresa"). Guardada na tabela <code>cliente</code>.</td></tr>
+    <tr><td>Empresa atendida</td><td>Para quem o processo é feito (na tela, "Empresa"). Tem <strong>nome</strong> e <strong>número</strong> (código interno). Guardada na tabela <code>cliente</code>.</td></tr>
     <tr><td>Setor</td><td>Departamento. Cada setor define quais entregas pode fazer.</td></tr>
     <tr><td>Entrega</td><td>O que pode ser entregue. Cada entrega está ligada a um fluxo, que vira o fluxo do processo.</td></tr>
     <tr><td>Fluxo</td><td>Modelo de trabalho: conjunto de etapas e das transições permitidas entre elas.</td></tr>
@@ -205,12 +206,13 @@
   <h2>3.4 Cadastros: empresas, setores e entregas</h2>
   <p>A página <em>Cadastros</em> reúne três listas, todas por empresa do sistema:</p>
   <ul>
-    <li><strong>Empresas atendidas:</strong> para quem os processos são feitos. Administrador e gestor cadastram, alteram e apagam.</li>
+    <li><strong>Empresas atendidas:</strong> para quem os processos são feitos. Cada uma tem <strong>número</strong> e <strong>nome</strong>: o número é um código interno de 1 a 10 dígitos, que não pode repetir o de outra empresa atendida, e é ele que passa a ser o número dos processos da empresa. Administrador e gestor cadastram, alteram e apagam.</li>
     <li><strong>Entregas:</strong> o que pode ser entregue. Cada entrega escolhe o fluxo que seus processos vão seguir.</li>
     <li><strong>Setores:</strong> departamentos. Cada setor marca quais entregas ele faz.</li>
   </ul>
   <p>Setores e entregas também são mantidos pelo administrador e pelo gestor. Qualquer item pode ser <strong>desativado</strong> (deixa de aparecer para novos processos, sem afetar os que já existem) ou <strong>apagado</strong>, conforme as regras da seção 4. Os nomes não se repetem dentro da empresa.</p>
-  <figure><img src="img/cadastros-setores.png" alt="Cadastro de setores"><figcaption>Figura 4 — Setores e as entregas que cada um faz; o botão <em>escolher</em> altera a lista.</figcaption></figure>
+  <figure><img src="img/cadastros-empresas.png" alt="Cadastro de empresas"><figcaption>Figura 4 — Empresas atendidas, com número e nome; o número só aceita dígitos e o sistema recusa números repetidos.</figcaption></figure>
+  <figure><img src="img/cadastros-setores.png" alt="Cadastro de setores"><figcaption>Figura 5 — Setores e as entregas que cada um faz; o botão <em>escolher</em> altera a lista.</figcaption></figure>
 
   <h2>3.5 Abrir e acompanhar processos</h2>
   <p>Qualquer usuário pode abrir um processo. O formulário pede, nesta ordem:</p>
@@ -220,17 +222,17 @@
     <li><strong>O que vai entregar</strong> (a entrega), com a indicação do fluxo que será usado;</li>
     <li><strong>Responsável</strong>, entre os usuários ativos; vem preenchido com quem está abrindo.</li>
   </ol>
-  <p>Há ainda um campo opcional de observações. Não existe campo de título nem de fluxo: o <strong>título é gerado</strong> (por exemplo <em>Laudo técnico — Construtora Alfa</em>) e o <strong>fluxo vem da entrega</strong>. Ao criar, o sistema:</p>
+  <p>Há ainda um campo opcional de observações. Não existe campo de título, de número nem de fluxo: o <strong>título é gerado</strong> (por exemplo <em>Laudo técnico — Construtora Alfa</em>) e o <strong>fluxo vem da entrega</strong>. Ao criar, o sistema:</p>
   <ol>
     <li>confere que a empresa, o setor e a entrega são da sua empresa e estão ativos, que o setor realmente faz aquela entrega e que o fluxo da entrega está ativo;</li>
     <li>coloca o processo na etapa inicial do fluxo e calcula o prazo (hoje + dias da etapa, fuso America/Sao_Paulo);</li>
-    <li>gera o número no formato <code>ANO-NNNNNN</code> (por exemplo <code>2026-000001</code>);</li>
+    <li>usa como número do processo o <strong>número da empresa atendida</strong> (por exemplo <code>1042</code>);</li>
     <li>registra no histórico a ação <em>Criado</em> e avisa o responsável, se for outra pessoa.</li>
   </ol>
-  <figure><img src="img/novo-processo.png" alt="Formulário de novo processo"><figcaption>Figura 5 — Novo processo: a entrega só libera depois do departamento e mostra apenas o que ele faz.</figcaption></figure>
+  <figure><img src="img/novo-processo.png" alt="Formulário de novo processo"><figcaption>Figura 6 — Novo processo: a entrega só libera depois do departamento e mostra apenas o que ele faz.</figcaption></figure>
   <p>A lista de processos mostra, nesta ordem, número, empresa, setor, entrega, prazo, responsável e situação (a etapa atual aparece no detalhe), e tem busca por empresa, entrega ou número, filtros por situação, empresa e setor, <em>Meus</em> (onde sou responsável) e <em>Atrasados</em>, com paginação. Um processo é considerado <strong>atrasado</strong> quando está aberto e o prazo da etapa já passou; isso é calculado na hora da consulta.</p>
-  <figure><img src="img/processos-claro.png" alt="Lista de processos"><figcaption>Figura 6 — Lista de processos com empresa, entrega, setor, filtros e selos de situação (tema claro).</figcaption></figure>
-  <figure><img src="img/processos-escuro.png" alt="Lista de processos no tema escuro"><figcaption>Figura 7 — A mesma tela no tema escuro, escolhido pelo botão de sol/lua no topo.</figcaption></figure>
+  <figure><img src="img/processos-claro.png" alt="Lista de processos"><figcaption>Figura 7 — Lista de processos com empresa, entrega, setor, filtros e selos de situação (tema claro).</figcaption></figure>
+  <figure><img src="img/processos-escuro.png" alt="Lista de processos no tema escuro"><figcaption>Figura 8 — A mesma tela no tema escuro, escolhido pelo botão de sol/lua no topo.</figcaption></figure>
 
   <h2>3.6 Movimentar um processo</h2>
   <p>No detalhe do processo aparecem os botões das etapas para as quais o fluxo permite avançar a partir da etapa atual. Ao avançar:</p>
@@ -241,7 +243,7 @@
     <li>se a etapa de destino for final, o processo vira <strong>Concluído</strong> e o prazo é removido;</li>
     <li>a movimentação entra no histórico, com o comentário opcional, e o responsável é avisado.</li>
   </ol>
-  <figure><img src="img/detalhe.png" alt="Detalhe do processo"><figcaption>Figura 8 — Detalhe: empresa, entrega e setor, documentos, ações disponíveis e histórico em linha do tempo.</figcaption></figure>
+  <figure><img src="img/detalhe.png" alt="Detalhe do processo"><figcaption>Figura 9 — Detalhe: empresa, entrega e setor, documentos, ações disponíveis e histórico em linha do tempo.</figcaption></figure>
 
   <h2>3.7 Documentos</h2>
   <p>Cada processo aceita anexos de até 25 MB por arquivo. O sistema sanitiza o nome do arquivo (remove caminhos e caracteres perigosos), grava no S3 com uma chave única por empresa e processo e criptografia no repouso (AES-256), e só então registra no banco. Se o registro falhar, o arquivo enviado é removido para não sobrar lixo no bucket. O <strong>download passa pelo backend</strong>, que confere a empresa antes de entregar o arquivo; não há links públicos.</p>
@@ -249,7 +251,19 @@
   <h2>3.8 Prazos e notificações</h2>
   <p>Uma tarefa agendada roda todos os dias às 08:00 (America/Sao_Paulo). Ela procura processos abertos, com responsável, cujo prazo vence em até 1 dia ou já venceu e que ainda não foram alertados naquela etapa. Para cada um, avisa o responsável (<em>Prazo próximo do vencimento</em> ou <em>Prazo vencido</em>) e marca como alertado. O resultado é <strong>um alerta por etapa</strong>; ele volta a valer quando o processo muda de etapa ou de responsável.</p>
   <p>Cada notificação é gravada no sistema (sininho no topo, com contador de não lidas, atualizado a cada 30 segundos) e enviada por e-mail de forma assíncrona. O e-mail é <em>best-effort</em>: se o servidor de e-mail falhar, isso é registrado em log e a operação principal não é afetada.</p>
-  <figure><img src="img/notificacoes.png" alt="Notificações"><figcaption>Figura 9 — Painel de notificações; as não lidas têm destaque e levam direto ao processo.</figcaption></figure>
+  <figure><img src="img/notificacoes.png" alt="Notificações"><figcaption>Figura 10 — Painel de notificações; as não lidas têm destaque e levam direto ao processo.</figcaption></figure>
+  <h2>3.9 Relatórios</h2>
+  <p>A aba <em>Relatórios</em> gera um PDF com os processos, e está aberta a todos os papéis. O que cada pessoa pode abranger é decidido pelo servidor, a partir do papel, e não pelo que a tela envia:</p>
+  <table>
+    <tr><th style="width:36mm">Papel</th><th>Abrangência do relatório</th></tr>
+    <tr><td>Administrador</td><td>Todos os setores, com a opção de filtrar por um setor.</td></tr>
+    <tr><td>Gestor</td><td>Somente o <strong>próprio setor</strong>. O filtro de setor fica travado, e a lista de responsáveis traz só quem é do setor. Pedir outro setor direto pela API é recusado (403). Gestor sem setor definido não consegue gerar relatório e recebe um aviso.</td></tr>
+    <tr><td>Usuário</td><td>Somente os <strong>próprios processos</strong> (aqueles em que é o responsável). O filtro de responsável fica travado nele mesmo.</td></tr>
+  </table>
+  <p>Os filtros se combinam: <strong>setor</strong>, <strong>responsável</strong>, <strong>empresa</strong>, <strong>período</strong> (por data de abertura ou por data de encerramento) e <strong>situação</strong> (em andamento, concluídos, cancelados). Antes de gerar, a tela mostra uma <strong>prévia</strong> com os totais (total, em andamento, atrasados, concluídos e cancelados); o botão fica bloqueado se não houver processo, se a data inicial for depois da final ou se nenhuma situação estiver marcada. No período por encerramento, só entram processos concluídos ou cancelados, e a data considerada é a da última movimentação.</p>
+  <figure><img src="img/relatorios.png" alt="Tela de relatórios"><figcaption>Figura 11 — Aba Relatórios: filtros à esquerda, prévia e botão de gerar à direita.</figcaption></figure>
+  <p>O PDF sai em A4 paisagem, na identidade visual do sistema: cabeçalho com a empresa, quem gerou, quando e a abrangência; a lista dos filtros usados; os totais; e a tabela com número, empresa, setor, entrega, responsável, data de abertura, data de encerramento e situação (o atrasado aparece em vermelho). O cabeçalho da tabela se repete em cada página, e o rodapé traz <em>Página X de Y</em>. Cada relatório comporta até 10.000 processos; acima disso o sistema pede para refinar os filtros.</p>
+  <figure><img src="img/relatorio-pdf.png" alt="Exemplo de relatório em PDF"><figcaption>Figura 12 — Primeira página de um relatório gerado pelo administrador, sem filtros.</figcaption></figure>
 </section>
 
 <!-- ============================ 4 ============================ -->
@@ -261,6 +275,7 @@
     <tr><td>Ver processos, cadastros, fluxos e equipe</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
     <tr><td>Abrir processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
     <tr><td>Movimentar, comentar, anexar e remover anexo, reatribuir</td><td class="c ok">em qualquer processo</td><td class="c ok">em qualquer processo</td><td class="c">só nos processos em que é o responsável</td></tr>
+    <tr><td>Gerar relatório em PDF</td><td class="c ok">de todos os setores</td><td class="c">só do próprio setor</td><td class="c">só dos próprios processos</td></tr>
     <tr><td>Cancelar processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar empresas atendidas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar setores e entregas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
@@ -278,6 +293,7 @@
     <li>Na tela, quem não pode alterar algo não vê o botão nem o formulário; a página mostra o aviso <em>Somente consulta</em>. Além disso, o servidor recusa a ação mesmo que alguém tente chamá-la direto pela API.</li>
     <li>Recusas por papel (por exemplo usuário comum cadastrar empresa) devolvem HTTP 403. Recusas por regra de negócio (usuário comum mexer em processo alheio) devolvem HTTP 422 com uma mensagem em português.</li>
     <li>O administrador não consegue desativar nem rebaixar a si mesmo, para evitar ficar sem acesso.</li>
+    <li>Gestor sem setor definido não gera relatório: o sistema avisa para pedir ao administrador que defina o setor.</li>
     <li>Recursos de outra empresa respondem 404, como se não existissem.</li>
     <li><strong>Apagar nunca leva processos junto.</strong> Só processo <em>em andamento</em> impede apagar uma empresa, um setor, uma entrega, um fluxo ou um funcionário: o sistema recusa, informa quantos processos estão ligados e orienta a concluí-los ou cancelá-los (ou a desativar o cadastro). Processos <em>concluídos ou cancelados</em> não bloqueiam; eles continuam existindo, apenas sem o vínculo com o item apagado (a lista mostra "—"; o título gerado e o histórico mantêm a informação).</li>
     <li>Apagar uma entrega a remove da lista dos setores; apagar um setor deixa os funcionários dele sem setor.</li>
@@ -287,14 +303,14 @@
     <li>O usuário comum pode abrir um processo e atribuí-lo a qualquer colega ativo; a partir daí, só o responsável (ou um gestor) mexe nele.</li>
     <li>O gestor ativa e desativa apenas funcionários com papel Usuário; não mexe na situação do administrador nem de outros gestores. Um funcionário desativado deixa de conseguir entrar.</li>
   </ul>
-  <figure><img src="img/somente-consulta.png" alt="Processo de outra pessoa em modo consulta"><figcaption>Figura 10 — Um usuário comum diante do processo de outra pessoa: vê tudo, sem botões de ação.</figcaption></figure>
+  <figure><img src="img/somente-consulta.png" alt="Processo de outra pessoa em modo consulta"><figcaption>Figura 13 — Um usuário comum diante do processo de outra pessoa: vê tudo, sem botões de ação.</figcaption></figure>
 
 </section>
 
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em quatro migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) e <code>V4</code> (processo encerrado pode ficar sem fluxo).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em cinco migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) e <code>V5</code> (número da empresa; o número do processo deixa de ser único).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -324,20 +340,20 @@
         <text x="73" y="212">avisos</text><text x="262" y="214">histórico</text><text x="438" y="214">anexos</text>
       </g>
     </svg>
-    <figcaption>Figura 11 — Relações principais; as setas vão de quem é referenciado para quem o referencia. Para clareza, nem todas foram desenhadas: todas as tabelas de negócio apontam também para a empresa do sistema (<code>tenant</code>), e o funcionário aponta para o seu setor.</figcaption>
+    <figcaption>Figura 14 — Relações principais; as setas vão de quem é referenciado para quem o referencia. Para clareza, nem todas foram desenhadas: todas as tabelas de negócio apontam também para a empresa do sistema (<code>tenant</code>), e o funcionário aponta para o seu setor.</figcaption>
   </figure>
   <table>
     <tr><th style="width:36mm">Tabela</th><th>Conteúdo e pontos importantes</th></tr>
     <tr><td><code>tenant</code></td><td>Empresa do sistema (quem usa o Viriato); flag <code>ativo</code>.</td></tr>
     <tr><td><code>usuario</code></td><td>Nome, e-mail (único em todo o sistema), hash BCrypt da senha, papel, ativo e <code>setor_id</code> (opcional).</td></tr>
-    <tr><td><code>cliente</code></td><td>Empresa atendida: nome (único por empresa do sistema) e flag <code>ativo</code>.</td></tr>
+    <tr><td><code>cliente</code></td><td>Empresa atendida: número (código interno de até 10 dígitos, único) e nome (único), mais a flag <code>ativo</code>. Empresas anteriores à V5 ficaram com o próprio identificador como número.</td></tr>
     <tr><td><code>setor</code></td><td>Departamento: nome (único) e flag <code>ativo</code>.</td></tr>
     <tr><td><code>entrega</code></td><td>Nome (único), <code>fluxo_id</code> e flag <code>ativo</code>.</td></tr>
     <tr><td><code>setor_entrega</code></td><td>Liga cada setor às entregas que ele faz (muitos para muitos).</td></tr>
     <tr><td><code>fluxo</code></td><td>Nome e flag <code>ativo</code>.</td></tr>
     <tr><td><code>etapa</code></td><td>Nome, ordem, <code>prazo_dias</code> (opcional), flags <code>inicial</code> e <code>final_</code>.</td></tr>
     <tr><td><code>transicao</code></td><td>Par de etapas (de, para), único; define os movimentos permitidos.</td></tr>
-    <tr><td><code>processo</code></td><td>Número (único por empresa), título (gerado), descrição, <code>cliente_id</code>, <code>entrega_id</code>, <code>setor_id</code>, fluxo, etapa atual, responsável, status, <code>prazo_etapa</code>, <code>prazo_alertado</code>, <code>campos_extras</code> (JSON livre em texto).</td></tr>
+    <tr><td><code>processo</code></td><td>Número (o da empresa; repete entre processos da mesma empresa), título (gerado), descrição, <code>cliente_id</code>, <code>entrega_id</code>, <code>setor_id</code>, fluxo, etapa atual, responsável, status, <code>prazo_etapa</code>, <code>prazo_alertado</code>, <code>campos_extras</code> (JSON livre em texto).</td></tr>
     <tr><td><code>processo_historico</code></td><td>Ação (CRIADO, MOVIDO, COMENTARIO, ATRIBUIDO, CANCELADO), autor, etapas de origem e destino, comentário, data.</td></tr>
     <tr><td><code>documento</code></td><td>Nome original, chave no S3, tipo, tamanho, quem enviou.</td></tr>
     <tr><td><code>notificacao</code></td><td>Destinatário, título, mensagem, processo relacionado, lida.</td></tr>
@@ -347,7 +363,7 @@
 <!-- ============================ 6 ============================ -->
 <section>
   <h1>6. Referência da API</h1>
-  <p>Todas as rotas começam com <code>/api</code>. Fora as de autenticação, exigem o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. A documentação interativa fica em <code>/swagger-ui.html</code> (39 rotas).</p>
+  <p>Todas as rotas começam com <code>/api</code>. Fora as de autenticação, exigem o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. A documentação interativa fica em <code>/swagger-ui.html</code> (42 rotas).</p>
   <table>
     <tr><th style="width:17mm">Método</th><th style="width:56mm">Rota</th><th>Função</th><th style="width:40mm">Quem</th></tr>
     <tr><td>POST</td><td><code>/auth/registrar-empresa</code></td><td>Cria empresa, administrador e fluxo padrão; devolve sessão</td><td>público</td></tr>
@@ -357,7 +373,10 @@
     <tr><td>POST</td><td><code>/usuarios</code></td><td>Adiciona funcionário (com setor opcional)</td><td>Admin (qualquer papel); Gestor (só Usuário)</td></tr>
     <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel, ativo ou setor</td><td>Admin (tudo); Gestor (só <code>ativo</code>, e só de quem é Usuário)</td></tr>
     <tr><td>GET</td><td><code>/clientes</code>, <code>/setores</code>, <code>/entregas</code></td><td>Listas de empresas atendidas, setores (com suas entregas) e entregas (com o fluxo)</td><td>todos</td></tr>
-    <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (nome, ativo)</td><td>Admin, Gestor</td></tr>
+    <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (<code>numero</code> obrigatório, só dígitos, único; <code>nome</code>; ativo). Mudar o número atualiza o dos processos da empresa</td><td>Admin, Gestor</td></tr>
+    <tr><td>GET</td><td><code>/relatorios/escopo</code></td><td>O que o usuário pode abranger (todos os setores, o próprio setor ou os próprios processos)</td><td>todos</td></tr>
+    <tr><td>GET</td><td><code>/relatorios/processos/resumo</code></td><td>Totais dos processos que entrariam no relatório. Filtros: <code>usuarioId</code>, <code>setorId</code>, <code>clienteId</code>, <code>de</code>, <code>ate</code>, <code>referencia</code> (ABERTURA ou ENCERRAMENTO), <code>situacoes</code></td><td>todos, dentro do papel</td></tr>
+    <tr><td>GET</td><td><code>/relatorios/processos/pdf</code></td><td>Gera o PDF do relatório, com os mesmos filtros</td><td>todos, dentro do papel</td></tr>
     <tr><td>DELETE</td><td><code>/clientes/{id}</code>, <code>/setores/{id}</code>, <code>/entregas/{id}</code></td><td>Apaga o cadastro (recusa se houver processo em andamento ligado)</td><td>Admin, Gestor</td></tr>
     <tr><td>DELETE</td><td><code>/fluxos/{id}</code></td><td>Apaga o fluxo, com etapas e transições (recusa se uma entrega o usa ou se há processo em andamento nele)</td><td>Admin, Gestor</td></tr>
     <tr><td>DELETE</td><td><code>/usuarios/{id}</code></td><td>Apaga funcionário (recusa se for responsável por processo em andamento ou se for o próprio usuário)</td><td>Admin; Gestor (só Usuário)</td></tr>
@@ -407,7 +426,7 @@
     <li>Upload sem lista de tipos permitidos e sem antivírus (limite de 25 MB por arquivo).</li>
     <li>O token fica no <code>localStorage</code> do navegador. O React escapa o conteúdo, o que reduz o risco, mas uma falha de injeção de script exporia o token. Uma alternativa é cookie <code>HttpOnly</code>.</li>
     <li>O e-mail é único em todo o sistema: uma pessoa não pode ter o mesmo e-mail em duas empresas.</li>
-    <li>O número do processo usa o identificador global, então não é sequencial por empresa (a primeira da empresa pode ser <code>2026-000137</code>).</li>
+    <li>O número do processo é o número da empresa atendida, então <strong>não identifica um processo isoladamente</strong>: processos da mesma empresa compartilham o número, e o que os distingue é o identificador interno, o título e o histórico. Processos criados antes dessa regra mantêm o número antigo (por exemplo <code>2026-000001</code>).</li>
     <li>Todos da empresa veem todos os processos, por decisão de projeto; não há visibilidade restrita por equipe ou setor.</li>
     <li>O responsável pode ser qualquer usuário ativo, não necessariamente do setor do processo.</li>
     <li>O gestor escolhe o setor do funcionário ao adicioná-lo, mas depois só o administrador consegue alterá-lo.</li>
@@ -422,6 +441,7 @@
     <li>Os campos extras do processo são um JSON livre aceito pela API; ainda não há tela para preenchê-los.</li>
     <li>Processos criados antes da versão com empresa, entrega e setor continuam existindo, mas mostram esses campos em branco.</li>
     <li>Prazos em dias corridos, sem calendário de feriados.</li>
+    <li>O PDF dos relatórios usa as fontes padrão do formato (Latin-1): letras fora dessa faixa podem não aparecer. Cada relatório comporta até 10.000 processos, e o período por encerramento usa a data da última movimentação do processo.</li>
     <li>Listas de usuários, fluxos e notificações não têm paginação (notificações mostram as 50 mais recentes).</li>
     <li>Data e hora do histórico aparecem no fuso do navegador.</li>
   </ul>
@@ -469,17 +489,19 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>28 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>43 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Ciclo completo do processo: criar, avançar por todas as etapas, concluir, histórico</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Isolamento entre empresas (processo, comentário, documentos, download, fluxo alheio)</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Permissões por papel e transição fora do fluxo</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Cadastros: quem altera empresas, setores, entregas e funcionários; entrega só aceita se o setor a faz</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Apagar empresas, setores, entregas e funcionários: permissões, proteção do que está em uso, histórico preservado, isolamento entre empresas</td><td class="ok">coberto por teste (7 testes)</td></tr>
+    <tr><td>Número da empresa: obrigatório, só dígitos, único; número do processo igual ao da empresa; editar o número acompanha os processos; número livre de novo depois que a empresa é apagada</td><td class="ok">coberto por teste (5 testes)</td></tr>
+    <tr><td>Relatórios: abrangência por papel (administrador, gestor, usuário), filtros combinados, período por abertura e por encerramento, isolamento entre empresas e conteúdo do PDF</td><td class="ok">coberto por teste (10 testes)</td></tr>
     <tr><td>Usuário comum vê tudo, mas não mexe em processo alheio (movimentar, comentar, anexar, remover, reatribuir, cancelar)</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Upload e download, com nome malicioso sanitizado</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Alerta de prazo: dispara uma vez só</td><td class="ok">coberto por teste</td></tr>
-    <tr><td>Migrações V1 a V3 e a aplicação contra MySQL 8 e S3 simulado reais (teste ponta a ponta via HTTP), incluindo as exclusões com chaves estrangeiras</td><td class="ok">executado, incluindo acentuação, permissões e isolamento</td></tr>
-    <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, colunas da lista, situação de funcionários, apagar cadastros e fluxos pelo X com confirmação, recusa de item em uso, concluir processo e então apagar, dois temas</td><td class="ok">executado (65 verificações)</td></tr>
+    <tr><td>Migrações V1 a V5 e a aplicação contra MySQL 8 e S3 simulado reais (teste ponta a ponta via HTTP), incluindo as exclusões com chaves estrangeiras, a V5 aplicada sobre dados da versão anterior e a geração do PDF com várias páginas</td><td class="ok">executado, incluindo acentuação, permissões e isolamento</td></tr>
+    <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, colunas da lista, situação de funcionários, apagar cadastros e fluxos pelo X com confirmação, recusa de item em uso, concluir processo e então apagar, número da empresa e dos processos, aba Relatórios com download e leitura do PDF por papel, dois temas</td><td class="ok">executado (103 verificações em 5 suítes, todas concluídas)</td></tr>
     <tr><td>Build do frontend com verificação de tipos</td><td class="ok">passa</td></tr>
   </table>
   <p>Esse teste com MySQL real encontrou dois defeitos que o H2 não revelava (parâmetro de codificação da conexão e health check de e-mail derrubando a aplicação); ambos já foram corrigidos.</p>
@@ -523,6 +545,11 @@
     <tr><td><code>35d6a9c</code></td><td>Relatório e README: nova regra de apagar e fluxos</td></tr>
     <tr><td><code>621e744</code></td><td>Fontes IBM Plex instaladas localmente</td></tr>
     <tr><td><code>cfb7f77</code></td><td>Frontend: identidade visual sóbria em azul, vermelho e dourado</td></tr>
+    <tr><td><code>b16e12e</code></td><td>Relatório com o novo visual do sistema</td></tr>
+    <tr><td><code>be5d2bc</code></td><td>Backend: empresa com número; número do processo é o da empresa (migração V5)</td></tr>
+    <tr><td><code>ac2a919</code></td><td>Frontend: cadastro de empresa com número e nome</td></tr>
+    <tr><td><code>57af26d</code></td><td>Backend: relatórios de processos em PDF por papel</td></tr>
+    <tr><td><code>f4f37be</code></td><td>Frontend: aba Relatórios</td></tr>
   </table>
 </section>
 
