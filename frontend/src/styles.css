@@ -90,7 +90,6 @@ main > h2::after, .barra h2::after { content: ''; position: absolute; left: 0; b
   position: sticky; top: 0; z-index: 5;
 }
 .marca { display: inline-flex; align-items: center; gap: .7rem; }
-.marca-nome { font-size: 15px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: #fff; }
 .topo nav { display: flex; align-self: stretch; gap: .15rem; margin-left: 1.75rem; }
 .topo nav a {
   display: flex; align-items: center; padding: 0 .9rem; color: var(--cab-texto); text-decoration: none;
@@ -109,7 +108,7 @@ main > h2::after, .barra h2::after { content: ''; position: absolute; left: 0; b
 .perfil-txt b { color: #fff; font-size: 13px; font-weight: 600; }
 .perfil-txt small { color: var(--cab-texto); font-size: 11px; }
 @media (max-width: 1180px) { .perfil-txt { display: none; } .topo { padding: 0 1rem; } .topo nav { margin-left: 1rem; } .topo nav a { padding: 0 .65rem; } }
-@media (max-width: 980px) { .marca-nome { display: none; } .topo nav { margin-left: .5rem; } .topo nav a { padding: 0 .5rem; letter-spacing: .05em; } }
+@media (max-width: 980px) { .topo nav { margin-left: .5rem; } .topo nav a { padding: 0 .5rem; letter-spacing: .05em; } }
 
 /* ---------- formulários ---------- */
 input, select, textarea, button { font: inherit; color: inherit; }
@@ -336,3 +335,46 @@ td.num { font-family: var(--mono); font-weight: 500; font-size: 13px; }
 .grade.usuarios { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .grade.usuarios td select { min-width: 8.5rem; }
 @media (max-width: 1280px) { .grade.usuarios { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+   Acentos: dourado e vermelho. O azul continua sendo a cor principal (botões, links, foco);
+   o dourado aparece em filetes e marcas (nunca como texto sobre fundo claro, exceto --ouro-texto)
+   e o vermelho em tudo que pede atenção (atraso, cancelamento, ações destrutivas).
+   ========================================================================== */
+::selection { background: var(--ouro-vivo); color: #0b1430; }
+a:hover { text-decoration-line: underline; text-decoration-color: var(--ouro); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+/* barra superior: filete dourado embaixo, com um trecho vermelho na ponta; aba ativa marcada em vermelho no topo */
+.topo { border-bottom: 0; }
+.topo::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--vermelho-solido) 0 120px, var(--ouro-vivo) 120px); }
+.topo nav a.active { border-top-color: var(--vermelho-solido); }
+
+/* títulos: filete dourado seguido de uma marca vermelha */
+main > h2::after, .barra h2::after { width: 54px; background: linear-gradient(90deg, var(--ouro) 0 38px, transparent 38px 43px, var(--vermelho-solido) 43px); }
+.cartao > h3::after, .modal > h3::after { background: var(--ouro); }
+.cartao { border-top: 2px solid var(--ouro-borda); }
+
+/* janelas de confirmação com ação destrutiva ficam em vermelho */
+.modal:has(button.perigo) { border-top-color: var(--vermelho-solido); }
+.modal:has(button.perigo) > h3::after { background: var(--vermelho-solido); }
+
+/* tabelas: cabeçalho com filete dourado; linha sob o cursor ganha marca dourada; prazo vencido em vermelho */
+th { border-bottom: 2px solid var(--ouro); }
+tbody tr:not(.linha-atrasada):hover td:first-child { box-shadow: inset 3px 0 0 var(--ouro); }
+tr.linha-atrasada td:nth-child(5) { color: var(--vermelho); font-weight: 600; }
+
+/* situação: cancelado também em vermelho (atrasado é o vermelho cheio) */
+.selo.cancelado { background: var(--vermelho-fundo); border-color: var(--vermelho); color: var(--vermelho); }
+
+/* histórico: o registro mais recente em dourado */
+.historico li:first-child::before { background: var(--ouro); border-color: var(--ouro); }
+
+/* login: faixa vermelha no topo do painel azul e barra azul, dourada e vermelha no cartão */
+.login-lado::before { content: ''; position: absolute; top: 0; left: 0; width: 96px; height: 4px; background: var(--vermelho-solido); }
+.login-form .cartao { position: relative; border-top: 1px solid var(--borda); }
+.login-form .cartao::before { content: ''; position: absolute; left: -1px; right: -1px; top: -3px; height: 3px; background: linear-gradient(90deg, var(--azul) 0 70%, var(--ouro) 70% 90%, var(--vermelho-solido) 90%); }
+
+/* Marca (imagem de fundo transparente) sobre painel branco */
+.logo-selo { display: inline-flex; align-items: center; background: #fff; border-radius: 4px; padding: 2px 6px; line-height: 0; }
+.logo-selo img { display: block; image-rendering: auto; }
+.login-marca .logo-selo { padding: 8px 14px; border-radius: 6px; }

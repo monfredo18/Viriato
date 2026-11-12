@@ -28,7 +28,7 @@ export default function Login() {
   return (
     <div className="login">
       <aside className="login-lado">
-        <div className="login-marca"><Logo tamanho={40} /><span>Viriato</span></div>
+        <div className="login-marca"><Logo altura={92} /></div>
         <div className="login-texto">
           <h1>Controle de processos</h1>
           <p>Etapas, prazos, responsáveis e documentos de cada processo, com histórico completo.</p>
