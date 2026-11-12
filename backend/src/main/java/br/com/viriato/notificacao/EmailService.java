@@ -25,6 +25,30 @@ public class EmailService {
         this.remetente = remetente;
     }
 
+    public boolean habilitado() { return habilitado; }
+
+    /**
+     * Envio imediato, com anexo opcional, para quem precisa saber se deu certo (as automações).
+     *
+     * @return {@code null} se enviou; senão o motivo da falha
+     */
+    public String enviarAgora(String para, String assunto, String texto, String nomeAnexo, byte[] anexo) {
+        try {
+            var msg = sender.createMimeMessage();
+            var h = new org.springframework.mail.javamail.MimeMessageHelper(msg, anexo != null, "UTF-8");
+            h.setFrom(remetente);
+            h.setTo(para);
+            h.setSubject(assunto);
+            h.setText(texto);
+            if (anexo != null) h.addAttachment(nomeAnexo, new org.springframework.core.io.ByteArrayResource(anexo), "application/pdf");
+            sender.send(msg);
+            return null;
+        } catch (Exception e) {
+            log.warn("Falha ao enviar e-mail para {}: {}", para, e.getMessage());
+            return e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+        }
+    }
+
     @Async
     public void enviar(String para, String assunto, String texto) {
         if (!habilitado) return;

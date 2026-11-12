@@ -14,5 +14,7 @@ public class Cliente {
     @Column(name = "tenant_id") private Long tenantId;
     private String numero;
     private String nome;
+    /** Opcional: para a automação que avisa a empresa atendida por e-mail. */
+    private String email;
     private boolean ativo = true;
 }

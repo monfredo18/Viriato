@@ -1,5 +1,7 @@
 package br.com.viriato.processo;
 
+import br.com.viriato.automacao.AutomacaoEvento;
+import br.com.viriato.automacao.EventoAutomacao;
 import br.com.viriato.cadastro.CadastroService;
 import br.com.viriato.cadastro.Cliente;
 import br.com.viriato.cadastro.ClienteRepository;
@@ -29,6 +31,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -54,13 +57,14 @@ public class ProcessoService {
     private final RequisitoService requisitos;
     private final ProcessoRequisitoRepository confirmacoes;
     private final ProcessoAprovacaoRepository aprovacoes;
+    private final ApplicationEventPublisher eventos;
 
     public ProcessoService(ProcessoRepository processos, ProcessoHistoricoRepository historicos,
                            FluxoRepository fluxos, EtapaRepository etapas, TransicaoRepository transicoes,
                            UsuarioRepository usuarios, NotificacaoService notificacoes, CadastroService cadastros,
                            ClienteRepository clientes, EntregaRepository entregasRepo, SetorRepository setoresRepo,
                            ObjectMapper json, RequisitoService requisitos, ProcessoRequisitoRepository confirmacoes,
-                           ProcessoAprovacaoRepository aprovacoes) {
+                           ProcessoAprovacaoRepository aprovacoes, ApplicationEventPublisher eventos) {
         this.processos = processos;
         this.historicos = historicos;
         this.fluxos = fluxos;
@@ -76,6 +80,7 @@ public class ProcessoService {
         this.requisitos = requisitos;
         this.confirmacoes = confirmacoes;
         this.aprovacoes = aprovacoes;
+        this.eventos = eventos;
     }
 
     public record Filtro(StatusProcesso status, Long etapaId, Long responsavelId, Long clienteId, Long setorId,
@@ -135,6 +140,7 @@ public class ProcessoService {
 
         registrar(p, quem.id(), "CRIADO", null, inicial.getNome(), null);
         notificacoes.notificar(p, "Novo processo aberto", null, quem.id());
+        eventos.publishEvent(new AutomacaoEvento(tid, p.getId(), EventoAutomacao.ENTRAR_ETAPA, inicial.getId(), quem.id()));   // roda após o commit
         return paraDto(p);
     }
 
@@ -263,6 +269,7 @@ public class ProcessoService {
 
         String detalhe = origem.getNome() + " → " + destino.getNome() + (comentario == null || comentario.isBlank() ? "" : ". " + comentario);
         notificacoes.notificar(p, destino.isFinalEtapa() ? "Processo concluído" : "Processo movido para " + destino.getNome(), detalhe, quem.id());
+        eventos.publishEvent(new AutomacaoEvento(p.getTenantId(), p.getId(), EventoAutomacao.ENTRAR_ETAPA, destino.getId(), quem.id()));
         return paraDto(p);
     }
 
@@ -326,6 +333,7 @@ public class ProcessoService {
         p = processos.save(p);
         registrar(p, quem.id(), "CANCELADO", null, null, motivo);
         notificacoes.notificar(p, "Processo cancelado", motivo, quem.id());
+        eventos.publishEvent(new AutomacaoEvento(p.getTenantId(), p.getId(), EventoAutomacao.CANCELADO, p.getEtapaAtualId(), quem.id()));
         return paraDto(p);
     }
 

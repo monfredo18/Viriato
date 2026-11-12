@@ -58,6 +58,10 @@ viriato:
     endpoint: ${S3_ENDPOINT:}
     access-key: ${S3_ACCESS_KEY:}
     secret-key: ${S3_SECRET_KEY:}
+  automacao:
+    assincrona: ${AUTOMACAO_ASSINCRONA:true}
+    # Só para desenvolvimento: permite webhook em http:// e para endereços da rede interna (localhost etc.).
+    permitir-rede-interna: ${AUTOMACAO_PERMITIR_REDE_INTERNA:false}
   prazos:
     cron: ${PRAZOS_CRON:0 0 8 * * *}
     antecedencia-dias: ${PRAZOS_ANTECEDENCIA_DIAS:1}
