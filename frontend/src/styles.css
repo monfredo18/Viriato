@@ -325,3 +325,6 @@ td.num { font-family: var(--mono); font-weight: 500; font-size: 13px; }
 
 .notif-linha { font-size: 12.5px; color: var(--texto); } .notif-linha span { color: var(--suave); } .notif-linha .sep { margin: 0 .2rem; }
 .notif-detalhe { font-size: 12.5px; margin-top: .15rem; color: var(--texto); }
+
+/* Aviso ao apagar funcionário com processos */
+.lista-aviso { margin: 0 0 1rem; padding-left: 1.2rem; line-height: 1.7; }

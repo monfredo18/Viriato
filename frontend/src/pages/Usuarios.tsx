@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, ROTULO_PAPEL, type Papel, type Setor, type Usuario } from '../api'
+import { api, ROTULO_PAPEL, type Papel, type PendenciasUsuario, type Setor, type Usuario } from '../api'
 import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 
@@ -7,7 +7,8 @@ import { useAuth } from '../auth'
  * Todos veem a equipe (papel e setor). Administrador altera papel, situação e setor e adiciona
  * qualquer papel; gestor adiciona funcionários (só papel Usuário) e ativa/desativa funcionários
  * com papel Usuário, sem alterar papel nem setor. Administrador e gestor (este só os de papel Usuário)
- * podem apagar funcionários.
+ * podem apagar funcionários (o gestor, só do próprio setor). Se o funcionário tem processos, abre o aviso
+ * e, para os em andamento, a escolha de herdeiros e do novo prazo.
  */
 export default function Usuarios() {
   const { usuario: eu, ehAdmin, podeGerenciar } = useAuth()
@@ -37,9 +38,24 @@ export default function Usuarios() {
   const patch = (id: number, data: object) => api.patch(`/usuarios/${id}`, data).then(carregar).catch((e) => setErro(e.message))
   const setoresAtivos = setores.filter((s) => s.ativo)
 
-  const apagar = (u: Usuario) => {
+  const meuSetorId = lista.find((u) => u.id === eu?.id)?.setorId ?? null
+  const [apagando, setApagando] = useState<{ u: Usuario; p: PendenciasUsuario } | null>(null)
+
+  // Sem processos: confirmação simples. Com processos: aviso com "Apagar mesmo assim" / "Desistir de apagar".
+  const apagar = async (u: Usuario) => {
     setErro('')
-    api.del(`/usuarios/${u.id}`).then(carregar).catch((e) => setErro(e.message))
+    try {
+      const p = await api.get<PendenciasUsuario>(`/usuarios/${u.id}/pendencias`)
+      if (p.abertos + p.concluidos + p.cancelados === 0) {
+        if (!confirm(`Apagar "${u.nome}"? Esta ação não pode ser desfeita.`)) return
+        await api.del(`/usuarios/${u.id}`)
+        carregar()
+      } else {
+        setApagando({ u, p })
+      }
+    } catch (e) {
+      setErro((e as Error).message)
+    }
   }
 
   return (
@@ -47,7 +63,7 @@ export default function Usuarios() {
       <h2>Usuários</h2>
       {!podeGerenciar && <p className="sub">Somente consulta. Quem pode alterar: administrador e gestor.</p>}
       {podeGerenciar && !ehAdmin && (
-        <p className="sub">Você pode adicionar funcionários e ativar, desativar ou apagar os de papel Usuário. Papel e setor só o administrador altera.</p>
+        <p className="sub">Você pode adicionar funcionários e ativar ou desativar os de papel Usuário, e apagar os do seu setor. Papel e setor só o administrador altera.</p>
       )}
       {erro && <p className="erro">{erro}</p>}
       <div className="grade">
@@ -86,8 +102,8 @@ export default function Usuarios() {
                   </td>
                   {podeGerenciar && (
                     <td>
-                      {u.id !== eu?.id && (ehAdmin || u.papel === 'USUARIO') && (
-                        <BotaoApagar nome={u.nome} aviso="O histórico dos processos em que ele atuou é mantido. Processos concluídos dele continuam existindo, sem responsável." apagar={() => apagar(u)} />
+                      {u.id !== eu?.id && (ehAdmin || (u.papel === 'USUARIO' && meuSetorId !== null && u.setorId === meuSetorId)) && (
+                        <BotaoApagar nome={u.nome} semConfirmar apagar={() => apagar(u)} />
                       )}
                     </td>
                   )}
@@ -119,6 +135,104 @@ export default function Usuarios() {
           </form>
         )}
       </div>
+
+      {apagando && (
+        <ApagarFuncionario
+          alvo={apagando.u}
+          pend={apagando.p}
+          colegas={lista}
+          fechar={() => setApagando(null)}
+          apagado={() => { setApagando(null); carregar() }}
+        />
+      )}
     </>
+  )
+}
+
+const hojeISO = () => new Date().toLocaleDateString('sv-SE')   // aaaa-mm-dd no horário local
+
+/**
+ * Passo 1: aviso de que o funcionário tem processos. Passo 2 (só se há processos em andamento): escolher quem
+ * herda e o novo prazo. Concluídos e cancelados ficam com o nome dele, visíveis só ao gestor do setor e ao administrador.
+ */
+function ApagarFuncionario({ alvo, pend, colegas, fechar, apagado }: {
+  alvo: Usuario; pend: PendenciasUsuario; colegas: Usuario[]; fechar: () => void; apagado: () => void
+}) {
+  const [passo, setPasso] = useState<'aviso' | 'herdeiros'>('aviso')
+  const [herdeiros, setHerdeiros] = useState<number[]>([])
+  const [prazo, setPrazo] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const encerrados = pend.concluidos + pend.cancelados
+  // Herdeiros possíveis: ativos, do setor dele (o administrador pode herdar de qualquer setor).
+  const candidatos = colegas.filter((c) => c.id !== alvo.id && c.ativo && (c.papel === 'ADMIN' || (alvo.setorId !== null && c.setorId === alvo.setorId)))
+
+  const apagarAgora = async (corpo?: object) => {
+    setErro('')
+    setEnviando(true)
+    try {
+      await api.post(`/usuarios/${alvo.id}/apagar`, corpo ?? {})
+      apagado()
+    } catch (e) {
+      setErro((e as Error).message)
+      setEnviando(false)
+    }
+  }
+  const continuar = () => (pend.abertos > 0 ? setPasso('herdeiros') : apagarAgora())
+  const alternar = (id: number) => setHerdeiros((h) => (h.includes(id) ? h.filter((x) => x !== id) : [...h, id]))
+  const enviar = (e: FormEvent) => { e.preventDefault(); apagarAgora({ herdeiroIds: herdeiros, prazo }) }
+  const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`
+
+  if (passo === 'aviso') {
+    return (
+      <div className="fundo" onClick={fechar}>
+        <div className="modal" onClick={(e) => e.stopPropagation()} role="alertdialog" aria-label="Funcionário com processos">
+          <h3>{alvo.nome} possui processos</h3>
+          <ul className="lista-aviso">
+            {pend.abertos > 0 && <li><strong>{plural(pend.abertos, 'processo em andamento', 'processos em andamento')}</strong>{pend.atrasados > 0 && <> ({plural(pend.atrasados, 'atrasado', 'atrasados')})</>}</li>}
+            {pend.concluidos > 0 && <li>{plural(pend.concluidos, 'processo concluído', 'processos concluídos')}</li>}
+            {pend.cancelados > 0 && <li>{plural(pend.cancelados, 'processo cancelado', 'processos cancelados')}</li>}
+          </ul>
+          {pend.abertos > 0 && <p className="sub">Os processos em andamento precisarão ser passados para outros funcionários, com um novo prazo.</p>}
+          {encerrados > 0 && <p className="sub">Os processos encerrados continuam existindo com o nome dele, e só o gestor do setor e o administrador terão acesso a eles.</p>}
+          {erro && <p className="erro">{erro}</p>}
+          <div className="acoes">
+            <button type="button" onClick={fechar}>Desistir de apagar</button>
+            <button type="button" className="perigo" disabled={enviando} onClick={continuar}>Apagar mesmo assim</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fundo" onClick={fechar}>
+      <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={enviar}>
+        <h3>Quem herda os processos de {alvo.nome}?</h3>
+        <p className="sub">
+          {plural(pend.abertos, 'processo em andamento será passado', 'processos em andamento serão passados')}
+          {pend.atrasados > 0 && <> (inclusive {plural(pend.atrasados, 'atrasado', 'atrasados')})</>}.
+          Com mais de um escolhido, a divisão é igual.
+        </p>
+        <fieldset className="caixas">
+          <legend>Funcionários que herdam</legend>
+          {candidatos.length === 0 && <small className="aviso-campo">Não há outro funcionário ativo neste setor. Cadastre ou ative alguém antes de apagar.</small>}
+          {candidatos.map((c) => (
+            <label key={c.id} className="chk">
+              <input type="checkbox" checked={herdeiros.includes(c.id)} onChange={() => alternar(c.id)} />
+              {c.nome} <small>— {ROTULO_PAPEL[c.papel]}</small>
+            </label>
+          ))}
+        </fieldset>
+        <label>Novo prazo dos processos
+          <input type="date" required min={hojeISO()} value={prazo} onChange={(e) => setPrazo(e.target.value)} />
+        </label>
+        {erro && <p className="erro">{erro}</p>}
+        <div className="acoes">
+          <button type="button" onClick={fechar}>Desistir de apagar</button>
+          <button className="perigo" disabled={enviando || herdeiros.length === 0 || !prazo}>Apagar mesmo assim</button>
+        </div>
+      </form>
+    </div>
   )
 }
