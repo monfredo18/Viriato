@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, type Fluxo } from '../api'
+import { api, type Fluxo, type RegraAutomacao } from '../api'
 import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 import ConfigurarEtapa from './ConfigurarEtapa'
+import { JanelaCancelamento } from './AutomacoesSecao'
 
 interface EtapaForm { nome: string; prazoDias: string; inicial: boolean; finalEtapa: boolean }
 
@@ -18,10 +19,19 @@ export default function Fluxos() {
   const [etapas, setEtapas] = useState<EtapaForm[]>(modelo())
   const [erro, setErro] = useState('')
   const [erroLista, setErroLista] = useState('')
-  const [config, setConfig] = useState<{ fluxoId: number; etapaId: number } | null>(null)
+  const [config, setConfig] = useState<{ fluxoId: number; etapaId: number | null } | null>(null)
+  const [regras, setRegras] = useState<Record<number, RegraAutomacao[]>>({})
 
-  const carregar = () => api.get<Fluxo[]>('/fluxos').then(setFluxos)
-  useEffect(() => { carregar() }, [])
+  // Só administrador e gestor consultam as automações (podem ter endereços e segredos de integração).
+  const carregar = async () => {
+    const lista = await api.get<Fluxo[]>('/fluxos')
+    setFluxos(lista)
+    if (podeGerenciar) {
+      const pares = await Promise.all(lista.map(async (f) => [f.id, await api.get<RegraAutomacao[]>(`/fluxos/${f.id}/automacoes`)] as const))
+      setRegras(Object.fromEntries(pares))
+    }
+  }
+  useEffect(() => { carregar() }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const apagarFluxo = (f: Fluxo) => {
     setErroLista('')
@@ -77,6 +87,7 @@ export default function Fluxos() {
                     <span className="etapa-nome"><b>{e.nome}</b>
                       {e.prazoDias !== null && <small> · prazo {e.prazoDias} d</small>}
                       {e.inicial && <small> · inicial</small>}{e.finalEtapa && <small> · final</small>}
+                      {(regras[f.id] ?? []).filter((r) => r.evento === 'ENTRAR_ETAPA' && r.etapaId === e.id).length > 0 && <small className="so-gestor"> · {(regras[f.id] ?? []).filter((r) => r.evento === 'ENTRAR_ETAPA' && r.etapaId === e.id).length} automação(ões)</small>}
                       {e.papelMinimo !== 'USUARIO' && <small className="so-gestor"> · {e.papelMinimo === 'ADMIN' ? 'só administrador' : 'só gestor'} move para cá</small>}
                     </span>
                     {e.requisitos.length > 0 && (
@@ -88,6 +99,11 @@ export default function Fluxos() {
                   </li>
                 ))}
               </ol>
+              {podeGerenciar && (
+                <button className="link" onClick={() => setConfig({ fluxoId: f.id, etapaId: null })}>
+                  Ao cancelar{(regras[f.id] ?? []).filter((r) => r.evento === 'CANCELADO').length > 0 ? ` (${(regras[f.id] ?? []).filter((r) => r.evento === 'CANCELADO').length})` : ''}
+                </button>
+              )}
               {podeGerenciar && (
                 <button className="link" onClick={() => api.patch(`/fluxos/${f.id}`, { ativo: !f.ativo }).then(carregar)}>
                   {f.ativo ? 'Desativar' : 'Reativar'}
@@ -116,8 +132,10 @@ export default function Fluxos() {
       </div>
       {config && (() => {
         const f = fluxos.find((x) => x.id === config.fluxoId)
-        const e = f?.etapas.find((x) => x.id === config.etapaId)
-        return f && e ? <ConfigurarEtapa fluxo={f} etapa={e} recarregar={carregar} fechar={() => setConfig(null)} /> : null
+        if (!f) return null
+        if (config.etapaId === null) return <JanelaCancelamento fluxo={f} regras={regras[f.id] ?? []} recarregar={carregar} fechar={() => setConfig(null)} />
+        const e = f.etapas.find((x) => x.id === config.etapaId)
+        return e ? <ConfigurarEtapa fluxo={f} etapa={e} regras={regras[f.id] ?? []} recarregar={carregar} fechar={() => setConfig(null)} /> : null
       })()}
     </>
   )

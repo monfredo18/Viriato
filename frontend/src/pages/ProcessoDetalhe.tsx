@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, NIVEL_PAPEL, type Detalhe, type Documento, type Papel, type Usuario } from '../api'
+import { api, NIVEL_PAPEL, ROTULO_AUTOMACAO, type Detalhe, type Documento, type ExecucaoAutomacao, type Papel, type Usuario } from '../api'
 import { useAuth } from '../auth'
 import { Selo } from './Processos'
 
@@ -15,6 +15,7 @@ export default function ProcessoDetalhe() {
   const { podeGerenciar, usuario } = useAuth()
   const [d, setD] = useState<Detalhe | null>(null)
   const [docs, setDocs] = useState<Documento[]>([])
+  const [execucoes, setExecucoes] = useState<ExecucaoAutomacao[]>([])
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [comentario, setComentario] = useState('')
   const [erro, setErro] = useState('')
@@ -23,12 +24,14 @@ export default function ProcessoDetalhe() {
 
   const carregar = useCallback(async () => {
     try {
-      const [det, ds] = await Promise.all([
+      const [det, ds, ex] = await Promise.all([
         api.get<Detalhe>(`/processos/${id}`),
         api.get<Documento[]>(`/processos/${id}/documentos`),
+        api.get<ExecucaoAutomacao[]>(`/processos/${id}/automacoes`),
       ])
       setD(det)
       setDocs(ds)
+      setExecucoes(ex)
     } catch (e) {
       setErro((e as Error).message)
     }
@@ -169,6 +172,23 @@ export default function ProcessoDetalhe() {
             </div>
           )}
 
+          {execucoes.length > 0 && (
+            <div className="automacoes-exec">
+              <h4>Automações executadas</h4>
+              <ul>
+                {execucoes.map((x) => (
+                  <li key={x.id} className={`exec-${x.status.toLowerCase()}`}>
+                    <span className="req-marca" aria-hidden="true">{x.status === 'OK' ? '✓' : x.status === 'FALHA' ? '✕' : '–'}</span>
+                    <span className="req-texto">
+                      <b>{ROTULO_AUTOMACAO[x.tipo]}{x.evento === 'CANCELADO' ? ' (ao cancelar)' : x.etapa ? ` — ao entrar em ${x.etapa}` : ''}</b>
+                      <small>{{ OK: 'Feito', FALHA: 'Falhou', IGNORADA: 'Não executada' }[x.status]}{x.mensagem && <> · {x.mensagem}</>} · {new Date(x.executadoEm).toLocaleString('pt-BR')}</small>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {aberto && podeMexer && (
             <div className="acoes-processo">
               {d.proximasEtapas.map((e) => !atende(e.papelMinimo) ? (
@@ -228,7 +248,7 @@ export default function ProcessoDetalhe() {
             {docs.map((x) => (
               <li key={x.id}>
                 <button className="link" onClick={() => api.download(`/documentos/${x.id}/download`, x.nome).catch((e) => setErro(e.message))}>{x.nome}</button>
-                <small> {fmtTam(x.tamanho)}{x.requisito && <> · requisito: {x.requisito}</>}</small>
+                <small> {fmtTam(x.tamanho)}{x.requisito && <> · requisito: {x.requisito}</>}{x.automatico && <> · gerado automaticamente</>}</small>
                 {podeMexer && <button className="link perigo-txt" onClick={() => confirm('Remover documento?') && acao(() => api.del(`/documentos/${x.id}`))}>remover</button>}
               </li>
             ))}

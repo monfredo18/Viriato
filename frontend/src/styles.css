@@ -459,3 +459,17 @@ tr.linha-atrasada td:nth-child(5) { color: var(--vermelho); font-weight: 600; }
 .aprov-cancelada { opacity: .65; }
 .aprov-acoes { display: flex; gap: .4rem; align-items: center; flex: none; }
 .aprovacoes button { height: 28px; font-size: 12px; }
+
+/* ---------- automações ---------- */
+.auto-form { display: flex; flex-direction: column; gap: .5rem; }
+.auto-form textarea { height: auto; }
+.regra-inativa { opacity: .6; }
+.automacoes-exec { margin: 1rem 0 .25rem; padding: .85rem 1rem; background: var(--bg); border-left: 3px solid var(--borda-forte); }
+.automacoes-exec h4 { margin: 0 0 .6rem; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.automacoes-exec ul { list-style: none; margin: 0; padding: 0; }
+.automacoes-exec li { display: flex; align-items: flex-start; gap: .7rem; padding: .4rem 0; border-bottom: 1px solid var(--borda); }
+.automacoes-exec li:last-child { border-bottom: none; }
+.exec-ok .req-marca { color: var(--ouro-texto); }
+.exec-falha .req-marca { color: var(--vermelho); }
+.exec-falha b { color: var(--vermelho); }
+.exec-ignorada .req-marca { color: var(--suave); }

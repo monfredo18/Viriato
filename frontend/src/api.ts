@@ -70,7 +70,7 @@ export type Status = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO'
 export interface PendenciasUsuario { nome: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
 export interface Usuario { id: number; nome: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null; deveTrocarSenha: boolean }
 export const ROTULO_PAPEL: Record<Papel, string> = { ADMIN: 'Administrador', GESTOR: 'Gestor', USUARIO: 'Usuário' }
-export interface Cliente { id: number; numero: string; nome: string; ativo: boolean }
+export interface Cliente { id: number; numero: string; nome: string; ativo: boolean; email: string | null }
 export interface EntregaResumo { id: number; nome: string; ativo: boolean }
 export interface Setor { id: number; nome: string; ativo: boolean; entregas: EntregaResumo[] }
 export interface Entrega { id: number; nome: string; fluxoId: number; fluxoNome: string; ativo: boolean }
@@ -101,7 +101,7 @@ export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historic
 export const NIVEL_PAPEL: Record<Papel, number> = { ADMIN: 2, GESTOR: 1, USUARIO: 0 }
 export const ROTULO_QUEM_MOVE: Record<Papel, string> = { USUARIO: 'Qualquer responsável', GESTOR: 'Somente gestor ou administrador', ADMIN: 'Somente administrador' }
 export interface Pagina<T> { content: T[]; totalPages: number; number: number; totalElements: number }
-export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string; requisitoId: number | null; requisito: string | null }
+export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string; requisitoId: number | null; requisito: string | null; automatico: boolean }
 export interface PainelResumo { abertos: number; atrasados: number; concluidos: number; cancelados: number; tempoMedioConclusaoDias: number | null }
 export interface PainelSetor { setorId: number | null; setor: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
 export interface PainelEtapa { fluxo: string; etapa: string; prazoDias: number | null; passagens: number; mediaHoras: number; foraDoPrazo: number }
@@ -109,5 +109,15 @@ export interface PainelFuncionario { usuarioId: number; nome: string; setor: str
 export interface Painel {
   escopo: string; todosOsSetores: boolean; periodoDias: number; geradoEm: string
   resumo: PainelResumo; setores: PainelSetor[]; etapas: PainelEtapa[]; funcionarios: PainelFuncionario[]
+}
+export type TipoAutomacao = 'GERAR_DOCUMENTO' | 'EMAIL_EMPRESA' | 'WEBHOOK'
+export type EventoAutomacao = 'ENTRAR_ETAPA' | 'CANCELADO'
+export interface RegraAutomacao {
+  id: number; fluxoId: number; etapaId: number | null; etapaNome: string | null; evento: EventoAutomacao; tipo: TipoAutomacao; ativo: boolean
+  assunto: string | null; mensagem: string | null; anexarDocumento: boolean; url: string | null; temSegredo: boolean
+}
+export interface ExecucaoAutomacao { id: number; tipo: TipoAutomacao; evento: EventoAutomacao; etapa: string | null; status: 'OK' | 'FALHA' | 'IGNORADA'; mensagem: string | null; executadoEm: string }
+export const ROTULO_AUTOMACAO: Record<TipoAutomacao, string> = {
+  GERAR_DOCUMENTO: 'Gerar a ficha do processo (PDF)', EMAIL_EMPRESA: 'Avisar a empresa por e-mail', WEBHOOK: 'Chamar outro sistema (webhook)',
 }
 export interface Notificacao { id: number; titulo: string; mensagem: string | null; empresaNome: string | null; entregaNome: string | null; autorNome: string | null; processoId: number | null; lida: boolean; criadoEm: string }
