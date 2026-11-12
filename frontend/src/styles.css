@@ -302,3 +302,6 @@ form.cartao > button + button { margin-left: .5rem; }
 .etapa-form button.link { color: var(--suave); font-size: 14px; }
 .etapa-form button.link:hover:not(:disabled) { color: var(--vermelho); text-decoration: none; }
 .menu-notif .vazio { padding: 1rem .9rem; margin: 0; }
+
+td.num { font-family: var(--mono); font-weight: 500; font-size: 13px; }
+.campo-numero { width: 7rem; flex: none; font-family: var(--mono); }

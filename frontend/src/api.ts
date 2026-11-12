@@ -65,7 +65,7 @@ export type Status = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO'
 
 export interface Usuario { id: number; nome: string; email: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null }
 export const ROTULO_PAPEL: Record<Papel, string> = { ADMIN: 'Administrador', GESTOR: 'Gestor', USUARIO: 'Usuário' }
-export interface Cliente { id: number; nome: string; ativo: boolean }
+export interface Cliente { id: number; numero: string; nome: string; ativo: boolean }
 export interface EntregaResumo { id: number; nome: string; ativo: boolean }
 export interface Setor { id: number; nome: string; ativo: boolean; entregas: EntregaResumo[] }
 export interface Entrega { id: number; nome: string; fluxoId: number; fluxoNome: string; ativo: boolean }

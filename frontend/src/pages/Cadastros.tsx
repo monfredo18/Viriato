@@ -51,6 +51,31 @@ function NomeEditavel({ nome, pode, salvar }: { nome: string; pode: boolean; sal
   )
 }
 
+const soDigitos = (v: string) => v.replace(/\D/g, '').slice(0, 10)
+
+/** Nome da empresa com edição no próprio lugar: número (só dígitos) e nome. */
+function EmpresaEditavel({ c, pode, salvar }: { c: Cliente; pode: boolean; salvar: (numero: string, nome: string) => Promise<unknown> }) {
+  const [editando, setEditando] = useState(false)
+  const [numero, setNumero] = useState(c.numero)
+  const [nome, setNome] = useState(c.nome)
+  if (!editando) {
+    return (
+      <>
+        {c.nome}
+        {pode && <button className="link" onClick={() => { setNumero(c.numero); setNome(c.nome); setEditando(true) }}>editar</button>}
+      </>
+    )
+  }
+  return (
+    <form className="linha" onSubmit={async (e) => { e.preventDefault(); await salvar(numero, nome); setEditando(false) }}>
+      <input className="campo-numero" inputMode="numeric" value={numero} onChange={(e) => setNumero(soDigitos(e.target.value))} placeholder="Nº" aria-label="Número da empresa" required />
+      <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} maxLength={150} aria-label="Nome da empresa" required />
+      <button className="primario">Salvar</button>
+      <button type="button" onClick={() => setEditando(false)}>Cancelar</button>
+    </form>
+  )
+}
+
 function Situacao({ ativo, pode, alternar }: { ativo: boolean; pode: boolean; alternar: () => void }) {
   if (!pode) return <span className={`selo ${ativo ? 'aberto' : 'cancelado'}`}>{ativo ? 'Ativo' : 'Inativo'}</span>
   return (
@@ -64,6 +89,7 @@ function Situacao({ ativo, pode, alternar }: { ativo: boolean; pode: boolean; al
 function Empresas({ pode }: { pode: boolean }) {
   const [lista, setLista] = useState<Cliente[]>([])
   const [nome, setNome] = useState('')
+  const [numero, setNumero] = useState('')
   const [erro, setErro] = useState('')
 
   const carregar = useCallback(() => { api.get<Cliente[]>('/clientes').then(setLista) }, [])
@@ -74,7 +100,7 @@ function Empresas({ pode }: { pode: boolean }) {
   const criar = async (e: FormEvent) => {
     e.preventDefault()
     setErro('')
-    await agir(async () => { await api.post('/clientes', { nome }); setNome('') })
+    await agir(async () => { await api.post('/clientes', { numero, nome }); setNome(''); setNumero('') })
   }
 
   return (
@@ -84,22 +110,25 @@ function Empresas({ pode }: { pode: boolean }) {
         <Aviso pode={pode} quem="administrador e gestor" />
         {erro && <p className="erro">{erro}</p>}
         <table>
-          <thead><tr><th>Nome</th><th>Situação</th>{pode && <th></th>}</tr></thead>
+          <thead><tr><th>Número</th><th>Nome</th><th>Situação</th>{pode && <th></th>}</tr></thead>
           <tbody>
             {lista.map((c) => (
               <tr key={c.id}>
-                <td><NomeEditavel nome={c.nome} pode={pode} salvar={(n) => agir(() => api.patch(`/clientes/${c.id}`, { nome: n }))} /></td>
+                <td className="num">{c.numero}</td>
+                <td><EmpresaEditavel c={c} pode={pode} salvar={(n, nm) => agir(() => api.patch(`/clientes/${c.id}`, { numero: n, nome: nm }))} /></td>
                 <td><Situacao ativo={c.ativo} pode={pode} alternar={() => agir(() => api.patch(`/clientes/${c.id}`, { ativo: !c.ativo }))} /></td>
                 {pode && <td><BotaoApagar nome={c.nome} aviso="Processos já concluídos ou cancelados dela continuam existindo, sem o vínculo com a empresa." apagar={() => { setErro(''); agir(() => api.del(`/clientes/${c.id}`)) }} /></td>}
               </tr>
             ))}
-            {lista.length === 0 && <tr><td colSpan={pode ? 3 : 2} className="vazio">Nenhuma empresa cadastrada.</td></tr>}
+            {lista.length === 0 && <tr><td colSpan={pode ? 4 : 3} className="vazio">Nenhuma empresa cadastrada.</td></tr>}
           </tbody>
         </table>
       </section>
       {pode && (
         <form className="cartao" onSubmit={criar}>
           <h3>Nova empresa</h3>
+          <label>Número da empresa<input required inputMode="numeric" pattern="\d{1,10}" maxLength={10} placeholder="Ex.: 1042" value={numero} onChange={(e) => setNumero(soDigitos(e.target.value))} /></label>
+          <small>Código interno: de 1 a 10 dígitos, diferente do de outras empresas. É o número que identifica os processos da empresa.</small>
           <label>Nome<input required maxLength={150} value={nome} onChange={(e) => setNome(e.target.value)} /></label>
           <button className="primario">Adicionar empresa</button>
         </form>
