@@ -80,7 +80,7 @@ export default function Processos() {
         </thead>
         <tbody>
           {dados?.content.map((p) => (
-            <tr key={p.id}>
+            <tr key={p.id} className={p.atrasado ? 'linha-atrasada' : undefined}>
               <td><Link to={`/processos/${p.id}`}>{p.numero}</Link></td>
               <td><Link to={`/processos/${p.id}`} className="titulo-link">{p.clienteNome ?? '—'}</Link></td>
               <td>{p.setorNome ?? '—'}</td>
