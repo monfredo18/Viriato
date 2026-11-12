@@ -93,4 +93,12 @@ export interface Historico { id: number; acao: string; usuarioNome: string | nul
 export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historico: Historico[]; requisitos: RequisitoStatus[]; etapaOrdem: number | null }
 export interface Pagina<T> { content: T[]; totalPages: number; number: number; totalElements: number }
 export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string; requisitoId: number | null; requisito: string | null }
+export interface PainelResumo { abertos: number; atrasados: number; concluidos: number; cancelados: number; tempoMedioConclusaoDias: number | null }
+export interface PainelSetor { setorId: number | null; setor: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
+export interface PainelEtapa { fluxo: string; etapa: string; prazoDias: number | null; passagens: number; mediaHoras: number; foraDoPrazo: number }
+export interface PainelFuncionario { usuarioId: number; nome: string; setor: string | null; abertos: number; atrasados: number; concluidos: number }
+export interface Painel {
+  escopo: string; todosOsSetores: boolean; periodoDias: number; geradoEm: string
+  resumo: PainelResumo; setores: PainelSetor[]; etapas: PainelEtapa[]; funcionarios: PainelFuncionario[]
+}
 export interface Notificacao { id: number; titulo: string; mensagem: string | null; empresaNome: string | null; entregaNome: string | null; autorNome: string | null; processoId: number | null; lida: boolean; criadoEm: string }
