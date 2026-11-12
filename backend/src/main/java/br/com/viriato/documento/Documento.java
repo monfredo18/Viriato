@@ -18,6 +18,8 @@ public class Documento {
     @Column(name = "content_type") private String contentType;
     private long tamanho;
     @Column(name = "enviado_por") private Long enviadoPor;
+    /** Requisito de etapa que este documento cumpre (opcional). */
+    @Column(name = "requisito_id") private Long requisitoId;
     @Column(name = "criado_em") private Instant criadoEm;
 
     @PrePersist void antesDeInserir() { criadoEm = Instant.now(); }

@@ -3,6 +3,7 @@ package br.com.viriato.fluxo;
 import br.com.viriato.seguranca.Contexto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -14,7 +15,15 @@ import org.springframework.web.bind.annotation.*;
 public class FluxoController {
     private final FluxoService service;
 
-    public FluxoController(FluxoService service) { this.service = service; }
+    private final RequisitoService requisitos;
+
+    public FluxoController(FluxoService service, RequisitoService requisitos) {
+        this.service = service;
+        this.requisitos = requisitos;
+    }
+
+    public record NovoRequisito(@NotNull TipoRequisito tipo, @NotBlank @Size(max = 200) String descricao) {}
+    public record DescricaoReq(@NotBlank @Size(max = 200) String descricao) {}
 
     public record NovoFluxo(@NotBlank @Size(max = 150) String nome,
                             List<FluxoService.EtapaReq> etapas,
@@ -44,5 +53,28 @@ public class FluxoController {
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public FluxoService.FluxoDto ativo(@PathVariable Long id, @RequestBody AtivoReq r) {
         return service.alterarAtivo(id, Contexto.tenantId(), r.ativo());
+    }
+
+    // ---- requisitos para sair de uma etapa (administrador e gestor configuram; todos consultam pelo fluxo) ----
+
+    @PostMapping("/{fluxoId}/etapas/{etapaId}/requisitos")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public RequisitoService.RequisitoDto criarRequisito(@PathVariable Long fluxoId, @PathVariable Long etapaId, @Valid @RequestBody NovoRequisito r) {
+        return requisitos.criar(Contexto.tenantId(), fluxoId, etapaId, r.tipo(), r.descricao());
+    }
+
+    @PatchMapping("/{fluxoId}/etapas/{etapaId}/requisitos/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public RequisitoService.RequisitoDto renomearRequisito(@PathVariable Long fluxoId, @PathVariable Long etapaId, @PathVariable Long id,
+                                                           @Valid @RequestBody DescricaoReq r) {
+        return requisitos.renomear(Contexto.tenantId(), fluxoId, etapaId, id, r.descricao());
+    }
+
+    @DeleteMapping("/{fluxoId}/etapas/{etapaId}/requisitos/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public void apagarRequisito(@PathVariable Long fluxoId, @PathVariable Long etapaId, @PathVariable Long id) {
+        requisitos.apagar(Contexto.tenantId(), fluxoId, etapaId, id);
     }
 }

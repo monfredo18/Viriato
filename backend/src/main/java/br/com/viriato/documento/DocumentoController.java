@@ -28,8 +28,9 @@ public class DocumentoController {
     @PostMapping(value = "/processos/{processoId}/documentos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public DocumentoService.DocumentoDto enviar(@PathVariable Long processoId,
-                                                @RequestParam("arquivo") MultipartFile arquivo) throws IOException {
-        return service.enviar(Contexto.atual(), processoId, arquivo);
+                                                @RequestParam("arquivo") MultipartFile arquivo,
+                                                @RequestParam(value = "requisitoId", required = false) Long requisitoId) throws IOException {
+        return service.enviar(Contexto.atual(), processoId, arquivo, requisitoId);
     }
 
     /** O download passa pelo backend: valida tenant e permissão antes de entregar o arquivo. */

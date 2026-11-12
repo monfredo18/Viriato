@@ -1,6 +1,7 @@
 package br.com.viriato.processo;
 
 import br.com.viriato.fluxo.FluxoService.EtapaDto;
+import br.com.viriato.fluxo.RequisitoService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -18,5 +19,6 @@ public record ProcessoDto(Long id, String numero, String titulo, String descrica
     public record HistoricoDto(Long id, String acao, String usuarioNome, String deEtapa, String paraEtapa,
                                String comentario, Instant criadoEm) {}
 
-    public record Detalhe(ProcessoDto processo, List<EtapaDto> proximasEtapas, List<HistoricoDto> historico) {}
+    public record Detalhe(ProcessoDto processo, List<EtapaDto> proximasEtapas, List<HistoricoDto> historico,
+                          List<RequisitoService.RequisitoStatusDto> requisitos) {}
 }

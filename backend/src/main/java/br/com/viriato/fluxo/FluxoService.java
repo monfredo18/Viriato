@@ -18,21 +18,29 @@ public class FluxoService {
     private final TransicaoRepository transicoes;
     private final EntregaRepository entregas;
     private final ProcessoRepository processos;
+    private final RequisitoService requisitos;
 
     public FluxoService(FluxoRepository fluxos, EtapaRepository etapas, TransicaoRepository transicoes,
-                        EntregaRepository entregas, ProcessoRepository processos) {
+                        EntregaRepository entregas, ProcessoRepository processos, RequisitoService requisitos) {
         this.fluxos = fluxos;
         this.etapas = etapas;
         this.transicoes = transicoes;
         this.entregas = entregas;
         this.processos = processos;
+        this.requisitos = requisitos;
     }
 
     public record EtapaReq(String nome, Integer prazoDias, boolean inicial, boolean finalEtapa) {}
     /** Índices (base 0) na lista de etapas enviada. */
     public record TransicaoReq(int de, int para) {}
 
-    public record EtapaDto(Long id, String nome, int ordem, Integer prazoDias, boolean inicial, boolean finalEtapa) {}
+    public record EtapaDto(Long id, String nome, int ordem, Integer prazoDias, boolean inicial, boolean finalEtapa,
+                           List<RequisitoService.RequisitoDto> requisitos) {
+        public static EtapaDto de(Etapa e, List<RequisitoService.RequisitoDto> requisitos) {
+            return new EtapaDto(e.getId(), e.getNome(), e.getOrdem(), e.getPrazoDias(), e.isInicial(), e.isFinalEtapa(),
+                    requisitos == null ? List.of() : requisitos);
+        }
+    }
     public record TransicaoDto(Long de, Long para) {}
     public record FluxoDto(Long id, String nome, boolean ativo, List<EtapaDto> etapas, List<TransicaoDto> transicoes) {}
 
@@ -142,10 +150,10 @@ public class FluxoService {
     }
 
     private FluxoDto dto(Fluxo f, Long tenantId) {
+        List<Etapa> lista = etapas.findByFluxoIdAndTenantIdOrderByOrdem(f.getId(), tenantId);
+        var reqs = requisitos.porEtapa(lista.stream().map(Etapa::getId).toList(), tenantId);
         return new FluxoDto(f.getId(), f.getNome(), f.isAtivo(),
-                etapas.findByFluxoIdAndTenantIdOrderByOrdem(f.getId(), tenantId).stream()
-                        .map(e -> new EtapaDto(e.getId(), e.getNome(), e.getOrdem(), e.getPrazoDias(), e.isInicial(), e.isFinalEtapa()))
-                        .toList(),
+                lista.stream().map(e -> EtapaDto.de(e, reqs.get(e.getId()))).toList(),
                 transicoes.findByFluxoIdAndTenantId(f.getId(), tenantId).stream()
                         .map(t -> new TransicaoDto(t.getDeEtapa(), t.getParaEtapa())).toList());
     }

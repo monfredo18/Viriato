@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.criteria.Predicate;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
@@ -49,12 +50,14 @@ public class ProcessoService {
     private final EntregaRepository entregasRepo;
     private final SetorRepository setoresRepo;
     private final ObjectMapper json;
+    private final RequisitoService requisitos;
+    private final ProcessoRequisitoRepository confirmacoes;
 
     public ProcessoService(ProcessoRepository processos, ProcessoHistoricoRepository historicos,
                            FluxoRepository fluxos, EtapaRepository etapas, TransicaoRepository transicoes,
                            UsuarioRepository usuarios, NotificacaoService notificacoes, CadastroService cadastros,
                            ClienteRepository clientes, EntregaRepository entregasRepo, SetorRepository setoresRepo,
-                           ObjectMapper json) {
+                           ObjectMapper json, RequisitoService requisitos, ProcessoRequisitoRepository confirmacoes) {
         this.processos = processos;
         this.historicos = historicos;
         this.fluxos = fluxos;
@@ -67,6 +70,8 @@ public class ProcessoService {
         this.entregasRepo = entregasRepo;
         this.setoresRepo = setoresRepo;
         this.json = json;
+        this.requisitos = requisitos;
+        this.confirmacoes = confirmacoes;
     }
 
     public record Filtro(StatusProcesso status, Long etapaId, Long responsavelId, Long clienteId, Long setorId,
@@ -119,6 +124,7 @@ public class ProcessoService {
         p.setEtapaAtualId(inicial.getId());
         p.setResponsavelId(responsavelId);
         p.setPrazoEtapa(calcularPrazo(inicial));
+        p.setEtapaDesde(Instant.now());
         p.setCamposExtras(serializar(extras));
         p.setCriadoPor(quem.id());
         p = processos.save(p);
@@ -174,7 +180,7 @@ public class ProcessoService {
                 .map(h -> new HistoricoDto(h.getId(), h.getAcao(), nomes.get(h.getUsuarioId()), h.getDeEtapa(),
                         h.getParaEtapa(), h.getComentario(), h.getCriadoEm()))
                 .toList();
-        return new Detalhe(paraDto(p), proximas, hist);
+        return new Detalhe(paraDto(p), proximas, hist, p.getStatus() == StatusProcesso.ABERTO ? requisitos.situacao(p) : List.of());
     }
 
     // ---------- operações ----------
@@ -190,8 +196,11 @@ public class ProcessoService {
             throw new NegocioException("Transição não permitida pelo fluxo");
         }
         Etapa origem = etapas.findById(p.getEtapaAtualId()).orElseThrow();
+        // Avançar exige os requisitos da etapa de origem; voltar para uma etapa anterior não exige nada.
+        if (destino.getOrdem() > origem.getOrdem()) requisitos.exigirCumpridos(p, origem);
 
         p.setEtapaAtualId(destino.getId());
+        p.setEtapaDesde(Instant.now());
         p.setPrazoAlertado(false);
         if (destino.isFinalEtapa()) {
             p.setStatus(StatusProcesso.CONCLUIDO);
@@ -205,6 +214,28 @@ public class ProcessoService {
         String detalhe = origem.getNome() + " → " + destino.getNome() + (comentario == null || comentario.isBlank() ? "" : ". " + comentario);
         notificacoes.notificar(p, destino.isFinalEtapa() ? "Processo concluído" : "Processo movido para " + destino.getNome(), detalhe, quem.id());
         return paraDto(p);
+    }
+
+    /** Marca ou desmarca a confirmação de um requisito do tipo CONFIRMACAO da etapa atual. */
+    @Transactional
+    public void definirRequisito(UsuarioLogado quem, Long id, Long requisitoId, boolean cumprido) {
+        Processo p = buscar(quem, id);
+        exigirAberto(p);
+        exigirPodeMexer(quem, p);
+        EtapaRequisito r = requisitos.daEtapaAtual(p, requisitoId, TipoRequisito.CONFIRMACAO);
+        var existente = confirmacoes.findByProcessoIdAndRequisitoId(p.getId(), r.getId());
+        if (cumprido) {
+            ProcessoRequisito c = existente.orElseGet(ProcessoRequisito::new);
+            c.setTenantId(p.getTenantId());
+            c.setProcessoId(p.getId());
+            c.setRequisitoId(r.getId());
+            c.setCumpridoPor(quem.id());
+            c.setCumpridoEm(Instant.now());
+            confirmacoes.save(c);
+        } else {
+            existente.ifPresent(confirmacoes::delete);
+        }
+        registrar(p, quem.id(), "REQUISITO", null, null, (cumprido ? "Confirmado: " : "Desmarcado: ") + r.getDescricao());
     }
 
     @Transactional
@@ -338,7 +369,7 @@ public class ProcessoService {
                 .map(Transicao::getParaEtapa).collect(Collectors.toSet());
         return etapas.findByFluxoIdAndTenantIdOrderByOrdem(p.getFluxoId(), p.getTenantId()).stream()
                 .filter(e -> destinos.contains(e.getId()))
-                .map(e -> new EtapaDto(e.getId(), e.getNome(), e.getOrdem(), e.getPrazoDias(), e.isInicial(), e.isFinalEtapa()))
+                .map(e -> EtapaDto.de(e, null))
                 .toList();
     }
 
