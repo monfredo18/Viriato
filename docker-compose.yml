@@ -50,6 +50,10 @@ services:
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
       CORS_ORIGINS: http://localhost:3000
+      # Primeiro administrador (criado só se o banco estiver vazio). A senha é provisória: ele cria a própria no primeiro acesso.
+      ADMIN_NOME: ${ADMIN_NOME:-Administrador}
+      ADMIN_SENHA: ${ADMIN_SENHA:-trocar-12345}
+      ADMIN_EMPRESA: ${ADMIN_EMPRESA:-Minha empresa}
     ports: ["8080:8080"]
 
   frontend:

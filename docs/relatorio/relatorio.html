@@ -145,7 +145,7 @@
   <table>
     <tr><th style="width:36mm">Módulo (backend)</th><th>Responsabilidade</th></tr>
     <tr><td><code>seguranca</code></td><td>Geração e validação do JWT, filtro de requisições, regras de acesso e CORS.</td></tr>
-    <tr><td><code>usuario</code></td><td>Login, cadastro de empresa (onboarding), usuários e papéis.</td></tr>
+    <tr><td><code>usuario</code></td><td>Login por nome, senha provisória, primeiro administrador, usuários e papéis.</td></tr>
     <tr><td><code>fluxo</code></td><td>Fluxos, etapas e transições por empresa.</td></tr>
     <tr><td><code>processo</code></td><td>Núcleo do sistema: processos, movimentação, histórico, atribuição, cancelamento.</td></tr>
     <tr><td><code>documento</code></td><td>Upload, download e remoção de arquivos, com armazenamento abstraído (S3).</td></tr>
@@ -159,15 +159,18 @@
   <h1>3. Como o sistema funciona</h1>
   <p>Esta seção percorre a jornada de uso, da primeira tela até o encerramento de um processo.</p>
 
-  <h2>3.1 Primeiro acesso: cadastro da empresa</h2>
-  <p>Na tela de login, <em>Cadastrar minha empresa</em> pede o nome da empresa, o nome do usuário, e-mail e senha (mínimo de 8 caracteres). Numa única operação o sistema cria a empresa, o primeiro usuário como <strong>Administrador</strong>, um <strong>fluxo padrão</strong>, o setor <strong>Geral</strong> e a entrega <strong>Atendimento geral</strong>, e já devolve a sessão. As empresas atendidas são cadastradas depois pelo administrador ou pelo gestor. Não existe usuário ou senha pré-cadastrados.</p>
-  <figure><img src="img/login.png" alt="Tela de login"><figcaption>Figura 2 — Tela de login, com o botão de tema no canto superior direito.</figcaption></figure>
+  <h2>3.1 Primeiro acesso e senhas</h2>
+  <p>Entra-se com <strong>nome e senha</strong>; não há campo de e-mail e <em>não existe cadastro aberto de empresas</em>. O primeiro administrador nasce da configuração do ambiente (<code>ADMIN_NOME</code>, <code>ADMIN_SENHA</code> e <code>ADMIN_EMPRESA</code>) na primeira vez em que o sistema sobe com o banco vazio; nesse momento o sistema também cria o setor <strong>Geral</strong>, a entrega <strong>Atendimento geral</strong> e um <strong>fluxo padrão</strong>. As empresas atendidas são cadastradas depois pelo administrador ou pelo gestor.</p>
+  <figure><img src="img/login.png" alt="Tela de login"><figcaption>Figura 2 — Tela de login: apenas Nome e Senha.</figcaption></figure>
+  <p>A <strong>senha inicial é provisória</strong>. Isso vale para o administrador criado pela configuração, para quem é cadastrado por administrador ou gestor e para quem teve a senha zerada. Ao entrar com uma senha provisória, a pessoa vê somente a tela <em>Crie a sua senha</em> (duas digitações iguais, mínimo de 8 caracteres e diferente da senha inicial); o <strong>servidor</strong> também bloqueia todo o resto da API até a troca ser feita, então não dá para contornar pela tela. Depois disso a senha inicial deixa de valer.</p>
+  <p>O <strong>nome</strong> é a identificação de acesso: não diferencia maiúsculas de minúsculas, é único na empresa e não aceita <code>@</code>. Se duas contas ativas tiverem o mesmo nome e a mesma senha, o acesso é recusado até o administrador diferenciar os nomes. Contas criadas antes desta versão ainda podem entrar com o e-mail; o e-mail não é mais pedido, exibido nem exposto pela API, e os avisos por e-mail só chegam a quem tem um e-mail cadastrado (as contas novas não têm).</p>
+  <p><strong>Zerar senha:</strong> somente o administrador, e vale para funcionário, gestor ou outro administrador (não para a própria conta). Ao zerar, ele informa na hora a nova senha (provisória); a senha antiga deixa de valer, <strong>as sessões abertas da pessoa são encerradas</strong> e, no próximo acesso, ela cria uma senha própria.</p>
 
   <h2>3.2 Login e sessão</h2>
   <ol>
-    <li>O usuário informa e-mail e senha. O sistema confere a senha (BCrypt) e verifica se o usuário e a empresa estão ativos.</li>
-    <li>Se estiver tudo certo, devolve um <strong>token JWT</strong> válido por 12 horas. Ele carrega o identificador do usuário, o da empresa e o papel.</li>
-    <li>O navegador guarda o token e o envia em cada chamada. Se o servidor responder 401, o usuário é deslogado.</li>
+    <li>O usuário informa nome e senha. O sistema confere a senha (BCrypt) e verifica se o usuário e a empresa estão ativos.</li>
+    <li>Se estiver tudo certo, devolve um <strong>token JWT</strong> válido por 12 horas. Ele carrega o identificador do usuário, o da empresa, o papel e a versão da sessão.</li>
+    <li>O navegador guarda o token e o envia em cada chamada. A cada requisição o servidor confere o usuário no banco: quem foi desativado ou apagado, ou teve a senha zerada, recebe 401 e é deslogado; o papel vigente é sempre o atual.</li>
   </ol>
   <p>A empresa de cada requisição vem <strong>sempre do token</strong>, nunca de algo que o usuário digite. É isso que sustenta o isolamento entre empresas.</p>
 
@@ -284,7 +287,8 @@
     <tr><td>Apagar empresas, setores e entregas</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c no">não</td></tr>
     <tr><td>Apagar fluxos</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c no">não</td></tr>
     <tr><td>Criar e ativar/desativar fluxos</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
-    <tr><td>Adicionar funcionários</td><td class="c ok">com qualquer papel</td><td class="c">só com papel Usuário</td><td class="c no">não</td></tr>
+    <tr><td>Adicionar funcionários</td><td class="c ok">com qualquer papel; informa nome, senha inicial, papel e setor</td><td class="c">só com papel Usuário; informa nome, senha inicial e papel, e o funcionário fica no setor do gestor</td><td class="c no">não</td></tr>
+    <tr><td>Zerar a senha de uma conta</td><td class="c ok">de qualquer outra conta, informando a nova senha</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Alterar o setor de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Alterar o papel de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Ativar ou desativar funcionário</td><td class="c ok">qualquer um</td><td class="c">só os de papel Usuário</td><td class="c no">não</td></tr>
@@ -312,7 +316,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em sete migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) e <code>V7</code> (nome do responsável apagado no processo).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em oito migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) e <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -347,7 +351,7 @@
   <table>
     <tr><th style="width:36mm">Tabela</th><th>Conteúdo e pontos importantes</th></tr>
     <tr><td><code>tenant</code></td><td>Empresa do sistema (quem usa o Viriato); flag <code>ativo</code>.</td></tr>
-    <tr><td><code>usuario</code></td><td>Nome, e-mail (único em todo o sistema), hash BCrypt da senha, papel, ativo e <code>setor_id</code> (opcional).</td></tr>
+    <tr><td><code>usuario</code></td><td>Nome (identificação de acesso), e-mail (opcional, só contas antigas; único), hash BCrypt da senha, indicador de senha provisória, versão da sessão, papel, ativo e <code>setor_id</code> (opcional).</td></tr>
     <tr><td><code>cliente</code></td><td>Empresa atendida: número (código interno de até 10 dígitos, único) e nome (único), mais a flag <code>ativo</code>. Empresas anteriores à V5 ficaram com o próprio identificador como número.</td></tr>
     <tr><td><code>setor</code></td><td>Departamento: nome (único) e flag <code>ativo</code>.</td></tr>
     <tr><td><code>entrega</code></td><td>Nome (único), <code>fluxo_id</code> e flag <code>ativo</code>.</td></tr>
@@ -368,11 +372,13 @@
   <p>Todas as rotas começam com <code>/api</code>. Fora as de autenticação, exigem o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. A documentação interativa fica em <code>/swagger-ui.html</code> (42 rotas).</p>
   <table>
     <tr><th style="width:17mm">Método</th><th style="width:56mm">Rota</th><th>Função</th><th style="width:40mm">Quem</th></tr>
-    <tr><td>POST</td><td><code>/auth/registrar-empresa</code></td><td>Cria empresa, administrador e fluxo padrão; devolve sessão</td><td>público</td></tr>
-    <tr><td>POST</td><td><code>/auth/login</code></td><td>Autentica e devolve o token</td><td>público</td></tr>
+    <tr><td>POST</td><td><code>/auth/login</code></td><td>Autentica por nome e senha e devolve o token</td><td>público</td></tr>
+    <tr><td>POST</td><td><code>/auth/registrar-empresa</code></td><td>Cadastro aberto de empresa; desligado por padrão (responde 404) e só ligado por <code>CADASTRO_EMPRESA_ABERTO=true</code></td><td>público, quando ligado</td></tr>
+    <tr><td>PUT</td><td><code>/me/senha</code></td><td>Primeiro acesso: troca a senha provisória pela própria (<code>novaSenha</code>)</td><td>quem está com senha provisória</td></tr>
+    <tr><td>PUT</td><td><code>/usuarios/{id}/senha</code></td><td>Zera a senha de outra conta, informando a nova (<code>senha</code>); encerra as sessões abertas dela</td><td>Admin</td></tr>
     <tr><td>GET</td><td><code>/me</code></td><td>Dados do usuário logado</td><td>todos</td></tr>
     <tr><td>GET</td><td><code>/usuarios</code></td><td>Lista usuários da empresa</td><td>todos</td></tr>
-    <tr><td>POST</td><td><code>/usuarios</code></td><td>Adiciona funcionário (com setor opcional)</td><td>Admin (qualquer papel); Gestor (só Usuário)</td></tr>
+    <tr><td>POST</td><td><code>/usuarios</code></td><td>Adiciona funcionário com nome, senha inicial (provisória) e papel; setor só para o administrador (o gestor cria sempre no próprio setor); e-mail opcional. Nome único na empresa</td><td>Admin (qualquer papel); Gestor (só Usuário)</td></tr>
     <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel, ativo ou setor</td><td>Admin (tudo); Gestor (só <code>ativo</code>, e só de quem é Usuário)</td></tr>
     <tr><td>GET</td><td><code>/clientes</code>, <code>/setores</code>, <code>/entregas</code></td><td>Listas de empresas atendidas, setores (com suas entregas) e entregas (com o fluxo)</td><td>todos</td></tr>
     <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (<code>numero</code> obrigatório, só dígitos, único; <code>nome</code>; ativo). Mudar o número atualiza o dos processos da empresa</td><td>Admin, Gestor</td></tr>
@@ -411,7 +417,8 @@
   <h2>O que já está implementado</h2>
   <ul>
     <li><strong>Isolamento entre empresas:</strong> o <code>tenant_id</code> vem só do token; toda consulta filtra por ele; acesso a recurso de outra empresa dá 404. Há testes automáticos cobrindo processos, comentários, documentos, download e uso de fluxo alheio.</li>
-    <li><strong>Senhas:</strong> guardadas com BCrypt; nunca retornam pela API.</li>
+    <li><strong>Senhas:</strong> guardadas com BCrypt; nunca retornam pela API. A senha inicial ou zerada é provisória e precisa ser trocada no primeiro acesso, com bloqueio no servidor.</li>
+    <li><strong>Sessão conferida no banco:</strong> a cada requisição o usuário é lido do banco; desativar, apagar, mudar o papel ou zerar a senha vale na hora, sem esperar o token expirar.</li>
     <li><strong>Autenticação sem sessão:</strong> JWT assinado (HS256) com validade de 12 horas. O sistema se recusa a iniciar com segredo menor que 32 bytes.</li>
     <li><strong>Acesso por padrão negado:</strong> só <code>/api/**</code> autenticada, login e documentação são liberados; qualquer outra rota é bloqueada.</li>
     <li><strong>Arquivos:</strong> nome sanitizado, chave única no S3, criptografia no repouso, download intermediado pelo backend com cabeçalho <code>nosniff</code>.</li>
@@ -424,12 +431,11 @@
     <p>Esta lista existe para que nada seja descoberto tarde demais. Itens marcados com <strong>(prioridade)</strong> devem ser resolvidos antes de qualquer uso real.</p>
   </div>
   <ol>
-    <li><strong>(prioridade) O token não pode ser revogado.</strong> Desativar ou apagar um usuário, ou mudar seu papel, só passa a valer quando o token expira (até 12 horas), porque o filtro não consulta o banco a cada requisição. Quem foi desativado continua com o acesso que tinha nesse período.</li>
-    <li><strong>(prioridade) Sem limite de tentativas de login</strong>, sem recuperação de senha e sem autenticação em dois fatores.</li>
+        <li><strong>(prioridade) Sem limite de tentativas de login</strong>, sem recuperação de senha por conta própria (só o administrador zera), sem troca voluntária de senha depois do primeiro acesso e sem autenticação em dois fatores.</li>
     <li><strong>(prioridade) Segredo padrão de desenvolvimento.</strong> Existe um <code>JWT_SECRET</code> padrão para facilitar o uso local; em produção ele <em>precisa</em> ser trocado.</li>
     <li>Upload sem lista de tipos permitidos e sem antivírus (limite de 25 MB por arquivo).</li>
     <li>O token fica no <code>localStorage</code> do navegador. O React escapa o conteúdo, o que reduz o risco, mas uma falha de injeção de script exporia o token. Uma alternativa é cookie <code>HttpOnly</code>.</li>
-    <li>O e-mail é único em todo o sistema: uma pessoa não pode ter o mesmo e-mail em duas empresas.</li>
+    <li>O nome de acesso é único dentro de cada empresa, mas não entre empresas: se duas contas ativas de empresas diferentes tiverem o mesmo nome e a mesma senha, nenhuma delas consegue entrar até uma mudar. Na prática, com o cadastro aberto desligado, há uma só empresa por instalação.</li>
     <li>O número do processo é o número da empresa atendida, então <strong>não identifica um processo isoladamente</strong>: processos da mesma empresa compartilham o número, e o que os distingue é o identificador interno, o título e o histórico. Processos criados antes dessa regra mantêm o número antigo (por exemplo <code>2026-000001</code>).</li>
     <li>A visibilidade vem do setor <em>atual</em> de quem consulta: se o administrador muda o funcionário de setor, ele passa a ver os processos do novo setor e deixa de ver os do antigo. Funcionário sem setor não vê nenhum processo. Processos encerrados cujo setor foi apagado ficam visíveis só ao administrador.</li>
     <li>O responsável pertence ao setor do processo (ou é administrador). Se o funcionário trocar de setor, processos em andamento sob sua responsabilidade devem ser reatribuídos pelo gestor ou administrador.</li>
@@ -439,7 +445,6 @@
 
   <h2>Limitações funcionais</h2>
   <ul>
-    <li>Apagar um funcionário não remove a sessão que ele já tenha aberta: ela continua válida até o token expirar (limitação 1 da seção 7).</li>
     <li>Os próprios processos não podem ser apagados (só concluídos ou cancelados); por isso um processo encerrado pode ficar com empresa, setor, entrega, fluxo ou responsável em branco depois que esses cadastros são apagados.</li>
     <li>Fluxos não podem ser editados depois de criados (só ativados ou desativados); a tela monta apenas transições em sequência.</li>
     <li>Os campos extras do processo são um JSON livre aceito pela API; ainda não há tela para preenchê-los.</li>
@@ -469,6 +474,7 @@
   <table>
     <tr><th style="width:44mm">Variável</th><th>Para quê</th></tr>
     <tr><td><code>JWT_SECRET</code></td><td>Segredo de assinatura (mínimo 32 bytes). <strong>Obrigatório trocar em produção.</strong></td></tr>
+    <tr><td><code>ADMIN_NOME</code>, <code>ADMIN_SENHA</code>, <code>ADMIN_EMPRESA</code></td><td>Primeiro administrador e nome da empresa, criados só com o banco vazio; a senha é provisória. Defina uma senha inicial própria.</td></tr>
     <tr><td><code>DB_URL</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code></td><td>Conexão com o MySQL.</td></tr>
     <tr><td><code>S3_BUCKET</code>, <code>S3_REGIAO</code></td><td>Bucket real. Sem <code>S3_ENDPOINT</code>, usa a AWS com credenciais da função (IAM Role).</td></tr>
     <tr><td><code>MAIL_*</code></td><td>Servidor SMTP (por exemplo AWS SES) e remetente.</td></tr>
@@ -586,7 +592,7 @@
   </ol>
 
   <h2>Apêndice — como acessar</h2>
-  <p>Não há usuário ou senha pré-definidos. Depois de subir o sistema, abra a aplicação, clique em <strong>Cadastrar minha empresa</strong> e crie o seu acesso; ele já nasce como Administrador. Para abrir o primeiro processo, cadastre antes ao menos uma empresa atendida em <em>Cadastros → Empresas</em>; o setor Geral e a entrega Atendimento geral já vêm prontos. Os usuários e as empresas mostradas nas capturas deste relatório foram dados de demonstração criados num ambiente temporário e não fazem parte do código.</p>
+  <p>Depois de subir o sistema, entre com o administrador inicial: no ambiente Docker local o nome é <code>Administrador</code> e a senha <code>trocar-12345</code> (configuráveis por <code>ADMIN_NOME</code> e <code>ADMIN_SENHA</code>); o sistema pede que ele crie a própria senha no primeiro acesso. Para abrir o primeiro processo, cadastre antes ao menos uma empresa atendida em <em>Cadastros → Empresas</em>; o setor Geral e a entrega Atendimento geral já vêm prontos. Os usuários e as empresas mostradas nas capturas deste relatório foram dados de demonstração criados num ambiente temporário e não fazem parte do código.</p>
 </section>
 
 </div>
