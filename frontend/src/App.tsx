@@ -11,6 +11,7 @@ import Fluxos from './pages/Fluxos'
 import Usuarios from './pages/Usuarios'
 import Relatorios from './pages/Relatorios'
 import DefinirSenha from './pages/DefinirSenha'
+import Painel from './pages/Painel'
 
 const iniciais = (nome?: string) =>
   (nome ?? '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
@@ -23,6 +24,7 @@ function Layout() {
         <span className="marca"><Logo altura={42} /></span>
         <nav>
           <NavLink to="/processos">Processos</NavLink>
+          <NavLink to="/painel">Painel</NavLink>
           <NavLink to="/cadastros">Cadastros</NavLink>
           <NavLink to="/fluxos">Fluxos</NavLink>
           <NavLink to="/usuarios">Usuários</NavLink>
@@ -44,6 +46,7 @@ function Layout() {
         <Routes>
           <Route path="/processos" element={<Processos />} />
           <Route path="/processos/:id" element={<ProcessoDetalhe />} />
+          <Route path="/painel" element={<Painel />} />
           <Route path="/cadastros" element={<Cadastros />} />
           <Route path="/fluxos" element={<Fluxos />} />
           <Route path="/usuarios" element={<Usuarios />} />
