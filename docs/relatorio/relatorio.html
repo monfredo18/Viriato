@@ -55,7 +55,7 @@
   <h1>Relatório do Sistema</h1>
   <p class="sub">Controle de processos multi-empresa: como o sistema funciona, como foi construído e quais são seus limites atuais.</p>
   <table class="meta">
-    <tr><td>Versão do código</td><td>commit <code>f4f37be</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
+    <tr><td>Versão do código</td><td>commit <code>b86b5d9</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
     <tr><td>Data</td><td>12 de novembro de 2026</td></tr>
     <tr><td>Estágio</td><td>MVP funcional, ainda não preparado para produção</td></tr>
     <tr><td>Repositório</td><td>github.com/monfredo18/Viriato</td></tr>
@@ -250,7 +250,7 @@
 
   <h2>3.8 Prazos e notificações</h2>
   <p>Uma tarefa agendada roda todos os dias às 08:00 (America/Sao_Paulo). Ela procura processos abertos, com responsável, cujo prazo vence em até 1 dia ou já venceu e que ainda não foram alertados naquela etapa. Para cada um, avisa o responsável (<em>Prazo próximo do vencimento</em> ou <em>Prazo vencido</em>) e marca como alertado. O resultado é <strong>um alerta por etapa</strong>; ele volta a valer quando o processo muda de etapa ou de responsável.</p>
-  <p>Cada notificação é gravada no sistema (sininho no topo, com contador de não lidas, atualizado a cada 30 segundos) e enviada por e-mail de forma assíncrona. O e-mail é <em>best-effort</em>: se o servidor de e-mail falhar, isso é registrado em log e a operação principal não é afetada.</p>
+  <p>Cada notificação informa <strong>o que foi feito</strong>, a <strong>empresa</strong>, a <strong>entrega</strong>, <strong>quem fez</strong> (ou "Sistema", no alerta de prazo) e a <strong>data e a hora</strong>. Pela regra de setor, quem pertence a um setor só recebe avisos de processos do seu próprio setor; quem não tem setor, como o administrador, recebe os que lhe cabem. A notificação é gravada no sistema (sininho no topo, com contador de não lidas, atualizado a cada 30 segundos) e enviada por e-mail, com as mesmas informações, de forma assíncrona. O e-mail é <em>best-effort</em>: se o servidor de e-mail falhar, isso é registrado em log e a operação principal não é afetada.</p>
   <figure><img src="img/notificacoes.png" alt="Notificações"><figcaption>Figura 10 — Painel de notificações; as não lidas têm destaque e levam direto ao processo.</figcaption></figure>
   <h2>3.9 Relatórios</h2>
   <p>A aba <em>Relatórios</em> gera um PDF com os processos, e está aberta a todos os papéis. O que cada pessoa pode abranger é decidido pelo servidor, a partir do papel, e não pelo que a tela envia:</p>
@@ -310,7 +310,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em cinco migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) e <code>V5</code> (número da empresa; o número do processo deixa de ser único).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em seis migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) e <code>V6</code> (detalhes da notificação).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -489,7 +489,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>43 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>45 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Ciclo completo do processo: criar, avançar por todas as etapas, concluir, histórico</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Isolamento entre empresas (processo, comentário, documentos, download, fluxo alheio)</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Permissões por papel e transição fora do fluxo</td><td class="ok">coberto por teste</td></tr>
@@ -550,6 +550,9 @@
     <tr><td><code>ac2a919</code></td><td>Frontend: cadastro de empresa com número e nome</td></tr>
     <tr><td><code>57af26d</code></td><td>Backend: relatórios de processos em PDF por papel</td></tr>
     <tr><td><code>f4f37be</code></td><td>Frontend: aba Relatórios</td></tr>
+    <tr><td><code>7259079</code></td><td>Relatório e README com relatórios e número da empresa</td></tr>
+    <tr><td><code>b86b5d9</code></td><td>Backend: notificações com detalhes e sem cruzar setores (migração V6)</td></tr>
+    <tr><td><code>6feeda3</code></td><td>Frontend: notificações detalhadas e enquadramento das telas</td></tr>
   </table>
 </section>
 
