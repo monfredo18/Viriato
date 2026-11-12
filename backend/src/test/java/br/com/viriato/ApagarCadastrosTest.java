@@ -237,7 +237,7 @@ class ApagarCadastrosTest {
         apagar(c.gestor(), "/api/usuarios/" + outro).andExpect(status().isNoContent());
         JsonNode depois = processo(c, p2);
         assertThat(depois.get("status").asText()).isEqualTo("CONCLUIDO");
-        assertThat(depois.get("responsavelNome").isNull()).isTrue();
+        assertThat(depois.get("responsavelNome").asText()).isEqualTo("Outro (removido)");   // o nome continua visível
     }
 
     @Test

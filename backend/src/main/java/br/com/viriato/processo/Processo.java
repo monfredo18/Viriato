@@ -22,6 +22,8 @@ public class Processo {
     @Column(name = "setor_id") private Long setorId;
     @Column(name = "etapa_atual_id") private Long etapaAtualId;
     @Column(name = "responsavel_id") private Long responsavelId;
+    /** Nome de quem era o responsável e foi apagado; marca o processo como restrito ao gestor do setor. */
+    @Column(name = "responsavel_removido_nome") private String responsavelRemovidoNome;
     @Enumerated(EnumType.STRING) private StatusProcesso status = StatusProcesso.ABERTO;
     @Column(name = "prazo_etapa") private LocalDate prazoEtapa;
     @Column(name = "prazo_alertado") private boolean prazoAlertado;
