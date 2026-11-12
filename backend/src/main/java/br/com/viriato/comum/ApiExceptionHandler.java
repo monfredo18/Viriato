@@ -9,9 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
@@ -40,6 +43,13 @@ public class ApiExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<Map<String, Object>> negado(AccessDeniedException e) {
         return erro(HttpStatus.FORBIDDEN, "Sem permissão para esta ação");
+    }
+
+    /** Parâmetro de URL ou corpo da requisição em formato inválido (ex.: situação desconhecida). */
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class,
+            MissingServletRequestParameterException.class})
+    ResponseEntity<Map<String, Object>> requisicaoInvalida(Exception e) {
+        return erro(HttpStatus.BAD_REQUEST, "Requisição inválida: confira os valores informados");
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
