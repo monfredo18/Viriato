@@ -70,7 +70,7 @@
   <p>O Viriato é um sistema web para cadastrar, acompanhar e automatizar <strong>processos</strong> dentro de uma empresa. Cada processo percorre as <strong>etapas</strong> de um <strong>fluxo</strong> definido pela própria empresa, tem um responsável, um prazo por etapa, documentos anexados e um histórico completo do que aconteceu.</p>
   <p>O sistema foi desenhado desde o início como <strong>SaaS multi-empresa</strong>: uma única instalação atende várias empresas, e os dados de uma nunca são visíveis para outra.</p>
 
-  <div class="caixa"><strong>Em uma frase:</strong> a empresa cadastra as empresas que atende, os setores e o que cada setor entrega; cada entrega tem um fluxo de etapas. Ao abrir um processo, escolhe-se a empresa atendida, o departamento, a entrega e o responsável, e o sistema controla em que etapa o processo está, quando vence o prazo e o que já foi feito.</div>
+  <div class="caixa"><strong>Em uma frase:</strong> a empresa cadastra as empresas que atende, os setores e o que cada setor entrega; cada entrega tem um fluxo de etapas. Ao abrir um processo, informa-se a empresa atendida e a entrega (administrador e gestor indicam também o responsável; o administrador, o departamento), e o sistema controla em que etapa o processo está, quando vence o prazo e o que já foi feito.</div>
 
   <h2>O que o sistema faz hoje</h2>
   <ul>
@@ -78,7 +78,7 @@
     <li><strong>Usuários, setores e papéis:</strong> Administrador, Gestor e Usuário, com permissões diferentes; cada funcionário pertence a um setor.</li>
     <li><strong>Cadastros:</strong> empresas atendidas (com número e nome), setores e entregas. Cada setor define quais entregas faz, e cada entrega define o fluxo.</li>
     <li><strong>Fluxos configuráveis:</strong> etapas com prazo em dias, etapa inicial e etapas finais.</li>
-    <li><strong>Processos:</strong> abertos com empresa, departamento, entrega e responsável; busca e filtros, movimentação entre etapas respeitando as regras do fluxo, atribuição, comentários e cancelamento.</li>
+    <li><strong>Processos:</strong> abertos com empresa e entrega (o departamento e o responsável dependem do papel de quem abre); cada setor só vê os próprios processos, e só o administrador vê todos; busca e filtros, movimentação entre etapas respeitando as regras do fluxo, atribuição, comentários e cancelamento.</li>
     <li><strong>Histórico:</strong> cada ação fica registrada com autor, data e comentário.</li>
     <li><strong>Documentos:</strong> upload e download de arquivos por processo, guardados no AWS S3.</li>
     <li><strong>Prazos e notificações:</strong> aviso dentro do sistema (sininho) e por e-mail, com alerta automático de prazo vencendo ou vencido.</li>
@@ -215,21 +215,22 @@
   <figure><img src="img/cadastros-setores.png" alt="Cadastro de setores"><figcaption>Figura 5 — Setores e as entregas que cada um faz; o botão <em>escolher</em> altera a lista.</figcaption></figure>
 
   <h2>3.5 Abrir e acompanhar processos</h2>
-  <p>Qualquer usuário pode abrir um processo. O formulário pede, nesta ordem:</p>
-  <ol>
-    <li><strong>Empresa</strong> atendida;</li>
-    <li><strong>Departamento</strong>: ao escolher, a lista seguinte mostra <em>somente as entregas que esse setor faz</em>;</li>
-    <li><strong>O que vai entregar</strong> (a entrega), com a indicação do fluxo que será usado;</li>
-    <li><strong>Responsável</strong>, entre os usuários ativos; vem preenchido com quem está abrindo.</li>
-  </ol>
+  <p>Qualquer usuário pode abrir um processo, mas o formulário pede só o que cabe ao papel de quem abre:</p>
+  <table>
+    <tr><th>Quem abre</th><th>Informa</th><th>O que o sistema define sozinho</th></tr>
+    <tr><td>Administrador</td><td>Empresa, departamento, entrega e responsável</td><td>—</td></tr>
+    <tr><td>Gestor</td><td>Empresa, entrega e responsável</td><td>O departamento é o do próprio gestor</td></tr>
+    <tr><td>Usuário</td><td>Empresa e entrega</td><td>O departamento é o dele e o responsável é ele mesmo</td></tr>
+  </table>
+  <p>A entrega listada é sempre <em>somente a que o setor faz</em>, com a indicação do fluxo que será usado. O responsável escolhido por administrador ou gestor precisa estar ativo e ser do setor do processo (o administrador pode ser responsável em qualquer setor). Quem não é administrador e não tem setor definido não consegue abrir processos até que o administrador defina o seu setor. Se uma requisição tentar enviar outro setor ou responsável, o servidor ignora e aplica a regra do papel.</p>
   <p>Há ainda um campo opcional de observações. Não existe campo de título, de número nem de fluxo: o <strong>título é gerado</strong> (por exemplo <em>Laudo técnico — Construtora Alfa</em>) e o <strong>fluxo vem da entrega</strong>. Ao criar, o sistema:</p>
   <ol>
     <li>confere que a empresa, o setor e a entrega são da sua empresa e estão ativos, que o setor realmente faz aquela entrega e que o fluxo da entrega está ativo;</li>
     <li>coloca o processo na etapa inicial do fluxo e calcula o prazo (hoje + dias da etapa, fuso America/Sao_Paulo);</li>
     <li>usa como número do processo o <strong>número da empresa atendida</strong> (por exemplo <code>1042</code>);</li>
-    <li>registra no histórico a ação <em>Criado</em> e avisa o responsável, se for outra pessoa.</li>
+    <li>registra no histórico a ação <em>Criado</em> e avisa o gestor do setor (se não foi ele quem criou).</li>
   </ol>
-  <figure><img src="img/novo-processo.png" alt="Formulário de novo processo"><figcaption>Figura 6 — Novo processo: a entrega só libera depois do departamento e mostra apenas o que ele faz.</figcaption></figure>
+  <figure><img src="img/novo-processo.png" alt="Formulário de novo processo"><figcaption>Figura 6 — Novo processo (visão do administrador): a entrega só libera depois do departamento. Gestor e usuário não veem o campo Departamento.</figcaption></figure>
   <p>A lista de processos mostra, nesta ordem, número, empresa, setor, entrega, prazo, responsável e situação (a etapa atual aparece no detalhe), e tem busca por empresa, entrega ou número, filtros por situação, empresa e setor, <em>Meus</em> (onde sou responsável) e <em>Atrasados</em>, com paginação. Um processo é considerado <strong>atrasado</strong> quando está aberto e o prazo da etapa já passou; isso é calculado na hora da consulta.</p>
   <figure><img src="img/processos-claro.png" alt="Lista de processos"><figcaption>Figura 7 — Lista de processos com empresa, entrega, setor, filtros e selos de situação (tema claro).</figcaption></figure>
   <figure><img src="img/processos-escuro.png" alt="Lista de processos no tema escuro"><figcaption>Figura 8 — A mesma tela no tema escuro, escolhido pelo botão de sol/lua no topo.</figcaption></figure>
@@ -269,12 +270,13 @@
 <!-- ============================ 4 ============================ -->
 <section>
   <h1>4. Papéis e permissões</h1>
-  <p>Todos os usuários da empresa <strong>enxergam tudo</strong>: processos de todos, documentos, histórico, cadastros, fluxos e a equipe (com papel e setor). O que muda é quem pode <strong>alterar</strong>.</p>
+  <p>Os <strong>processos são separados por setor</strong>: gestor e usuário enxergam apenas os processos (e documentos e histórico) do próprio setor; <strong>só o administrador vê os de todos os setores</strong>. Processo de outro setor responde “não encontrado”, inclusive no endereço direto, nos documentos e nos filtros. Cadastros, fluxos e a equipe (com papel e setor) continuam visíveis a todos. O que muda, além disso, é quem pode <strong>alterar</strong>.</p>
   <table>
     <tr><th>Ação</th><th class="c">Administrador</th><th class="c">Gestor</th><th class="c">Usuário</th></tr>
-    <tr><td>Ver processos, cadastros, fluxos e equipe</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
+    <tr><td>Ver processos</td><td class="c ok">de todos os setores</td><td class="c">só do próprio setor</td><td class="c">só do próprio setor</td></tr>
+    <tr><td>Ver cadastros, fluxos e equipe</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
     <tr><td>Abrir processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
-    <tr><td>Movimentar, comentar, anexar e remover anexo, reatribuir</td><td class="c ok">em qualquer processo</td><td class="c ok">em qualquer processo</td><td class="c">só nos processos em que é o responsável</td></tr>
+    <tr><td>Movimentar, comentar, anexar e remover anexo, reatribuir</td><td class="c ok">em qualquer processo</td><td class="c ok">em qualquer processo do seu setor</td><td class="c">só nos processos em que é o responsável</td></tr>
     <tr><td>Gerar relatório em PDF</td><td class="c ok">de todos os setores</td><td class="c">só do próprio setor</td><td class="c">só dos próprios processos</td></tr>
     <tr><td>Cancelar processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar empresas atendidas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
@@ -427,8 +429,8 @@
     <li>O token fica no <code>localStorage</code> do navegador. O React escapa o conteúdo, o que reduz o risco, mas uma falha de injeção de script exporia o token. Uma alternativa é cookie <code>HttpOnly</code>.</li>
     <li>O e-mail é único em todo o sistema: uma pessoa não pode ter o mesmo e-mail em duas empresas.</li>
     <li>O número do processo é o número da empresa atendida, então <strong>não identifica um processo isoladamente</strong>: processos da mesma empresa compartilham o número, e o que os distingue é o identificador interno, o título e o histórico. Processos criados antes dessa regra mantêm o número antigo (por exemplo <code>2026-000001</code>).</li>
-    <li>Todos da empresa veem todos os processos, por decisão de projeto; não há visibilidade restrita por equipe ou setor.</li>
-    <li>O responsável pode ser qualquer usuário ativo, não necessariamente do setor do processo.</li>
+    <li>A visibilidade vem do setor <em>atual</em> de quem consulta: se o administrador muda o funcionário de setor, ele passa a ver os processos do novo setor e deixa de ver os do antigo. Funcionário sem setor não vê nenhum processo. Processos encerrados cujo setor foi apagado ficam visíveis só ao administrador.</li>
+    <li>O responsável pertence ao setor do processo (ou é administrador). Se o funcionário trocar de setor, processos em andamento sob sua responsabilidade devem ser reatribuídos pelo gestor ou administrador.</li>
     <li>O gestor escolhe o setor do funcionário ao adicioná-lo, mas depois só o administrador consegue alterá-lo.</li>
     <li>Não há ferramentas de LGPD (exportar ou excluir dados de uma pessoa), nem registro de auditoria de login.</li>
   </ol>

@@ -56,7 +56,8 @@ backend/src/main/java/br/com/viriato/
 - **Empresas atendidas** (para quem o processo é feito), **setores** e **entregas** são cadastros da empresa.
 - Cada empresa atendida tem **número** (código interno de 1 a 10 dígitos, sem repetir) e **nome**. O **número do processo é o número da empresa**: processos da mesma empresa compartilham o número.
 - Cada **setor** define quais entregas faz; cada **entrega** define o fluxo (etapas) do processo.
-- Novo processo = empresa + departamento + entrega + responsável. Ao escolher o departamento, só aparecem as entregas que ele faz.
+- Novo processo: administrador informa empresa, departamento, entrega e responsável; gestor, empresa, entrega e responsável (departamento é o dele); usuário, só empresa e entrega (departamento e responsável são os dele). Só aparecem as entregas que o setor faz.
+- Cada setor vê apenas os próprios processos; só o administrador vê os de todos os setores.
 
 ### Relatórios (PDF)
 A aba **Relatórios** gera um PDF dos processos, com filtros por setor, responsável, empresa, período (abertura ou encerramento) e situação (em andamento, concluídos, cancelados). A abrangência depende do papel e é imposta pelo servidor:
