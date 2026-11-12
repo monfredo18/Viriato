@@ -328,3 +328,11 @@ td.num { font-family: var(--mono); font-weight: 500; font-size: 13px; }
 
 /* Aviso ao apagar funcionário com processos */
 .lista-aviso { margin: 0 0 1rem; padding-left: 1.2rem; line-height: 1.7; }
+
+/* Ações na linha da lista de usuários */
+.acoes-linha { white-space: nowrap; text-align: right; }
+
+/* Usuários: a tabela (com "Zerar senha" e X) precisa de mais largura que o formulário */
+.grade.usuarios { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.grade.usuarios td select { min-width: 8.5rem; }
+@media (max-width: 1280px) { .grade.usuarios { grid-template-columns: 1fr; } }

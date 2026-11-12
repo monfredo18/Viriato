@@ -34,7 +34,7 @@ class NotificacaoSetorTest {
     }
     private JsonNode consultar(String t, String url) throws Exception { return corpo(mvc.perform(get(url).header("Authorization", "Bearer " + t)).andExpect(status().isOk())); }
     private String login(String e) throws Exception {
-        return corpo(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + e + "\",\"senha\":\"senha12345\"}")).andExpect(status().isOk())).get("token").asText();
+        return TestesAuth.entrar(mvc, json, e);
     }
     private long usuario(String admin, String nome, String email, String papel, long setor) throws Exception {
         return corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"" + email + "\",\"senha\":\"senha12345\",\"papel\":\"" + papel

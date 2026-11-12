@@ -159,9 +159,7 @@ class FluxoCompletoTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"nome\":\"Op\",\"email\":\"" + emailU + "\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}"))
                 .andExpect(status().isCreated());
-        String tokenU = corpo(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + emailU + "\",\"senha\":\"senha12345\"}")).andExpect(status().isOk()))
-                .get("token").asText();
+        String tokenU = TestesAuth.entrar(mvc, json, emailU);
 
         mvc.perform(post("/api/fluxos").header("Authorization", "Bearer " + tokenU)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -177,7 +175,7 @@ class FluxoCompletoTest {
         Empresa e = novaEmpresa();
         var me = corpo(mvc.perform(get("/api/me").header("Authorization", "Bearer " + e.token())).andExpect(status().isOk()));
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + me.get("email").asText() + "\",\"senha\":\"errada123\"}"))
+                .content("{\"email\":\"" + me.get("nome").asText() + "\",\"senha\":\"errada123\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -209,8 +207,7 @@ class FluxoCompletoTest {
         mvc.perform(post("/api/usuarios").header("Authorization", "Bearer " + e.token()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"nome\":\"Gestor\",\"email\":\"" + emailG + "\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\",\"setorId\":" + e.setorId() + "}"))
                 .andExpect(status().isCreated());
-        String tokenG = corpo(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + emailG + "\",\"senha\":\"senha12345\"}")).andExpect(status().isOk())).get("token").asText();
+        String tokenG = TestesAuth.entrar(mvc, json, emailG);
         long id = criarProcesso(e, "Atrasado").get("id").asLong();
         var p = processos.findById(id).orElseThrow();
         p.setPrazoEtapa(LocalDate.now().minusDays(3));

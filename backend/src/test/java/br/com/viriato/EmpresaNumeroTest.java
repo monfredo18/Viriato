@@ -51,8 +51,7 @@ class EmpresaNumeroTest {
                 .andExpect(status().isCreated()));
         String admin = reg.get("token").asText();
         enviar(admin, "/api/usuarios", "{\"nome\":\"Gestor\",\"email\":\"ges-" + sfx + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\"}").andExpect(status().isCreated());
-        String gestor = corpo(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"ges-" + sfx + "@t.com\",\"senha\":\"senha12345\"}")).andExpect(status().isOk())).get("token").asText();
+        String gestor = TestesAuth.entrar(mvc, json, "ges-" + sfx + "@t.com");
         JsonNode geral = consultar(admin, "/api/setores").get(0);
         return new Cenario(admin, gestor, reg.get("usuario").get("id").asLong(), geral.get("id").asLong(),
                 geral.get("entregas").get(0).get("id").asLong());

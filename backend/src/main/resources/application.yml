@@ -31,6 +31,13 @@ spring:
       mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
 
 viriato:
+  # Cadastro aberto de empresas (POST /api/auth/registrar-empresa). Desligado: o primeiro administrador
+  # vem de ADMIN_NOME/ADMIN_SENHA, e os demais usuários são criados por administradores e gestores.
+  cadastro-empresa-aberto: ${CADASTRO_EMPRESA_ABERTO:false}
+  admin-inicial:
+    nome: ${ADMIN_NOME:}
+    senha: ${ADMIN_SENHA:}
+    empresa: ${ADMIN_EMPRESA:Minha empresa}
   jwt:
     # Em produção defina JWT_SECRET com no mínimo 32 caracteres.
     secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}

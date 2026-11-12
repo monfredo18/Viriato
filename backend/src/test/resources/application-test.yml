@@ -6,6 +6,7 @@ spring:
   flyway:
     locations: classpath:db/migration
 viriato:
+  cadastro-empresa-aberto: true   # os testes criam empresas pela API
   mail:
     habilitado: false
   prazos:

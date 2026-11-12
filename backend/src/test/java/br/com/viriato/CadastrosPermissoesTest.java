@@ -25,7 +25,7 @@ class CadastrosPermissoesTest {
     @Autowired ObjectMapper json;
 
     /** Empresa com um admin, um gestor e um usuário comum já criados. */
-    record Cenario(String admin, String gestor, String usuario, long fluxoId, long setorGeralId, long entregaPadraoId) {}
+    record Cenario(String admin, String gestor, String usuario, long fluxoId, long setorGeralId, long entregaPadraoId, String emailFunc) {}
 
     private JsonNode corpo(ResultActions r) throws Exception {
         return json.readTree(r.andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
@@ -46,9 +46,7 @@ class CadastrosPermissoesTest {
     }
 
     private String login(String email) throws Exception {
-        return corpo(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + email + "\",\"senha\":\"senha12345\"}")).andExpect(status().isOk()))
-                .get("token").asText();
+        return TestesAuth.entrar(mvc, json, email);
     }
 
     private Cenario cenario() throws Exception {
@@ -57,14 +55,14 @@ class CadastrosPermissoesTest {
                 .content("{\"empresa\":\"Emp\",\"nome\":\"Adm\",\"email\":\"adm-" + sufixo + "@t.com\",\"senha\":\"senha12345\"}"))
                 .andExpect(status().isCreated()));
         String admin = reg.get("token").asText();
-        enviar(admin, "/api/usuarios", "{\"nome\":\"Gestor\",\"email\":\"ges-" + sufixo + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\"}")
+        JsonNode geral = consultar(admin, "/api/setores").get(0);
+        enviar(admin, "/api/usuarios", "{\"nome\":\"Gestor\",\"email\":\"ges-" + sufixo + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\",\"setorId\":" + geral.get("id").asLong() + "}")
                 .andExpect(status().isCreated());
         enviar(admin, "/api/usuarios", "{\"nome\":\"Func\",\"email\":\"usu-" + sufixo + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}")
                 .andExpect(status().isCreated());
         long fluxo = consultar(admin, "/api/fluxos").get(0).get("id").asLong();
-        JsonNode geral = consultar(admin, "/api/setores").get(0);
         return new Cenario(admin, login("ges-" + sufixo + "@t.com"), login("usu-" + sufixo + "@t.com"), fluxo,
-                geral.get("id").asLong(), geral.get("entregas").get(0).get("id").asLong());
+                geral.get("id").asLong(), geral.get("entregas").get(0).get("id").asLong(), "usu-" + sufixo + "@t.com");
     }
 
     @Test
@@ -118,9 +116,9 @@ class CadastrosPermissoesTest {
     void gestorAdicionaFuncionarioMasSoComPapelUsuario() throws Exception {
         Cenario c = cenario();
         String email = "novo-" + UUID.randomUUID() + "@t.com";
-        enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"Novo\",\"email\":\"" + email
-                + "\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + c.setorGeralId() + "}")
-                .andExpect(status().isCreated());
+        var novo = corpo(enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"Novo\",\"email\":\"" + email
+                + "\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated()));
+        assertThat(novo.get("setorNome").asText()).isEqualTo("Geral");   // o setor é o do gestor que criou
         enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"Chefe\",\"email\":\"x-" + email
                 + "\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\"}").andExpect(status().isForbidden());
         enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"Adm\",\"email\":\"y-" + email
@@ -141,15 +139,15 @@ class CadastrosPermissoesTest {
                 default -> { }
             }
         }
-        String emailFunc = null;
-        for (JsonNode u : consultar(c.admin(), "/api/usuarios")) if (u.get("id").asLong() == idFunc) emailFunc = u.get("email").asText();
+        String emailFunc = c.emailFunc();
 
         // gestor desativa e reativa um funcionário (papel Usuário)
         alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"ativo\":false}").andExpect(status().isOk());
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)       // desativado não entra
                 .content("{\"email\":\"" + emailFunc + "\",\"senha\":\"senha12345\"}")).andExpect(status().isUnauthorized());
         alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"ativo\":true}").andExpect(status().isOk());
-        login(emailFunc);
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)       // reativado volta a entrar (com a senha própria)
+                .content("{\"nome\":\"" + emailFunc + "\",\"senha\":\"" + TestesAuth.SENHA_PROPRIA + "\"}")).andExpect(status().isOk());
 
         // mas não mexe no setor (nem para trocar, nem para remover) nem no papel
         alterar(c.gestor(), "/api/usuarios/" + idFunc, "{\"setorId\":" + c.setorGeralId() + "}").andExpect(status().isForbidden());

@@ -19,7 +19,7 @@ Sistema web multi-empresa (SaaS) para cadastrar, acompanhar e automatizar proces
 docker compose up --build
 ```
 
-- App: http://localhost:3000 (clique em **Cadastrar minha empresa**)
+- App: http://localhost:3000 — entre com o administrador inicial (nome `Administrador`, senha `trocar-12345`, definidos por `ADMIN_NOME`/`ADMIN_SENHA` em `docker-compose.yml` ou `.env`). No primeiro acesso o sistema pede que ele crie a própria senha.
 - Swagger/OpenAPI: http://localhost:8080/swagger-ui.html
 - E-mails enviados (Mailpit): http://localhost:8025
 
@@ -38,7 +38,7 @@ Testes: `cd backend && mvn test` (usa H2 em modo MySQL; não precisa de Docker).
 ```
 backend/src/main/java/br/com/viriato/
   seguranca/   JWT, filtro, config de segurança, CORS
-  usuario/     login, cadastro de empresa (onboarding), usuários e papéis
+  usuario/     login por nome, senha provisória, primeiro administrador, usuários e papéis
   fluxo/       fluxos, etapas e transições configuráveis por empresa
   processo/    processos, movimentação, histórico, atribuição, cancelamento
   documento/   upload/download (S3), nomes sanitizados
@@ -58,6 +58,14 @@ backend/src/main/java/br/com/viriato/
 - Cada **setor** define quais entregas faz; cada **entrega** define o fluxo (etapas) do processo.
 - Novo processo: administrador informa empresa, departamento, entrega e responsável; gestor, empresa, entrega e responsável (departamento é o dele); usuário, só empresa e entrega (departamento e responsável são os dele). Só aparecem as entregas que o setor faz.
 - Cada setor vê apenas os próprios processos; só o administrador vê os de todos os setores.
+
+### Acesso e senhas
+- Entra-se com **nome e senha**. O nome não diferencia maiúsculas de minúsculas e é único na empresa (não aceita `@`). Contas antigas ainda podem entrar com o e-mail.
+- Não há cadastro aberto de empresas: o primeiro administrador nasce da configuração (`ADMIN_NOME`, `ADMIN_SENHA`, `ADMIN_EMPRESA`) quando o banco está vazio. Para reativar o cadastro aberto (uso em testes), defina `CADASTRO_EMPRESA_ABERTO=true`.
+- Administrador cria usuários com nome, senha inicial, papel e setor. Gestor informa só nome, senha inicial e papel (Usuário); o funcionário já nasce no setor do gestor.
+- A senha inicial é **provisória**: no primeiro acesso a pessoa cria a própria senha, e o servidor bloqueia o resto do sistema até isso acontecer.
+- O administrador pode **zerar a senha** de qualquer outra conta (funcionário, gestor ou administrador): ele informa na hora a nova senha, que também é provisória. A sessão aberta da pessoa é encerrada.
+- O usuário é conferido a cada requisição: quem é desativado ou apagado perde o acesso imediatamente.
 
 ### Relatórios (PDF)
 A aba **Relatórios** gera um PDF dos processos, com filtros por setor, responsável, empresa, período (abertura ou encerramento) e situação (em andamento, concluídos, cancelados). A abrangência depende do papel e é imposta pelo servidor:
