@@ -67,8 +67,12 @@ export default function Sino() {
           {itens.map((n) => (
             <div key={n.id} className={`notif ${n.lida ? '' : 'nao-lida'}`} onClick={() => clicar(n)}>
               <b>{n.titulo}</b>
-              {n.mensagem && <div>{n.mensagem}</div>}
-              <small>{new Date(n.criadoEm).toLocaleString('pt-BR')}</small>
+              {(n.empresaNome || n.entregaNome) && (
+                <div className="notif-linha"><span>Empresa:</span> {n.empresaNome ?? '—'} <span className="sep">|</span> <span>Entrega:</span> {n.entregaNome ?? '—'}</div>
+              )}
+              {n.autorNome && <div className="notif-linha"><span>Por:</span> {n.autorNome}</div>}
+              {n.mensagem && <div className="notif-detalhe">{n.mensagem}</div>}
+              <small>{new Date(n.criadoEm).toLocaleDateString('pt-BR')} às {new Date(n.criadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</small>
             </div>
           ))}
         </div>

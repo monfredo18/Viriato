@@ -89,4 +89,4 @@ export interface Historico { id: number; acao: string; usuarioNome: string | nul
 export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historico: Historico[] }
 export interface Pagina<T> { content: T[]; totalPages: number; number: number; totalElements: number }
 export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string }
-export interface Notificacao { id: number; titulo: string; mensagem: string | null; processoId: number | null; lida: boolean; criadoEm: string }
+export interface Notificacao { id: number; titulo: string; mensagem: string | null; empresaNome: string | null; entregaNome: string | null; autorNome: string | null; processoId: number | null; lida: boolean; criadoEm: string }
