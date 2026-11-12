@@ -63,8 +63,7 @@ class RelatorioTest {
     }
 
     private String login(String email) throws Exception {
-        return corpo(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + email + "\",\"senha\":\"senha12345\"}")).andExpect(status().isOk())).get("token").asText();
+        return TestesAuth.entrar(mvc, json, email);
     }
 
     private long idDe(JsonNode lista, String nome) {

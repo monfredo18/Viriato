@@ -63,7 +63,7 @@ public class NotificacaoService {
             if (empresa != null) txt.append("Empresa: ").append(empresa).append('\n');
             if (entrega != null) txt.append("Entrega: ").append(entrega).append('\n');
             if (detalhe != null && !detalhe.isBlank()) txt.append('\n').append(detalhe).append('\n');
-            email.enviar(gestor.getEmail(), "[Viriato] " + titulo, txt.toString());
+            if (gestor.getEmail() != null && !gestor.getEmail().isBlank()) email.enviar(gestor.getEmail(), "[Viriato] " + titulo, txt.toString());
         }
     }
 }

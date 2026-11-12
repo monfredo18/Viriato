@@ -60,8 +60,9 @@ public class UsuarioController {
         this.processoService = processoService;
     }
 
+    /** O acesso é por nome e senha; o e-mail é opcional (e a tela não o pede). */
     public record NovoUsuario(@NotBlank @Size(max = 150) String nome,
-                              @NotBlank @Email String email,
+                              @Email String email,
                               @NotBlank @Size(min = 8, max = 72) String senha,
                               @NotNull Papel papel,
                               Long setorId) {}
@@ -79,6 +80,10 @@ public class UsuarioController {
                 .toList();
     }
 
+    /**
+     * Administrador define papel e setor. Gestor só cria funcionário (papel Usuário) e o setor é sempre o dele:
+     * qualquer setor enviado é ignorado. A senha informada é provisória: a pessoa cria a própria no primeiro acesso.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
@@ -87,17 +92,47 @@ public class UsuarioController {
         if (quem.papel() == Papel.GESTOR && req.papel() != Papel.USUARIO) {
             throw new AccessDeniedException("Gestor só pode adicionar funcionários com papel Usuário");
         }
-        if (repo.existsByEmailIgnoreCase(req.email())) throw new NegocioException("E-mail já cadastrado");
-        Setor setor = req.setorId() == null ? null : cadastros.setorAtivo(quem.tenantId(), req.setorId());
+        String nome = req.nome().trim();
+        if (nome.contains("@")) throw new NegocioException("O nome não pode conter @");
+        if (repo.existsByTenantIdAndNomeIgnoreCase(quem.tenantId(), nome)) {
+            throw new NegocioException("Já existe um funcionário com este nome. O nome é usado para entrar no sistema, então precisa ser único.");
+        }
+        String email = req.email() == null || req.email().isBlank() ? null : req.email().trim().toLowerCase();
+        if (email != null && repo.existsByEmailIgnoreCase(email)) throw new NegocioException("E-mail já cadastrado");
+        Long setorId = req.setorId();
+        if (quem.papel() == Papel.GESTOR) {
+            setorId = repo.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
+            if (setorId == null) throw new NegocioException("Seu usuário não tem setor definido. Peça ao administrador para definir o seu setor.");
+        }
+        Setor setor = setorId == null ? null : cadastros.setorAtivo(quem.tenantId(), setorId);
 
         Usuario u = new Usuario();
         u.setTenantId(quem.tenantId());
-        u.setNome(req.nome().trim());
-        u.setEmail(req.email().trim().toLowerCase());
+        u.setNome(nome);
+        u.setEmail(email);
         u.setSenhaHash(encoder.encode(req.senha()));
+        u.setSenhaProvisoria(true);
         u.setPapel(req.papel());
         u.setSetorId(setor == null ? null : setor.getId());
         return UsuarioDto.de(repo.save(u), setor == null ? null : setor.getNome());
+    }
+
+    public record ZerarSenha(@NotBlank @Size(min = 8, max = 72) String senha) {}
+
+    /**
+     * Só o administrador zera a senha de funcionário, gestor ou outro administrador, e já informa a nova senha
+     * (provisória): a pessoa a troca por uma própria no próximo acesso. Não vale para a própria conta.
+     */
+    @PutMapping("/{id}/senha")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    public void zerarSenha(@PathVariable Long id, @Valid @RequestBody ZerarSenha req) {
+        UsuarioLogado quem = Contexto.atual();
+        Usuario u = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Usuário"));
+        if (u.getId().equals(quem.id())) throw new NegocioException("Você não pode zerar a sua própria senha");
+        u.setSenhaHash(encoder.encode(req.senha()));
+        u.setSenhaProvisoria(true);
+        repo.save(u);
     }
 
     @PatchMapping("/{id}")

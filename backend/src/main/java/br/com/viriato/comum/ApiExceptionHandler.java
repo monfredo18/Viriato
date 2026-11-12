@@ -37,7 +37,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     ResponseEntity<Map<String, Object>> credenciais(BadCredentialsException e) {
-        return erro(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
+        return erro(HttpStatus.UNAUTHORIZED, "Nome ou senha inválidos");
     }
 
     @ExceptionHandler(AccessDeniedException.class)
