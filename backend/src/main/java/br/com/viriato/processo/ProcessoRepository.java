@@ -18,6 +18,11 @@ public interface ProcessoRepository extends JpaRepository<Processo, Long>, JpaSp
     long countByTenantIdAndResponsavelIdAndStatus(Long tenantId, Long responsavelId, StatusProcesso status);
     long countByTenantIdAndFluxoIdAndStatus(Long tenantId, Long fluxoId, StatusProcesso status);
 
+    // O número do processo é o número da empresa: ao editar o número da empresa, os processos acompanham.
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Processo p set p.numero = :numero where p.tenantId = :t and p.clienteId = :id")
+    int atualizarNumeroDaEmpresa(Long t, Long id, String numero);
+
     // Ao apagar um cadastro, os processos já encerrados continuam existindo, só sem o vínculo.
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update Processo p set p.clienteId = null where p.tenantId = :t and p.clienteId = :id")

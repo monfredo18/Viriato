@@ -99,7 +99,7 @@ public class ProcessoService {
 
         Processo p = new Processo();
         p.setTenantId(tid);
-        p.setNumero("TMP-" + UUID.randomUUID().toString().substring(0, 8));
+        p.setNumero(cliente.getNumero());     // o número do processo é o número da empresa
         p.setTitulo(titulo);
         p.setDescricao(descricao);
         p.setClienteId(cliente.getId());
@@ -111,8 +111,6 @@ public class ProcessoService {
         p.setPrazoEtapa(calcularPrazo(inicial));
         p.setCamposExtras(serializar(extras));
         p.setCriadoPor(quem.id());
-        p = processos.save(p);
-        p.setNumero(String.format("%d-%06d", Datas.hoje().getYear(), p.getId()));
         p = processos.save(p);
 
         registrar(p, quem.id(), "CRIADO", null, inicial.getNome(), null);

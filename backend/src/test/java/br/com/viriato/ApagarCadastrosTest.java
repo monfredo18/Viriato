@@ -27,6 +27,8 @@ import org.springframework.test.web.servlet.ResultActions;
 @ActiveProfiles("test")
 class ApagarCadastrosTest {
 
+    private static final java.util.concurrent.atomic.AtomicInteger SEQ = new java.util.concurrent.atomic.AtomicInteger();
+
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
 
@@ -101,7 +103,8 @@ class ApagarCadastrosTest {
     }
 
     private long cliente(String token, String nome) throws Exception {
-        return corpo(enviar(token, "/api/clientes", "{\"nome\":\"" + nome + "\"}").andExpect(status().isCreated())).get("id").asLong();
+        String numero = String.valueOf(5000 + SEQ.incrementAndGet());
+        return corpo(enviar(token, "/api/clientes", "{\"numero\":\"" + numero + "\",\"nome\":\"" + nome + "\"}").andExpect(status().isCreated())).get("id").asLong();
     }
 
     // ------------------------------------------------------------------ empresas

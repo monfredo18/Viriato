@@ -12,6 +12,7 @@ public class Cliente {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(name = "tenant_id") private Long tenantId;
+    private String numero;
     private String nome;
     private boolean ativo = true;
 }

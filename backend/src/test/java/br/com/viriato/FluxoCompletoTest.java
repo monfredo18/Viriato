@@ -69,7 +69,7 @@ class FluxoCompletoTest {
         var fluxos = corpo(mvc.perform(get("/api/fluxos").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk()));
         long clienteId = corpo(mvc.perform(post("/api/clientes").header("Authorization", "Bearer " + token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Cliente Teste\"}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"numero\":\"301\",\"nome\":\"Cliente Teste\"}"))
                 .andExpect(status().isCreated())).get("id").asLong();
         var setor = corpo(mvc.perform(get("/api/setores").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())).get(0);
@@ -97,7 +97,7 @@ class FluxoCompletoTest {
         JsonNode p = criarProcesso(e, "Contrato A");
         long id = p.get("id").asLong();
         assertThat(p.get("etapaAtual").asText()).isEqualTo("Abertura");
-        assertThat(p.get("numero").asText()).matches("\\d{4}-\\d{6}");
+        assertThat(p.get("numero").asText()).isEqualTo("301");   // o número do processo é o número da empresa
         assertThat(p.get("camposExtras").get("cliente").asText()).isEqualTo("ACME");
 
         // percorre o fluxo padrão até o fim
