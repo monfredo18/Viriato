@@ -37,7 +37,7 @@ public class DocumentoService {
 
     @Transactional
     public DocumentoDto enviar(UsuarioLogado quem, Long processoId, MultipartFile arquivo) throws IOException {
-        Processo processo = processos.buscar(processoId, quem.tenantId()); // garante que o processo é do tenant
+        Processo processo = processos.buscar(quem, processoId); // garante que o processo é do tenant
         processos.exigirPodeMexer(quem, processo);
         if (arquivo == null || arquivo.isEmpty()) throw new NegocioException("Arquivo vazio");
 
@@ -65,21 +65,22 @@ public class DocumentoService {
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentoDto> listar(Long processoId, Long tenantId) {
-        processos.buscar(processoId, tenantId);
-        return repo.findByProcessoIdAndTenantIdOrderByIdDesc(processoId, tenantId).stream().map(DocumentoDto::de).toList();
+    public List<DocumentoDto> listar(UsuarioLogado quem, Long processoId) {
+        processos.buscar(quem, processoId);   // também garante que o processo é do setor de quem pede
+        return repo.findByProcessoIdAndTenantIdOrderByIdDesc(processoId, quem.tenantId()).stream().map(DocumentoDto::de).toList();
     }
 
     @Transactional(readOnly = true)
-    public Arquivo baixar(Long id, Long tenantId) {
-        Documento d = repo.findByIdAndTenantId(id, tenantId).orElseThrow(() -> new NaoEncontradoException("Documento"));
+    public Arquivo baixar(UsuarioLogado quem, Long id) {
+        Documento d = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Documento"));
+        processos.buscar(quem, d.getProcessoId());
         return new Arquivo(d, storage.abrir(d.getChaveS3()));
     }
 
     @Transactional
     public void remover(UsuarioLogado quem, Long id) {
         Documento d = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Documento"));
-        processos.exigirPodeMexer(quem, processos.buscar(d.getProcessoId(), quem.tenantId()));
+        processos.exigirPodeMexer(quem, processos.buscar(quem, d.getProcessoId()));
         repo.delete(d);
         storage.remover(d.getChaveS3());
     }
