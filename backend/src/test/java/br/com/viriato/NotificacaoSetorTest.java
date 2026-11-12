@@ -26,7 +26,7 @@ class NotificacaoSetorTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
 
-    record C(String admin, String u1, String u2, long adminId, long u1Id, long u2Id, long eng, long fin, long entrega, long empresa) {}
+    record C(String admin, String gestorEng, String gestorFin, String u1, String u2, long adminId, long u1Id, long u2Id, long eng, long fin, long entrega, long empresa) {}
 
     private JsonNode corpo(ResultActions r) throws Exception { return json.readTree(r.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)); }
     private ResultActions enviar(String t, String url, String b) throws Exception {
@@ -35,6 +35,10 @@ class NotificacaoSetorTest {
     private JsonNode consultar(String t, String url) throws Exception { return corpo(mvc.perform(get(url).header("Authorization", "Bearer " + t)).andExpect(status().isOk())); }
     private String login(String e) throws Exception {
         return corpo(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + e + "\",\"senha\":\"senha12345\"}")).andExpect(status().isOk())).get("token").asText();
+    }
+    private long usuario(String admin, String nome, String email, String papel, long setor) throws Exception {
+        return corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"" + email + "\",\"senha\":\"senha12345\",\"papel\":\"" + papel
+                + "\",\"setorId\":" + setor + "}").andExpect(status().isCreated())).get("id").asLong();
     }
 
     private C cenario() throws Exception {
@@ -45,52 +49,80 @@ class NotificacaoSetorTest {
         long entrega = consultar(admin, "/api/setores").get(0).get("entregas").get(0).get("id").asLong();
         long eng = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Engenharia\",\"entregaIds\":[" + entrega + "]}").andExpect(status().isCreated())).get("id").asLong();
         long fin = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Financeiro\",\"entregaIds\":[" + entrega + "]}").andExpect(status().isCreated())).get("id").asLong();
-        long u1 = corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"Ursula Eng\",\"email\":\"u1-" + s + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + eng + "}").andExpect(status().isCreated())).get("id").asLong();
-        long u2 = corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"Ubiratan Fin\",\"email\":\"u2-" + s + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + fin + "}").andExpect(status().isCreated())).get("id").asLong();
+        usuario(admin, "Gestor Eng", "ge-" + s + "@t.com", "GESTOR", eng);
+        usuario(admin, "Gestor Fin", "gf-" + s + "@t.com", "GESTOR", fin);
+        long u1 = usuario(admin, "Ursula Eng", "u1-" + s + "@t.com", "USUARIO", eng);
+        long u2 = usuario(admin, "Ubiratan Fin", "u2-" + s + "@t.com", "USUARIO", fin);
         long emp = corpo(enviar(admin, "/api/clientes", "{\"numero\":\"1042\",\"nome\":\"Alfa Engenharia\"}").andExpect(status().isCreated())).get("id").asLong();
-        return new C(admin, login("u1-" + s + "@t.com"), login("u2-" + s + "@t.com"), reg.get("usuario").get("id").asLong(), u1, u2, eng, fin, entrega, emp);
+        return new C(admin, login("ge-" + s + "@t.com"), login("gf-" + s + "@t.com"), login("u1-" + s + "@t.com"), login("u2-" + s + "@t.com"),
+                reg.get("usuario").get("id").asLong(), u1, u2, eng, fin, entrega, emp);
     }
 
-    private long processo(C c, long setor, long resp) throws Exception {
-        return corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.empresa() + ",\"entregaId\":" + c.entrega() + ",\"setorId\":" + setor
+    private long processo(C c, String token, long setor, long resp) throws Exception {
+        return corpo(enviar(token, "/api/processos", "{\"clienteId\":" + c.empresa() + ",\"entregaId\":" + c.entrega() + ",\"setorId\":" + setor
                 + ",\"responsavelId\":" + resp + "}").andExpect(status().isCreated())).get("id").asLong();
     }
 
+    private int quantas(String token) throws Exception { return consultar(token, "/api/notificacoes").size(); }
+
     @Test
-    void notificacaoInformaOQueFoiFeitoEmpresaEntregaAutorEHorario() throws Exception {
+    void movimentacaoAvisaSoOGestorDoSetor_comONomeDeQuemFez() throws Exception {
         C c = cenario();
-        processo(c, c.eng(), c.u1Id());
-        JsonNode n = consultar(c.u1(), "/api/notificacoes").get(0);
-        assertThat(n.get("titulo").asText()).isEqualTo("Novo processo atribuído a você");
+        long p = processo(c, c.admin(), c.eng(), c.u1Id());               // o administrador abre o processo de Engenharia
+        JsonNode aberto = consultar(c.gestorEng(), "/api/notificacoes").get(0);
+        assertThat(aberto.get("titulo").asText()).isEqualTo("Novo processo aberto - Adm Teste");
+        long antes = quantas(c.gestorEng());
+
+        // o funcionário (responsável) move o processo: quem recebe é o gestor do setor
+        long proxima = consultar(c.u1(), "/api/processos/" + p).get("proximasEtapas").get(0).get("id").asLong();
+        enviar(c.u1(), "/api/processos/" + p + "/avancar", "{\"etapaId\":" + proxima + "}").andExpect(status().isOk());
+        JsonNode n = consultar(c.gestorEng(), "/api/notificacoes").get(0);
+        assertThat(n.get("titulo").asText()).isEqualTo("Processo movido para Análise - Ursula Eng");
         assertThat(n.get("empresaNome").asText()).isEqualTo("Alfa Engenharia");
         assertThat(n.get("entregaNome").asText()).isEqualTo("Atendimento geral");
-        assertThat(n.get("autorNome").asText()).isEqualTo("Adm Teste");
         assertThat(n.get("criadoEm").asText()).isNotBlank();
+        assertThat(quantas(c.gestorEng())).isEqualTo(antes + 1);
 
-        long p = processo(c, c.eng(), c.u1Id());
-        enviar(c.admin(), "/api/processos/" + p + "/comentarios", "{\"texto\":\"Falta o laudo\"}").andExpect(status().isCreated());
-        JsonNode com = consultar(c.u1(), "/api/notificacoes").get(0);
-        assertThat(com.get("titulo").asText()).startsWith("Novo comentário");
-        assertThat(com.get("mensagem").asText()).isEqualTo("Falta o laudo");
-        assertThat(com.get("autorNome").asText()).isEqualTo("Adm Teste");
+        // ninguém mais é avisado: nem o próprio funcionário, nem outro setor, nem o administrador
+        assertThat(quantas(c.u1())).isZero();
+        assertThat(quantas(c.u2())).isZero();
+        assertThat(quantas(c.gestorFin())).isZero();
+        assertThat(quantas(c.admin())).isZero();
     }
 
     @Test
-    void setorNaoRecebeNotificacaoDeProcessoDeOutroSetor() throws Exception {
+    void comentarioAtribuicaoECancelamentoTambemVaoSoParaOGestorDoSetor() throws Exception {
         C c = cenario();
-        long p = processo(c, c.eng(), c.u2Id());                                            // responsável é do Financeiro, processo é de Engenharia
-        assertThat(consultar(c.u2(), "/api/notificacoes")).isEmpty();
-        enviar(c.admin(), "/api/processos/" + p + "/comentarios", "{\"texto\":\"x\"}").andExpect(status().isCreated());
-        assertThat(consultar(c.u2(), "/api/notificacoes")).isEmpty();
-        long q = processo(c, c.eng(), c.u1Id());                                            // reatribuir a alguém de outro setor também não avisa
-        mvc.perform(put("/api/processos/" + q + "/responsavel").header("Authorization", "Bearer " + c.admin())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"responsavelId\":" + c.u2Id() + "}")).andExpect(status().isOk());
-        assertThat(consultar(c.u2(), "/api/notificacoes")).isEmpty();
-        // mesmo setor: recebe
-        processo(c, c.fin(), c.u2Id());
-        assertThat(consultar(c.u2(), "/api/notificacoes")).hasSize(1);
-        // quem não tem setor (administrador) continua recebendo
-        processo(c, c.eng(), c.adminId());
-        assertThat(consultar(c.admin(), "/api/notificacoes").size()).isEqualTo(0);          // o autor não se auto-notifica
+        long p = processo(c, c.admin(), c.eng(), c.u1Id());
+        enviar(c.u1(), "/api/processos/" + p + "/comentarios", "{\"texto\":\"Falta o laudo\"}").andExpect(status().isCreated());
+        JsonNode com = consultar(c.gestorEng(), "/api/notificacoes").get(0);
+        assertThat(com.get("titulo").asText()).isEqualTo("Novo comentário - Ursula Eng");
+        assertThat(com.get("mensagem").asText()).isEqualTo("Falta o laudo");
+
+        mvc.perform(put("/api/processos/" + p + "/responsavel").header("Authorization", "Bearer " + c.admin()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"responsavelId\":" + c.u2Id() + "}")).andExpect(status().isOk());
+        assertThat(consultar(c.gestorEng(), "/api/notificacoes").get(0).get("titulo").asText()).isEqualTo("Processo atribuído a Ubiratan Fin - Adm Teste");
+
+        enviar(c.admin(), "/api/processos/" + p + "/cancelar", "{\"motivo\":\"desistiu\"}").andExpect(status().isOk());
+        assertThat(consultar(c.gestorEng(), "/api/notificacoes").get(0).get("titulo").asText()).isEqualTo("Processo cancelado - Adm Teste");
+
+        assertThat(quantas(c.gestorFin())).isZero();                      // setor do processo é Engenharia
+        assertThat(quantas(c.u1())).isZero();
+        assertThat(quantas(c.u2())).isZero();                             // nem o novo responsável, que é de outro setor
+    }
+
+    @Test
+    void cadaSetorSoVeOsAvisosDoProprioSetor_eOGestorNaoRecebeDeSiMesmo() throws Exception {
+        C c = cenario();
+        processo(c, c.admin(), c.fin(), c.u2Id());
+        assertThat(quantas(c.gestorFin())).isEqualTo(1);
+        assertThat(quantas(c.gestorEng())).isZero();
+        // o gestor abre um processo do próprio setor: não avisa a si mesmo
+        processo(c, c.gestorEng(), c.eng(), c.u1Id());
+        assertThat(quantas(c.gestorEng())).isZero();
+        // sem gestor no setor, ninguém é avisado e nada quebra
+        long semGestor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Sem gestor\",\"entregaIds\":[" + c.entrega() + "]}").andExpect(status().isCreated())).get("id").asLong();
+        processo(c, c.admin(), semGestor, c.adminId());
+        assertThat(quantas(c.admin())).isZero();
     }
 }

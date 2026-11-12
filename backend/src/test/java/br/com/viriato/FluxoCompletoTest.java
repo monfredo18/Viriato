@@ -204,6 +204,13 @@ class FluxoCompletoTest {
     @Test
     void agendadorNotificaPrazoVencidoUmaVezSo() throws Exception {
         Empresa e = novaEmpresa();
+        // o alerta de prazo vai para o gestor do setor do processo
+        String emailG = "gestor-" + UUID.randomUUID() + "@teste.com";
+        mvc.perform(post("/api/usuarios").header("Authorization", "Bearer " + e.token()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"nome\":\"Gestor\",\"email\":\"" + emailG + "\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\",\"setorId\":" + e.setorId() + "}"))
+                .andExpect(status().isCreated());
+        String tokenG = corpo(mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + emailG + "\",\"senha\":\"senha12345\"}")).andExpect(status().isOk())).get("token").asText();
         long id = criarProcesso(e, "Atrasado").get("id").asLong();
         var p = processos.findById(id).orElseThrow();
         p.setPrazoEtapa(LocalDate.now().minusDays(3));
@@ -212,9 +219,16 @@ class FluxoCompletoTest {
         assertThat(scheduler.verificar()).isGreaterThanOrEqualTo(1);
         assertThat(scheduler.verificar()).isZero(); // idempotente: não repete o alerta
 
-        var n = corpo(mvc.perform(get("/api/notificacoes/nao-lidas").header("Authorization", "Bearer " + e.token()))
+        var n = corpo(mvc.perform(get("/api/notificacoes/nao-lidas").header("Authorization", "Bearer " + tokenG))
                 .andExpect(status().isOk()));
-        assertThat(n.get("total").asLong()).isEqualTo(1);
+        assertThat(n.get("total").asLong()).isEqualTo(2);        // "Novo processo aberto" + o alerta de prazo
+        long alertas = 0;
+        for (var x : corpo(mvc.perform(get("/api/notificacoes").header("Authorization", "Bearer " + tokenG)).andExpect(status().isOk()))) {
+            if (x.get("titulo").asText().equals("Prazo vencido")) alertas++;
+        }
+        assertThat(alertas).isEqualTo(1);                          // e o alerta não se repete
+        var doAdmin = corpo(mvc.perform(get("/api/notificacoes/nao-lidas").header("Authorization", "Bearer " + e.token())).andExpect(status().isOk()));
+        assertThat(doAdmin.get("total").asLong()).isZero();      // o administrador não recebe
         var lista = corpo(mvc.perform(get("/api/processos?atrasados=true").header("Authorization", "Bearer " + e.token())));
         assertThat(lista.get("content").size()).isEqualTo(1);
     }
