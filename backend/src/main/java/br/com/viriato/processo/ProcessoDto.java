@@ -2,6 +2,7 @@ package br.com.viriato.processo;
 
 import br.com.viriato.fluxo.FluxoService.EtapaDto;
 import br.com.viriato.fluxo.RequisitoService;
+import br.com.viriato.usuario.Papel;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -20,5 +21,10 @@ public record ProcessoDto(Long id, String numero, String titulo, String descrica
                                String comentario, Instant criadoEm) {}
 
     public record Detalhe(ProcessoDto processo, List<EtapaDto> proximasEtapas, List<HistoricoDto> historico,
-                          List<RequisitoService.RequisitoStatusDto> requisitos, Integer etapaOrdem) {}
+                          List<RequisitoService.RequisitoStatusDto> requisitos, Integer etapaOrdem,
+                          List<AprovacaoDto> aprovacoes) {}
+
+    /** Pedido de aprovação para mover o processo a uma etapa que exige gestor (ou administrador). */
+    public record AprovacaoDto(Long id, Long etapaDestinoId, String etapaDestino, Papel papelMinimo, Long solicitadoPorId, String solicitadoPor,
+                               Instant solicitadoEm, String comentario, StatusAprovacao status, String decididoPor, Instant decididoEm, String motivo) {}
 }

@@ -446,3 +446,16 @@ tr.linha-atrasada td:nth-child(5) { color: var(--vermelho); font-weight: 600; }
   .topo nav { margin-left: .3rem; gap: 0; overflow-x: auto; scrollbar-width: none; }
   .topo nav a { padding: 0 .45rem; font-size: 10.5px; letter-spacing: .03em; }
 }
+
+/* ---------- aprovações ---------- */
+.so-gestor { color: var(--ouro-texto); font-weight: 600; }
+.aprovacoes { margin: 1rem 0 .25rem; padding: .85rem 1rem; background: var(--bg); border-left: 3px solid var(--azul); }
+.aprovacoes h4 { margin: 0 0 .6rem; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.aprovacoes ul { list-style: none; margin: 0; padding: 0; }
+.aprovacoes li { display: flex; align-items: center; gap: .7rem; padding: .45rem 0; border-bottom: 1px solid var(--borda); }
+.aprovacoes li:last-child { border-bottom: none; }
+.aprov-pendente { box-shadow: inset 3px 0 0 var(--ouro); padding-left: .6rem !important; }
+.aprov-recusada b { color: var(--vermelho); }
+.aprov-cancelada { opacity: .65; }
+.aprov-acoes { display: flex; gap: .4rem; align-items: center; flex: none; }
+.aprovacoes button { height: 28px; font-size: 12px; }

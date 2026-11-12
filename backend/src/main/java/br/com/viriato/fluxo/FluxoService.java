@@ -6,6 +6,7 @@ import br.com.viriato.cadastro.EntregaRepository;
 import br.com.viriato.comum.NegocioException;
 import br.com.viriato.processo.ProcessoRepository;
 import br.com.viriato.processo.StatusProcesso;
+import br.com.viriato.usuario.Papel;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -35,14 +36,16 @@ public class FluxoService {
     public record TransicaoReq(int de, int para) {}
 
     public record EtapaDto(Long id, String nome, int ordem, Integer prazoDias, boolean inicial, boolean finalEtapa,
-                           List<RequisitoService.RequisitoDto> requisitos) {
+                           List<RequisitoService.RequisitoDto> requisitos, Papel papelMinimo) {
         public static EtapaDto de(Etapa e, List<RequisitoService.RequisitoDto> requisitos) {
             return new EtapaDto(e.getId(), e.getNome(), e.getOrdem(), e.getPrazoDias(), e.isInicial(), e.isFinalEtapa(),
-                    requisitos == null ? List.of() : requisitos);
+                    requisitos == null ? List.of() : requisitos, e.getPapelMinimo());
         }
     }
     public record TransicaoDto(Long de, Long para) {}
-    public record FluxoDto(Long id, String nome, boolean ativo, List<EtapaDto> etapas, List<TransicaoDto> transicoes) {}
+    public record FluxoDto(Long id, String nome, boolean ativo, List<EtapaDto> etapas, List<TransicaoDto> transicoes) {
+        public record EtapaResumo(Long id, Papel papelMinimo) {}
+    }
 
     @Transactional(readOnly = true)
     public List<FluxoDto> listar(Long tenantId) {
@@ -102,6 +105,17 @@ public class FluxoService {
             transicoes.save(tr);
         }
         return dto(f, tenantId);
+    }
+
+    /** Define quem pode mover processos PARA a etapa (os demais pedem aprovação). */
+    @Transactional
+    public FluxoDto.EtapaResumo definirPapelMinimo(Long tenantId, Long fluxoId, Long etapaId, Papel papelMinimo) {
+        if (papelMinimo == null) throw new NegocioException("Informe quem pode mover para a etapa");
+        Etapa e = etapas.findByIdAndTenantId(etapaId, tenantId).filter(x -> x.getFluxoId().equals(fluxoId))
+                .orElseThrow(() -> new NaoEncontradoException("Etapa"));
+        e.setPapelMinimo(papelMinimo);
+        etapas.save(e);
+        return new FluxoDto.EtapaResumo(e.getId(), e.getPapelMinimo());
     }
 
     @Transactional

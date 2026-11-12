@@ -78,7 +78,7 @@ export interface Sessao { token: string; usuario: Usuario; empresa: string }
 export type TipoRequisito = 'DOCUMENTO' | 'CONFIRMACAO'
 export interface Requisito { id: number; tipo: TipoRequisito; descricao: string }
 export interface RequisitoStatus extends Requisito { cumprido: boolean; cumpridoPor: string | null; cumpridoEm: string | null; documentoId: number | null; documentoNome: string | null }
-export interface Etapa { id: number; nome: string; ordem: number; prazoDias: number | null; inicial: boolean; finalEtapa: boolean; requisitos: Requisito[] }
+export interface Etapa { id: number; nome: string; ordem: number; prazoDias: number | null; inicial: boolean; finalEtapa: boolean; requisitos: Requisito[]; papelMinimo: Papel }
 export interface Fluxo { id: number; nome: string; ativo: boolean; etapas: Etapa[]; transicoes: { de: number; para: number }[] }
 export interface Processo {
   id: number; numero: string; titulo: string; descricao: string | null
@@ -90,7 +90,16 @@ export interface Processo {
   camposExtras: Record<string, unknown>; criadoEm: string; atualizadoEm: string
 }
 export interface Historico { id: number; acao: string; usuarioNome: string | null; deEtapa: string | null; paraEtapa: string | null; comentario: string | null; criadoEm: string }
-export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historico: Historico[]; requisitos: RequisitoStatus[]; etapaOrdem: number | null }
+export type StatusAprovacao = 'PENDENTE' | 'APROVADA' | 'RECUSADA' | 'CANCELADA'
+export interface Aprovacao {
+  id: number; etapaDestinoId: number; etapaDestino: string | null; papelMinimo: Papel
+  solicitadoPorId: number | null; solicitadoPor: string | null; solicitadoEm: string; comentario: string | null
+  status: StatusAprovacao; decididoPor: string | null; decididoEm: string | null; motivo: string | null
+}
+export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historico: Historico[]; requisitos: RequisitoStatus[]; etapaOrdem: number | null; aprovacoes: Aprovacao[] }
+/** Administrador atende gestor, que atende usuário (mesma regra do servidor). */
+export const NIVEL_PAPEL: Record<Papel, number> = { ADMIN: 2, GESTOR: 1, USUARIO: 0 }
+export const ROTULO_QUEM_MOVE: Record<Papel, string> = { USUARIO: 'Qualquer responsável', GESTOR: 'Somente gestor ou administrador', ADMIN: 'Somente administrador' }
 export interface Pagina<T> { content: T[]; totalPages: number; number: number; totalElements: number }
 export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string; requisitoId: number | null; requisito: string | null }
 export interface PainelResumo { abertos: number; atrasados: number; concluidos: number; cancelados: number; tempoMedioConclusaoDias: number | null }

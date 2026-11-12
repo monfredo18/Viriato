@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { api, type Etapa, type Fluxo, type TipoRequisito } from '../api'
+import { api, ROTULO_QUEM_MOVE, type Etapa, type Fluxo, type Papel, type TipoRequisito } from '../api'
 
 export const ROTULO_TIPO: Record<TipoRequisito, string> = { DOCUMENTO: 'Anexar documento', CONFIRMACAO: 'Confirmação do responsável' }
 
@@ -38,6 +38,17 @@ export default function ConfigurarEtapa({ fluxo, etapa, recarregar, fechar }: {
       <div className="modal modal-largo" onClick={(e) => e.stopPropagation()}>
         <h3>Etapa “{etapa.nome}” — {fluxo.nome}</h3>
         {erro && <p className="erro">{erro}</p>}
+
+        <section className="config-secao">
+          <h4>Quem pode mover o processo para esta etapa</h4>
+          <p className="sub">Quem não tem esse papel pede a aprovação; o gestor (ou administrador) aprova e o processo avança em nome dele.</p>
+          <select value={etapa.papelMinimo} aria-label="Quem pode mover para esta etapa"
+            onChange={(e) => tentar(() => api.patch(base, { papelMinimo: e.target.value as Papel }))}>
+            {(['USUARIO', 'GESTOR', 'ADMIN'] as Papel[]).map((papel) => (
+              <option key={papel} value={papel}>{ROTULO_QUEM_MOVE[papel]}</option>
+            ))}
+          </select>
+        </section>
 
         <section className="config-secao">
           <h4>Requisitos para sair desta etapa</h4>

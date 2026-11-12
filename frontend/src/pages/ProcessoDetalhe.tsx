@@ -1,11 +1,12 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, type Detalhe, type Documento, type Usuario } from '../api'
+import { api, NIVEL_PAPEL, type Detalhe, type Documento, type Papel, type Usuario } from '../api'
 import { useAuth } from '../auth'
 import { Selo } from './Processos'
 
 const ROTULO: Record<string, string> = {
   CRIADO: 'Criado', MOVIDO: 'Movimentado', COMENTARIO: 'Comentário', ATRIBUIDO: 'Atribuído', CANCELADO: 'Cancelado', REQUISITO: 'Requisito',
+  APROVACAO_SOLICITADA: 'Aprovação solicitada', APROVACAO_RECUSADA: 'Aprovação recusada', APROVACAO_CANCELADA: 'Pedido retirado',
 }
 const fmtTam = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`)
 
@@ -54,6 +55,9 @@ export default function ProcessoDetalhe() {
   // Administrador e gestor mexem em qualquer processo; o usuário comum só nos seus.
   const podeMexer = podeGerenciar || p.responsavelId === usuario?.id
   const pendentes = d.requisitos.filter((r) => !r.cumprido).length
+  const meuPapel = (usuario?.papel ?? 'USUARIO') as Papel
+  const atende = (minimo: Papel) => NIVEL_PAPEL[meuPapel] >= NIVEL_PAPEL[minimo]
+  const pedidoPendente = d.aprovacoes.find((a) => a.status === 'PENDENTE')
   // só avançar exige os requisitos; voltar para uma etapa anterior não
   const bloqueia = (ordemDestino: number) => pendentes > 0 && d.etapaOrdem !== null && ordemDestino > d.etapaOrdem
 
@@ -124,9 +128,65 @@ export default function ProcessoDetalhe() {
             </div>
           )}
 
+          {d.aprovacoes.length > 0 && (
+            <div className="aprovacoes">
+              <h4>Aprovações</h4>
+              <ul>
+                {d.aprovacoes.map((a) => (
+                  <li key={a.id} className={`aprov-${a.status.toLowerCase()}`}>
+                    <span className="req-texto">
+                      <b>Para “{a.etapaDestino}” — {{ PENDENTE: 'aguardando decisão', APROVADA: 'aprovada', RECUSADA: 'recusada', CANCELADA: 'cancelada' }[a.status]}</b>
+                      <small>
+                        Pedido de {a.solicitadoPor ?? 'usuário removido'} em {new Date(a.solicitadoEm).toLocaleString('pt-BR')}
+                        {a.comentario && <> · “{a.comentario}”</>}
+                      </small>
+                      {a.status !== 'PENDENTE' && a.status !== 'CANCELADA' && (
+                        <small>{a.status === 'APROVADA' ? 'Aprovada' : 'Recusada'} por {a.decididoPor ?? 'usuário removido'}{a.motivo && <> · “{a.motivo}”</>}</small>
+                      )}
+                    </span>
+                    {a.status === 'PENDENTE' && aberto && (
+                      <span className="aprov-acoes">
+                        {atende(a.papelMinimo) && (
+                          <>
+                            <button type="button" className="primario" onClick={() => {
+                              const nota = prompt('Aprovar e mover o processo. Observação (opcional):')
+                              if (nota !== null) acao(() => api.post(`/processos/${p.id}/aprovacoes/${a.id}/aprovar`, { comentario: nota || null }))
+                            }}>Aprovar</button>
+                            <button type="button" className="perigo" onClick={() => {
+                              const motivo = prompt('Motivo da recusa:')
+                              if (motivo && motivo.trim()) acao(() => api.post(`/processos/${p.id}/aprovacoes/${a.id}/recusar`, { motivo }))
+                            }}>Recusar</button>
+                          </>
+                        )}
+                        {(a.solicitadoPorId === usuario?.id || podeGerenciar) && (
+                          <button type="button" className="link" onClick={() => confirm('Retirar este pedido de aprovação?') && acao(() => api.del(`/processos/${p.id}/aprovacoes/${a.id}`))}>retirar pedido</button>
+                        )}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {aberto && podeMexer && (
             <div className="acoes-processo">
-              {d.proximasEtapas.map((e) => (
+              {d.proximasEtapas.map((e) => !atende(e.papelMinimo) ? (
+                // etapa que exige gestor/administrador: quem não é pede aprovação
+                pedidoPendente?.etapaDestinoId === e.id ? (
+                  <span key={e.id} className="selo aberto" title="Aguardando decisão">Aprovação solicitada: {e.nome}</span>
+                ) : (
+                  <button key={e.id}
+                    disabled={!!pedidoPendente || bloqueia(e.ordem)}
+                    title={pedidoPendente ? 'Já há um pedido de aprovação pendente' : bloqueia(e.ordem) ? 'Cumpra os requisitos da etapa para pedir' : `Só ${e.papelMinimo === 'ADMIN' ? 'o administrador' : 'gestor ou administrador'} move para ${e.nome}`}
+                    onClick={() => {
+                      const comentario = prompt(`Solicitar aprovação para “${e.nome}”.\nObservação para quem vai aprovar (opcional):`)
+                      if (comentario !== null) acao(() => api.post(`/processos/${p.id}/aprovacoes`, { etapaId: e.id, comentario: comentario || null }))
+                    }}>
+                    Solicitar aprovação: {e.nome}
+                  </button>
+                )
+              ) : (
                 <button key={e.id} className="primario"
                   disabled={bloqueia(e.ordem)}
                   title={bloqueia(e.ordem) ? 'Cumpra os requisitos da etapa para avançar' : undefined}

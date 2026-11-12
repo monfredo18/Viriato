@@ -1,6 +1,7 @@
 package br.com.viriato.fluxo;
 
 import br.com.viriato.seguranca.Contexto;
+import br.com.viriato.usuario.Papel;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,6 +25,7 @@ public class FluxoController {
 
     public record NovoRequisito(@NotNull TipoRequisito tipo, @NotBlank @Size(max = 200) String descricao) {}
     public record DescricaoReq(@NotBlank @Size(max = 200) String descricao) {}
+    public record PapelMinimoReq(@NotNull Papel papelMinimo) {}
 
     public record NovoFluxo(@NotBlank @Size(max = 150) String nome,
                             List<FluxoService.EtapaReq> etapas,
@@ -76,5 +78,12 @@ public class FluxoController {
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public void apagarRequisito(@PathVariable Long fluxoId, @PathVariable Long etapaId, @PathVariable Long id) {
         requisitos.apagar(Contexto.tenantId(), fluxoId, etapaId, id);
+    }
+
+    /** Quem pode mover processos PARA a etapa; os demais precisam solicitar aprovação. */
+    @PatchMapping("/{fluxoId}/etapas/{etapaId}")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public FluxoService.FluxoDto.EtapaResumo etapa(@PathVariable Long fluxoId, @PathVariable Long etapaId, @Valid @RequestBody PapelMinimoReq r) {
+        return service.definirPapelMinimo(Contexto.tenantId(), fluxoId, etapaId, r.papelMinimo());
     }
 }
