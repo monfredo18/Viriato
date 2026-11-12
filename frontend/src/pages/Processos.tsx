@@ -63,7 +63,7 @@ export default function Processos() {
         </select>
         <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setPagina(0) }} aria-label="Empresa">
           <option value="">Todas as empresas</option>
-          {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          {clientes.map((c) => <option key={c.id} value={c.id}>{c.numero} — {c.nome}</option>)}
         </select>
         <select value={setorId} onChange={(e) => { setSetorId(e.target.value); setPagina(0) }} aria-label="Departamento">
           <option value="">Todos os setores</option>
@@ -155,7 +155,7 @@ function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => vo
         <label>Empresa
           <select required value={f.clienteId} onChange={(e) => setF({ ...f, clienteId: e.target.value })}>
             <option value="" disabled>Selecione a empresa…</option>
-            {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            {clientes.map((c) => <option key={c.id} value={c.id}>{c.numero} — {c.nome}</option>)}
           </select>
         </label>
         {clientes.length === 0 && <small className="aviso-campo">Nenhuma empresa cadastrada. Administrador ou gestor cadastra em Cadastros → Empresas.</small>}

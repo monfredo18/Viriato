@@ -49,7 +49,11 @@ export const api = {
   /** Download autenticado: baixa como blob e dispara o salvamento. */
   async download(p: string, nome: string) {
     const res = await fetch(`/api${p}`, { headers: { Authorization: `Bearer ${tokenStore.get()}` } })
-    if (!res.ok) throw new ApiError(res.status, 'Falha ao baixar arquivo')
+    if (!res.ok) {
+      let msg = 'Falha ao baixar arquivo'
+      try { msg = (await res.json()).erro ?? msg } catch { /* sem corpo */ }
+      throw new ApiError(res.status, msg)
+    }
     const url = URL.createObjectURL(await res.blob())
     const a = document.createElement('a')
     a.href = url
@@ -65,7 +69,7 @@ export type Status = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO'
 
 export interface Usuario { id: number; nome: string; email: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null }
 export const ROTULO_PAPEL: Record<Papel, string> = { ADMIN: 'Administrador', GESTOR: 'Gestor', USUARIO: 'Usuário' }
-export interface Cliente { id: number; nome: string; ativo: boolean }
+export interface Cliente { id: number; numero: string; nome: string; ativo: boolean }
 export interface EntregaResumo { id: number; nome: string; ativo: boolean }
 export interface Setor { id: number; nome: string; ativo: boolean; entregas: EntregaResumo[] }
 export interface Entrega { id: number; nome: string; fluxoId: number; fluxoNome: string; ativo: boolean }

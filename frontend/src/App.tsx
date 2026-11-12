@@ -9,6 +9,7 @@ import ProcessoDetalhe from './pages/ProcessoDetalhe'
 import Cadastros from './pages/Cadastros'
 import Fluxos from './pages/Fluxos'
 import Usuarios from './pages/Usuarios'
+import Relatorios from './pages/Relatorios'
 
 const iniciais = (nome?: string) =>
   (nome ?? '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
@@ -24,6 +25,7 @@ function Layout() {
           <NavLink to="/cadastros">Cadastros</NavLink>
           <NavLink to="/fluxos">Fluxos</NavLink>
           <NavLink to="/usuarios">Usuários</NavLink>
+          <NavLink to="/relatorios">Relatórios</NavLink>
         </nav>
         <span className="espaco" />
         <BotaoTema />
@@ -44,6 +46,7 @@ function Layout() {
           <Route path="/cadastros" element={<Cadastros />} />
           <Route path="/fluxos" element={<Fluxos />} />
           <Route path="/usuarios" element={<Usuarios />} />
+          <Route path="/relatorios" element={<Relatorios />} />
           <Route path="*" element={<Navigate to="/processos" />} />
         </Routes>
       </main>

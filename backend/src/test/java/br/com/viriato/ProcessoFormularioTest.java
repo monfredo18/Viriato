@@ -84,7 +84,7 @@ class ProcessoFormularioTest {
                 .andExpect(status().isCreated());
         long usuarioId = corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"Func\",\"email\":\"usu-" + sfx
                 + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated())).get("id").asLong();
-        long clienteId = corpo(enviar(admin, "/api/clientes", "{\"nome\":\"Construtora Alfa\"}").andExpect(status().isCreated())).get("id").asLong();
+        long clienteId = corpo(enviar(admin, "/api/clientes", "{\"numero\":\"201\",\"nome\":\"Construtora Alfa\"}").andExpect(status().isCreated())).get("id").asLong();
         JsonNode geral = consultar(admin, "/api/setores").get(0);
         long fluxoId = consultar(admin, "/api/fluxos").get(0).get("id").asLong();
         return new Cenario(admin, login("ges-" + sfx + "@t.com"), login("usu-" + sfx + "@t.com"),
@@ -204,7 +204,7 @@ class ProcessoFormularioTest {
     @Test
     void listaFiltraPorEmpresaESetor() throws Exception {
         Cenario c = cenario();
-        long outroCliente = corpo(enviar(c.admin(), "/api/clientes", "{\"nome\":\"Beta Engenharia\"}").andExpect(status().isCreated())).get("id").asLong();
+        long outroCliente = corpo(enviar(c.admin(), "/api/clientes", "{\"numero\":\"202\",\"nome\":\"Beta Engenharia\"}").andExpect(status().isCreated())).get("id").asLong();
         criar(c.admin(), c, c.usuarioId());
         enviar(c.admin(), "/api/processos", "{\"clienteId\":" + outroCliente + ",\"entregaId\":" + c.entregaId()
                 + ",\"setorId\":" + c.setorId() + ",\"responsavelId\":" + c.usuarioId() + "}").andExpect(status().isCreated());

@@ -80,16 +80,16 @@ class CadastrosPermissoesTest {
     @Test
     void adminEGestorCadastramEmpresas_usuarioSoVe() throws Exception {
         Cenario c = cenario();
-        enviar(c.admin(), "/api/clientes", "{\"nome\":\"Construtora Alfa\"}").andExpect(status().isCreated());
-        long doGestor = corpo(enviar(c.gestor(), "/api/clientes", "{\"nome\":\"Beta Engenharia\"}")
+        enviar(c.admin(), "/api/clientes", "{\"numero\":\"101\",\"nome\":\"Construtora Alfa\"}").andExpect(status().isCreated());
+        long doGestor = corpo(enviar(c.gestor(), "/api/clientes", "{\"numero\":\"102\",\"nome\":\"Beta Engenharia\"}")
                 .andExpect(status().isCreated())).get("id").asLong();
         alterar(c.gestor(), "/api/clientes/" + doGestor, "{\"nome\":\"Beta Engenharia S/A\"}").andExpect(status().isOk());
-        enviar(c.usuario(), "/api/clientes", "{\"nome\":\"Outra\"}").andExpect(status().isForbidden());
+        enviar(c.usuario(), "/api/clientes", "{\"numero\":\"103\",\"nome\":\"Outra\"}").andExpect(status().isForbidden());
         alterar(c.usuario(), "/api/clientes/" + doGestor, "{\"ativo\":false}").andExpect(status().isForbidden());
         // todos enxergam a lista
         assertThat(consultar(c.usuario(), "/api/clientes")).hasSize(2);
         // nome repetido (sem diferenciar maiúsculas) é recusado
-        enviar(c.admin(), "/api/clientes", "{\"nome\":\"construtora alfa\"}").andExpect(status().isUnprocessableEntity());
+        enviar(c.admin(), "/api/clientes", "{\"numero\":\"104\",\"nome\":\"construtora alfa\"}").andExpect(status().isUnprocessableEntity());
     }
 
     @Test
@@ -177,7 +177,7 @@ class CadastrosPermissoesTest {
     void cadastrosDeUmaEmpresaNaoVazamParaOutra() throws Exception {
         Cenario a = cenario();
         Cenario b = cenario();
-        long clienteA = corpo(enviar(a.admin(), "/api/clientes", "{\"nome\":\"Só da A\"}").andExpect(status().isCreated())).get("id").asLong();
+        long clienteA = corpo(enviar(a.admin(), "/api/clientes", "{\"numero\":\"105\",\"nome\":\"Só da A\"}").andExpect(status().isCreated())).get("id").asLong();
 
         assertThat(consultar(b.admin(), "/api/clientes")).isEmpty();
         alterar(b.admin(), "/api/clientes/" + clienteA, "{\"ativo\":false}").andExpect(status().isNotFound());

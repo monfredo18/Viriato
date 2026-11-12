@@ -39,7 +39,7 @@ public class CadastroService {
     }
 
     // ---------- DTOs ----------
-    public record ClienteDto(Long id, String nome, boolean ativo) {}
+    public record ClienteDto(Long id, String numero, String nome, boolean ativo) {}
     public record EntregaDto(Long id, String nome, Long fluxoId, String fluxoNome, boolean ativo) {}
     public record EntregaResumo(Long id, String nome, boolean ativo) {}
     public record SetorDto(Long id, String nome, boolean ativo, List<EntregaResumo> entregas) {}
@@ -51,21 +51,32 @@ public class CadastroService {
     }
 
     @Transactional
-    public ClienteDto criarCliente(Long tid, String nome) {
+    public ClienteDto criarCliente(Long tid, String numero, String nome) {
         String n = nome.trim();
+        String num = numero.trim();
         if (clientes.existsByTenantIdAndNomeIgnoreCase(tid, n)) throw new NegocioException("Já existe uma empresa com esse nome");
+        if (clientes.existsByTenantIdAndNumero(tid, num)) throw new NegocioException("Já existe uma empresa com o número " + num);
         Cliente c = new Cliente();
         c.setTenantId(tid);
+        c.setNumero(num);
         c.setNome(n);
         return dto(clientes.save(c));
     }
 
     @Transactional
-    public ClienteDto atualizarCliente(Long tid, Long id, String nome, Boolean ativo) {
+    public ClienteDto atualizarCliente(Long tid, Long id, String numero, String nome, Boolean ativo) {
         Cliente c = clientes.findByIdAndTenantId(id, tid).orElseThrow(() -> new NaoEncontradoException("Empresa"));
         if (nome != null && !nome.isBlank() && !nome.trim().equalsIgnoreCase(c.getNome())) {
             if (clientes.existsByTenantIdAndNomeIgnoreCase(tid, nome.trim())) throw new NegocioException("Já existe uma empresa com esse nome");
             c.setNome(nome.trim());
+        }
+        if (numero != null && !numero.isBlank() && !numero.trim().equals(c.getNumero())) {
+            String num = numero.trim();
+            if (clientes.existsByTenantIdAndNumero(tid, num)) throw new NegocioException("Já existe uma empresa com o número " + num);
+            c.setNumero(num);
+            processos.atualizarNumeroDaEmpresa(tid, id, num);     // o número do processo acompanha o da empresa
+            c = clientes.findByIdAndTenantId(id, tid).orElseThrow();
+            c.setNumero(num);
         }
         if (ativo != null) c.setAtivo(ativo);
         return dto(clientes.save(c));
@@ -236,7 +247,7 @@ public class CadastroService {
         return fluxos.findByTenantIdOrderByNome(tid).stream().collect(Collectors.toMap(Fluxo::getId, Fluxo::getNome));
     }
 
-    private ClienteDto dto(Cliente c) { return new ClienteDto(c.getId(), c.getNome(), c.isAtivo()); }
+    private ClienteDto dto(Cliente c) { return new ClienteDto(c.getId(), c.getNumero(), c.getNome(), c.isAtivo()); }
 
     private EntregaDto dto(Entrega e, Map<Long, String> nomesFluxo) {
         return new EntregaDto(e.getId(), e.getNome(), e.getFluxoId(), nomesFluxo.get(e.getFluxoId()), e.isAtivo());
