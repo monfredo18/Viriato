@@ -26,6 +26,8 @@ public class Processo {
     @Column(name = "responsavel_removido_nome") private String responsavelRemovidoNome;
     @Enumerated(EnumType.STRING) private StatusProcesso status = StatusProcesso.ABERTO;
     @Column(name = "prazo_etapa") private LocalDate prazoEtapa;
+    /** Quando entrou na etapa atual (requisitos só valem se cumpridos nesta passagem). */
+    @Column(name = "etapa_desde") private Instant etapaDesde;
     @Column(name = "prazo_alertado") private boolean prazoAlertado;
     @Column(name = "campos_extras") private String camposExtras;
     @Column(name = "criado_por") private Long criadoPor;

@@ -47,6 +47,10 @@ viriato:
   mail:
     habilitado: ${MAIL_HABILITADO:true}
     remetente: ${MAIL_REMETENTE:no-reply@viriato.local}
+  # Onde ficam os documentos: "s3" (padrão) ou "local" (disco, só para desenvolvimento).
+  armazenamento:
+    tipo: ${ARMAZENAMENTO:s3}
+    pasta: ${ARMAZENAMENTO_PASTA:./dados-arquivos}
   s3:
     bucket: ${S3_BUCKET:viriato-documentos}
     regiao: ${S3_REGIAO:sa-east-1}

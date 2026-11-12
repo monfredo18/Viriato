@@ -5,12 +5,14 @@ import java.io.InputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
+@ConditionalOnProperty(name = "viriato.armazenamento.tipo", havingValue = "s3", matchIfMissing = true)
 @Component
 public class S3Armazenamento implements ArmazenamentoArquivos {
     private static final Logger log = LoggerFactory.getLogger(S3Armazenamento.class);

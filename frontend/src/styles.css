@@ -378,3 +378,32 @@ tr.linha-atrasada td:nth-child(5) { color: var(--vermelho); font-weight: 600; }
 .logo-selo { display: inline-flex; align-items: center; background: #fff; border-radius: 4px; padding: 2px 6px; line-height: 0; }
 .logo-selo img { display: block; image-rendering: auto; }
 .login-marca .logo-selo { padding: 8px 14px; border-radius: 6px; }
+
+/* ---------- requisitos de etapa ---------- */
+.requisitos { margin: 1rem 0 .25rem; padding: .85rem 1rem; background: var(--bg); border-left: 3px solid var(--ouro); }
+.requisitos h4 { margin: 0 0 .6rem; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.requisitos ul { list-style: none; margin: 0 0 .4rem; padding: 0; }
+.requisitos li { display: flex; align-items: center; gap: .7rem; padding: .4rem 0; border-bottom: 1px solid var(--borda); }
+.requisitos li:last-child { border-bottom: none; }
+.req-marca { width: 18px; text-align: center; font-weight: 700; flex: none; }
+.req-ok .req-marca { color: var(--ouro-texto); }
+.req-pendente .req-marca { color: var(--vermelho); }
+.req-texto { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.req-texto small { overflow-wrap: anywhere; }
+.requisitos button { height: 28px; font-size: 12px; flex: none; }
+.req-aviso { display: block; color: var(--vermelho); margin-top: .35rem; }
+
+/* ---------- fluxos: lista de etapas e janela de configuração ---------- */
+.etapas-lista { margin: .5rem 0 .4rem; padding-left: 1.3rem; }
+.etapas-lista > li { padding: .15rem 0; }
+.etapas-lista .etapa-nome { margin-right: .5rem; }
+.etapa-reqs { list-style: none; margin: .1rem 0 .2rem; padding-left: .6rem; border-left: 2px solid var(--ouro); }
+.modal-largo { max-width: 640px; max-height: 88vh; overflow-y: auto; }
+.config-secao { margin-bottom: 1.1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--borda); }
+.config-secao:last-of-type { border-bottom: none; }
+.config-secao h4 { margin: 0 0 .5rem; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.config-lista { list-style: none; margin: 0 0 .75rem; padding: 0; }
+.config-lista li { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; border-bottom: 1px solid var(--borda); }
+.config-lista li:last-child { border-bottom: none; }
+.linha-form { display: grid; grid-template-columns: 15rem 1fr auto; gap: .5rem; align-items: center; }
+@media (max-width: 560px) { .linha-form { grid-template-columns: 1fr; } }

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api, type Fluxo } from '../api'
 import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
+import ConfigurarEtapa from './ConfigurarEtapa'
 
 interface EtapaForm { nome: string; prazoDias: string; inicial: boolean; finalEtapa: boolean }
 
@@ -17,6 +18,7 @@ export default function Fluxos() {
   const [etapas, setEtapas] = useState<EtapaForm[]>(modelo())
   const [erro, setErro] = useState('')
   const [erroLista, setErroLista] = useState('')
+  const [config, setConfig] = useState<{ fluxoId: number; etapaId: number } | null>(null)
 
   const carregar = () => api.get<Fluxo[]>('/fluxos').then(setFluxos)
   useEffect(() => { carregar() }, [])
@@ -69,7 +71,22 @@ export default function Fluxos() {
                   />
                 )}
               </div>
-              <div className="trilha">{f.etapas.map((e) => e.nome).join(' → ')}</div>
+              <ol className="etapas-lista">
+                {f.etapas.map((e) => (
+                  <li key={e.id}>
+                    <span className="etapa-nome"><b>{e.nome}</b>
+                      {e.prazoDias !== null && <small> · prazo {e.prazoDias} d</small>}
+                      {e.inicial && <small> · inicial</small>}{e.finalEtapa && <small> · final</small>}
+                    </span>
+                    {e.requisitos.length > 0 && (
+                      <ul className="etapa-reqs">
+                        {e.requisitos.map((r) => <li key={r.id}><small>{r.tipo === 'DOCUMENTO' ? 'Anexar' : 'Confirmar'}: {r.descricao}</small></li>)}
+                      </ul>
+                    )}
+                    {podeGerenciar && <button type="button" className="link" onClick={() => setConfig({ fluxoId: f.id, etapaId: e.id })}>Configurar</button>}
+                  </li>
+                ))}
+              </ol>
               {podeGerenciar && (
                 <button className="link" onClick={() => api.patch(`/fluxos/${f.id}`, { ativo: !f.ativo }).then(carregar)}>
                   {f.ativo ? 'Desativar' : 'Reativar'}
@@ -96,6 +113,11 @@ export default function Fluxos() {
           <button className="primario">Criar fluxo</button>
         </form>}
       </div>
+      {config && (() => {
+        const f = fluxos.find((x) => x.id === config.fluxoId)
+        const e = f?.etapas.find((x) => x.id === config.etapaId)
+        return f && e ? <ConfigurarEtapa fluxo={f} etapa={e} recarregar={carregar} fechar={() => setConfig(null)} /> : null
+      })()}
     </>
   )
 }

@@ -35,6 +35,7 @@ public class ProcessoController {
     public record AvancarReq(@NotNull Long etapaId, @Size(max = 2000) String comentario) {}
     public record ComentarioReq(@NotBlank @Size(max = 2000) String texto) {}
     public record AtribuirReq(Long responsavelId) {}
+    public record RequisitoReq(boolean cumprido) {}
     public record CancelarReq(@NotBlank @Size(max = 2000) String motivo) {}
 
     @GetMapping
@@ -85,5 +86,12 @@ public class ProcessoController {
     @PostMapping("/{id}/cancelar")
     public ProcessoDto cancelar(@PathVariable Long id, @Valid @RequestBody CancelarReq r) {
         return service.cancelar(Contexto.atual(), id, r.motivo());
+    }
+
+    /** Confirma (ou desmarca) um requisito do tipo confirmação da etapa atual. */
+    @PutMapping("/{id}/requisitos/{requisitoId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void requisito(@PathVariable Long id, @PathVariable Long requisitoId, @RequestBody RequisitoReq r) {
+        service.definirRequisito(Contexto.atual(), id, requisitoId, r.cumprido());
     }
 }
