@@ -79,6 +79,10 @@
     <li><strong>Cadastros:</strong> empresas atendidas (com número e nome), setores e entregas. Cada setor define quais entregas faz, e cada entrega define o fluxo.</li>
     <li><strong>Fluxos configuráveis:</strong> etapas com prazo em dias, etapa inicial e etapas finais.</li>
     <li><strong>Processos:</strong> abertos com empresa e entrega (o departamento e o responsável dependem do papel de quem abre); cada setor só vê os próprios processos, e só o administrador vê todos; busca e filtros, movimentação entre etapas respeitando as regras do fluxo, atribuição, comentários e cancelamento.</li>
+    <li><strong>Requisitos por etapa:</strong> cada etapa pode exigir documentos anexados ou confirmações antes de o processo avançar.</li>
+    <li><strong>Aprovação em etapas:</strong> etapas que só gestor (ou só administrador) pode receber; os demais pedem aprovação.</li>
+    <li><strong>Automações:</strong> ao entrar numa etapa (ou ao cancelar), o sistema gera a ficha do processo em PDF, avisa a empresa atendida por e-mail e chama outro sistema por webhook.</li>
+    <li><strong>Painel de indicadores:</strong> atrasados por setor, tempo médio por etapa e carga por funcionário.</li>
     <li><strong>Histórico:</strong> cada ação fica registrada com autor, data e comentário.</li>
     <li><strong>Documentos:</strong> upload e download de arquivos por processo, guardados no AWS S3.</li>
     <li><strong>Prazos e notificações:</strong> aviso dentro do sistema (sininho) e por e-mail, com alerta automático de prazo vencendo ou vencido.</li>
@@ -268,6 +272,57 @@
   <figure><img src="img/relatorios.png" alt="Tela de relatórios"><figcaption>Figura 11 — Aba Relatórios: filtros à esquerda, prévia e botão de gerar à direita.</figcaption></figure>
   <p>O PDF sai em A4 paisagem, na identidade visual do sistema: cabeçalho com a empresa, quem gerou, quando e a abrangência; a lista dos filtros usados; os totais; e a tabela com número, empresa, setor, entrega, responsável, data de abertura, data de encerramento e situação (o atrasado aparece em vermelho). O cabeçalho da tabela se repete em cada página, e o rodapé traz <em>Página X de Y</em>. Cada relatório comporta até 10.000 processos; acima disso o sistema pede para refinar os filtros.</p>
   <figure><img src="img/relatorio-pdf.png" alt="Exemplo de relatório em PDF"><figcaption>Figura 12 — Primeira página de um relatório gerado pelo administrador, sem filtros.</figcaption></figure>
+
+  <h2>3.10 Requisitos para avançar de etapa</h2>
+  <p>Cada etapa pode ter <strong>requisitos para sair dela</strong>, definidos por administrador ou gestor em <em>Fluxos → Configurar</em> (até 10 por etapa; a etapa final não tem saída). Há dois tipos:</p>
+  <ul>
+    <li><strong>Anexar documento:</strong> é preciso anexar um arquivo ligado ao requisito (por exemplo, <em>Laudo técnico assinado</em>);</li>
+    <li><strong>Confirmação do responsável:</strong> alguém com permissão no processo marca que fez (por exemplo, <em>Dados do cliente conferidos</em>).</li>
+  </ul>
+  <p>Na tela do processo aparece o checklist da etapa atual, com <em>Confirmar</em> e <em>Anexar</em>; o botão de avançar fica bloqueado enquanto houver pendência, e o <strong>servidor também recusa</strong> o avanço, com a lista do que falta, para <strong>todos os papéis</strong> (ninguém pula requisito). As regras:</p>
+  <ul>
+    <li>Só <strong>avançar</strong> exige; voltar para uma etapa anterior não exige nada.</li>
+    <li>O requisito só vale se cumprido <strong>na passagem atual</strong> pela etapa: se o processo voltar e entrar de novo, é preciso cumprir outra vez (o sistema guarda quando o processo entrou na etapa).</li>
+    <li>Remover o documento ou desmarcar a confirmação volta a bloquear; confirmações e desmarcações ficam no histórico.</li>
+    <li>Adicionar um requisito vale também para os processos que já estão naquela etapa.</li>
+  </ul>
+  <figure><img src="img/requisitos.png" alt="Checklist de requisitos no processo"><figcaption>Figura 13 — Checklist da etapa atual: documento anexado e confirmação feita liberam o botão de avançar.</figcaption></figure>
+
+  <h2>3.11 Aprovação em etapas específicas</h2>
+  <p>Cada etapa define <strong>quem pode mover um processo para ela</strong>: <em>qualquer responsável</em> (padrão), <em>somente gestor ou administrador</em> ou <em>somente administrador</em>. Quem não tem esse papel não consegue mover direto (o servidor recusa) e vê o botão <strong>Solicitar aprovação</strong>:</p>
+  <ol>
+    <li>O responsável (ou, no caso de etapa só de administrador, um gestor) pede a aprovação, com uma observação opcional. O pedido só é aceito com a transição válida e os requisitos da etapa de origem cumpridos, e há <strong>um pedido pendente por processo</strong>.</li>
+    <li>O gestor do setor é avisado (no caso de etapa só de administrador, os administradores).</li>
+    <li>Quem tem o papel exigido e enxerga o processo <strong>aprova</strong> (o processo avança em nome dele, com os requisitos conferidos de novo e o histórico dizendo <em>Aprovado por X, solicitado por Y</em>) ou <strong>recusa com motivo</strong> (o motivo fica no processo e no histórico).</li>
+    <li>Quem pediu pode <strong>retirar</strong> o pedido (gestor e administrador também). Se o processo andar por outro caminho (um gestor move direto, ou o processo é cancelado), os pedidos pendentes são cancelados automaticamente.</li>
+  </ol>
+  <figure><img src="img/aprovacao.png" alt="Pedido de aprovação visto pelo gestor"><figcaption>Figura 14 — A gestora vê o pedido do funcionário e decide: Aprovar ou Recusar.</figcaption></figure>
+
+  <h2>3.12 Painel de indicadores</h2>
+  <p>A aba <em>Painel</em> mostra, para os últimos 30, 90, 180 ou 365 dias (os processos em andamento aparecem todos): os números principais (em andamento, atrasados, concluídos, cancelados e tempo médio até concluir), uma tabela de <strong>atrasados por setor</strong>, as barras de <strong>tempo médio por etapa</strong> e a <strong>carga por funcionário</strong>. A abrangência segue a regra dos processos: o administrador vê todos os setores (e filtra por um); gestor e usuário veem o próprio setor.</p>
+  <ul>
+    <li><strong>Atrasado</strong> é processo em andamento com o prazo da etapa vencido.</li>
+    <li><strong>Tempo por etapa</strong> sai do histórico: cada entrada em etapa dura até a entrada seguinte. A etapa atual e a final não entram. A marca dourada é o prazo previsto; a barra fica vermelha quando a média passa dele, e o texto informa quantas passagens excederam o prazo.</li>
+    <li>Processos de funcionários apagados só entram nos números de gestor e administrador, como na lista.</li>
+  </ul>
+  <figure><img src="img/painel.png" alt="Painel de indicadores"><figcaption>Figura 15 — Painel do administrador: atrasados por setor, tempo médio por etapa e carga por funcionário.</figcaption></figure>
+
+  <h2>3.13 Automações</h2>
+  <p>Em <em>Fluxos → Configurar</em> (etapa) e <em>Ao cancelar</em> (fluxo), administrador e gestor definem regras que o sistema executa sozinho <strong>depois que o processo entra na etapa</strong> (inclusive a inicial, na criação) ou é <strong>cancelado</strong>:</p>
+  <table>
+    <tr><th style="width:44mm">Regra</th><th>O que faz</th></tr>
+    <tr><td>Gerar a ficha do processo</td><td>Cria um PDF com os dados e o histórico do processo e o anexa a ele, marcado como <em>gerado automaticamente</em>. Uma por etapa.</td></tr>
+    <tr><td>Avisar a empresa por e-mail</td><td>Envia ao e-mail da empresa atendida (cadastrado em <em>Cadastros → Empresas</em>, opcional) um texto com variáveis (<code>{{empresa}}</code>, <code>{{numero}}</code>, <code>{{titulo}}</code>, <code>{{entrega}}</code>, <code>{{setor}}</code>, <code>{{responsavel}}</code>, <code>{{etapa}}</code>, <code>{{prazo}}</code>, <code>{{situacao}}</code>), com a ficha em anexo se a regra de documento rodou antes.</td></tr>
+    <tr><td>Chamar outro sistema (webhook)</td><td>Envia um POST com JSON do processo (evento <code>ENTROU_NA_ETAPA</code> ou <code>CANCELADO</code>). Com segredo, o cabeçalho <code>X-Viriato-Assinatura</code> traz <code>sha256=</code> e o HMAC-SHA256 do corpo, para quem recebe conferir a origem.</td></tr>
+  </table>
+  <p>Garantias e cuidados:</p>
+  <ul>
+    <li><strong>Falha nunca desfaz o movimento.</strong> As regras rodam depois da confirmação no banco, em segundo plano, na ordem documento, e-mail, webhook. Cada execução fica registrada no processo (<em>Feito</em>, <em>Falhou</em> ou <em>Não executada</em>, por exemplo empresa sem e-mail ou envio de e-mail desligado no ambiente).</li>
+    <li><strong>Webhook seguro:</strong> só <code>https://</code>, sem usuário e senha na URL e <strong>nunca para a rede interna</strong> (localhost, endereços privados, 169.254.x.x e semelhantes são recusados na configuração e de novo, resolvendo o nome, na hora de enviar); sem redirecionamentos e com prazo de 10 s. O segredo nunca volta pela API, e só administrador e gestor consultam as regras.</li>
+    <li>O assunto do e-mail não aceita quebra de linha (evita injeção de cabeçalhos).</li>
+    <li>Cada etapa aceita até 10 automações; regras podem ser desligadas sem apagar.</li>
+  </ul>
+  <figure><img src="img/automacoes.png" alt="Automações de uma etapa"><figcaption>Figura 16 — Janela da etapa: quem pode mover para ela, requisitos e automações.</figcaption></figure>
 </section>
 
 <!-- ============================ 4 ============================ -->
@@ -286,6 +341,10 @@
     <tr><td>Cadastrar e alterar setores e entregas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Apagar empresas, setores e entregas</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c no">não</td></tr>
     <tr><td>Apagar fluxos</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c no">não</td></tr>
+    <tr><td>Configurar requisitos, quem move para cada etapa e automações</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
+    <tr><td>Mover para etapa que exige gestor (ou administrador)</td><td class="c ok">sempre</td><td class="c">se a etapa aceita gestor; senão pede aprovação</td><td class="c">pede aprovação</td></tr>
+    <tr><td>Aprovar ou recusar pedido de aprovação</td><td class="c ok">qualquer um</td><td class="c">os de etapas que aceitam gestor, no próprio setor</td><td class="c no">não</td></tr>
+    <tr><td>Ver o painel de indicadores</td><td class="c ok">todos os setores</td><td class="c">só o próprio setor</td><td class="c">só o próprio setor</td></tr>
     <tr><td>Criar e ativar/desativar fluxos</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Adicionar funcionários</td><td class="c ok">com qualquer papel; informa nome, senha inicial, papel e setor</td><td class="c">só com papel Usuário; informa nome, senha inicial e papel, e o funcionário fica no setor do gestor</td><td class="c no">não</td></tr>
     <tr><td>Zerar a senha de uma conta</td><td class="c ok">de qualquer outra conta, informando a nova senha</td><td class="c no">não</td><td class="c no">não</td></tr>
@@ -316,7 +375,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em oito migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) e <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em onze migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) e <code>V11</code> (automações e e-mail da empresa).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -358,10 +417,13 @@
     <tr><td><code>setor_entrega</code></td><td>Liga cada setor às entregas que ele faz (muitos para muitos).</td></tr>
     <tr><td><code>fluxo</code></td><td>Nome e flag <code>ativo</code>.</td></tr>
     <tr><td><code>etapa</code></td><td>Nome, ordem, <code>prazo_dias</code> (opcional), flags <code>inicial</code> e <code>final_</code>.</td></tr>
+    <tr><td><code>etapa_requisito</code></td><td>Requisitos para sair da etapa: tipo (DOCUMENTO ou CONFIRMACAO) e descrição. <code>processo_requisito</code> guarda as confirmações feitas em cada processo (quem e quando).</td></tr>
+    <tr><td><code>processo_aprovacao</code></td><td>Pedidos de aprovação: etapa de origem e destino, quem pediu e quando, status (PENDENTE, APROVADA, RECUSADA, CANCELADA), quem decidiu e o motivo. A etapa tem também <code>papel_minimo</code> (quem pode movê-la para lá).</td></tr>
+    <tr><td><code>automacao_regra</code></td><td>Regras por fluxo: evento (ENTRAR_ETAPA ou CANCELADO), etapa, tipo, assunto e mensagem do e-mail, URL e segredo do webhook, ativa. <code>automacao_execucao</code> registra cada execução (status e mensagem).</td></tr>
     <tr><td><code>transicao</code></td><td>Par de etapas (de, para), único; define os movimentos permitidos.</td></tr>
     <tr><td><code>processo</code></td><td>Número (o da empresa; repete entre processos da mesma empresa), título (gerado), descrição, <code>cliente_id</code>, <code>entrega_id</code>, <code>setor_id</code>, fluxo, etapa atual, responsável, status, <code>prazo_etapa</code>, <code>prazo_alertado</code>, <code>campos_extras</code> (JSON livre em texto).</td></tr>
     <tr><td><code>processo_historico</code></td><td>Ação (CRIADO, MOVIDO, COMENTARIO, ATRIBUIDO, CANCELADO), autor, etapas de origem e destino, comentário, data.</td></tr>
-    <tr><td><code>documento</code></td><td>Nome original, chave no S3, tipo, tamanho, quem enviou.</td></tr>
+    <tr><td><code>documento</code></td><td>Nome original, chave no S3, tipo, tamanho, quem enviou (vazio se gerado pelo sistema), requisito que cumpre (opcional) e flag <code>automatico</code>.</td></tr>
     <tr><td><code>notificacao</code></td><td>Destinatário, título, mensagem, processo relacionado, lida.</td></tr>
   </table>
 </section>
@@ -394,8 +456,17 @@
     <tr><td>POST, PATCH</td><td><code>/entregas</code>, <code>/entregas/{id}</code></td><td>Cria e altera entrega (nome, fluxo, ativo)</td><td>Admin, Gestor</td></tr>
     <tr><td>GET</td><td><code>/fluxos</code>, <code>/fluxos/{id}</code></td><td>Lista e detalha fluxos com etapas e transições</td><td>todos</td></tr>
     <tr><td>POST</td><td><code>/fluxos</code></td><td>Cria fluxo</td><td>Admin, Gestor</td></tr>
+    <tr><td>POST, PATCH, DELETE</td><td><code>/fluxos/{id}/etapas/{etapaId}/requisitos[/{reqId}]</code></td><td>Cria, renomeia e remove requisitos para sair da etapa (<code>tipo</code>, <code>descricao</code>)</td><td>Admin, Gestor</td></tr>
+    <tr><td>PATCH</td><td><code>/fluxos/{id}/etapas/{etapaId}</code></td><td>Define quem pode mover processos para a etapa (<code>papelMinimo</code>: USUARIO, GESTOR ou ADMIN)</td><td>Admin, Gestor</td></tr>
+    <tr><td>GET, POST, PATCH, DELETE</td><td><code>/fluxos/{id}/automacoes[/{regraId}]</code></td><td>Lista e gerencia as regras de automação do fluxo (o segredo nunca volta)</td><td>Admin, Gestor</td></tr>
+    <tr><td>GET</td><td><code>/indicadores</code></td><td>Painel: <code>dias</code> (período) e <code>setorId</code> (só vale para o administrador)</td><td>todos, dentro do papel</td></tr>
     <tr><td>PATCH</td><td><code>/fluxos/{id}</code></td><td>Ativa ou desativa</td><td>Admin, Gestor</td></tr>
     <tr><td>GET</td><td><code>/processos</code></td><td>Lista com filtros: <code>status</code>, <code>etapaId</code>, <code>responsavelId</code>, <code>clienteId</code>, <code>setorId</code>, <code>entregaId</code>, <code>busca</code>, <code>atrasados</code>, <code>meus</code>, <code>pagina</code>, <code>tamanho</code></td><td>todos</td></tr>
+    <tr><td>PUT</td><td><code>/processos/{id}/requisitos/{reqId}</code></td><td>Confirma ou desmarca um requisito do tipo confirmação da etapa atual (<code>cumprido</code>)</td><td>quem pode mexer no processo</td></tr>
+    <tr><td>POST</td><td><code>/processos/{id}/documentos?requisitoId=</code></td><td>Anexa arquivo; com <code>requisitoId</code>, cumpre o requisito de documento da etapa atual</td><td>quem pode mexer no processo</td></tr>
+    <tr><td>POST, DELETE</td><td><code>/processos/{id}/aprovacoes[/{aprovacaoId}]</code></td><td>Solicita aprovação (<code>etapaId</code>, <code>comentario</code>) ou retira o pedido</td><td>quem pode mexer; gestor e admin retiram</td></tr>
+    <tr><td>POST</td><td><code>/processos/{id}/aprovacoes/{aprovacaoId}/aprovar</code>, <code>/recusar</code></td><td>Aprova (e move o processo) ou recusa com <code>motivo</code></td><td>quem tem o papel exigido pela etapa</td></tr>
+    <tr><td>GET</td><td><code>/processos/{id}/automacoes</code></td><td>O que as automações já fizeram no processo</td><td>quem enxerga o processo</td></tr>
     <tr><td>POST</td><td><code>/processos</code></td><td>Cria processo: <code>clienteId</code>, <code>setorId</code>, <code>entregaId</code> e <code>responsavelId</code> obrigatórios</td><td>todos</td></tr>
     <tr><td>GET</td><td><code>/processos/{id}</code></td><td>Detalhe, próximas etapas possíveis e histórico</td><td>todos</td></tr>
     <tr><td>POST</td><td><code>/processos/{id}/avancar</code></td><td>Move para outra etapa</td><td>Admin, Gestor; Usuário só se for o responsável</td></tr>
@@ -434,6 +505,8 @@
         <li><strong>(prioridade) Sem limite de tentativas de login</strong>, sem recuperação de senha por conta própria (só o administrador zera), sem troca voluntária de senha depois do primeiro acesso e sem autenticação em dois fatores.</li>
     <li><strong>(prioridade) Segredo padrão de desenvolvimento.</strong> Existe um <code>JWT_SECRET</code> padrão para facilitar o uso local; em produção ele <em>precisa</em> ser trocado.</li>
     <li>Upload sem lista de tipos permitidos e sem antivírus (limite de 25 MB por arquivo).</li>
+    <li>As automações rodam em memória, depois do commit: se o servidor for reiniciado exatamente nesse intervalo, as regras daquele movimento não rodam, e não há nova tentativa automática (a falha de uma regra fica registrada, mas não é repetida). O webhook confere o endereço ao enviar, mas um nome de domínio que mude de endereço entre a conferência e a conexão ainda é um risco teórico.</li>
+    <li>As regras de automação só podem ser ligadas, desligadas ou removidas pela tela; para editar o texto de uma, remova e crie de novo (a API aceita edição).</li>
     <li>O token fica no <code>localStorage</code> do navegador. O React escapa o conteúdo, o que reduz o risco, mas uma falha de injeção de script exporia o token. Uma alternativa é cookie <code>HttpOnly</code>.</li>
     <li>O nome de acesso é único dentro de cada empresa, mas não entre empresas: se duas contas ativas de empresas diferentes tiverem o mesmo nome e a mesma senha, nenhuma delas consegue entrar até uma mudar. Na prática, com o cadastro aberto desligado, há uma só empresa por instalação.</li>
     <li>O número do processo é o número da empresa atendida, então <strong>não identifica um processo isoladamente</strong>: processos da mesma empresa compartilham o número, e o que os distingue é o identificador interno, o título e o histórico. Processos criados antes dessa regra mantêm o número antigo (por exemplo <code>2026-000001</code>).</li>
@@ -478,6 +551,8 @@
     <tr><td><code>DB_URL</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code></td><td>Conexão com o MySQL.</td></tr>
     <tr><td><code>S3_BUCKET</code>, <code>S3_REGIAO</code></td><td>Bucket real. Sem <code>S3_ENDPOINT</code>, usa a AWS com credenciais da função (IAM Role).</td></tr>
     <tr><td><code>MAIL_*</code></td><td>Servidor SMTP (por exemplo AWS SES) e remetente.</td></tr>
+    <tr><td><code>ARMAZENAMENTO</code>, <code>ARMAZENAMENTO_PASTA</code></td><td><code>s3</code> (padrão) ou <code>local</code> (disco, só para desenvolvimento sem S3).</td></tr>
+    <tr><td><code>AUTOMACAO_ASSINCRONA</code>, <code>AUTOMACAO_PERMITIR_REDE_INTERNA</code></td><td>Executar as automações em segundo plano (padrão) e permitir webhook em <code>http://</code> e na rede interna (<strong>só desenvolvimento</strong>; em produção deixe desligado).</td></tr>
     <tr><td><code>CORS_ORIGINS</code></td><td>Origens permitidas.</td></tr>
     <tr><td><code>PRAZOS_CRON</code>, <code>PRAZOS_ANTECEDENCIA_DIAS</code></td><td>Horário do alerta de prazo e antecedência em dias.</td></tr>
   </table>
@@ -499,7 +574,11 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>45 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>91 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
+    <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
+    <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>
+    <tr><td>Automações: configuração e permissões, ficha em PDF, e-mail com variáveis e anexo, webhook assinado (servidor local), falha isolada do movimento, proteção contra rede interna, armazenamento local</td><td class="ok">coberto por teste (15 testes)</td></tr>
     <tr><td>Ciclo completo do processo: criar, avançar por todas as etapas, concluir, histórico</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Isolamento entre empresas (processo, comentário, documentos, download, fluxo alheio)</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Permissões por papel e transição fora do fluxo</td><td class="ok">coberto por teste</td></tr>
@@ -512,6 +591,7 @@
     <tr><td>Alerta de prazo: dispara uma vez só</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Migrações V1 a V5 e a aplicação contra MySQL 8 e S3 simulado reais (teste ponta a ponta via HTTP), incluindo as exclusões com chaves estrangeiras, a V5 aplicada sobre dados da versão anterior e a geração do PDF com várias páginas</td><td class="ok">executado, incluindo acentuação, permissões e isolamento</td></tr>
     <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, colunas da lista, situação de funcionários, apagar cadastros e fluxos pelo X com confirmação, recusa de item em uso, concluir processo e então apagar, número da empresa e dos processos, aba Relatórios com download e leitura do PDF por papel, dois temas</td><td class="ok">executado (103 verificações em 5 suítes, todas concluídas)</td></tr>
+    <tr><td>Novas telas em navegador automatizado: configuração de requisitos, aprovação e automações pelo gestor; checklist, pedido de aprovação e execução das automações pelo funcionário; painel nos três papéis e nos dois temas</td><td class="ok">verificado</td></tr>
     <tr><td>Build do frontend com verificação de tipos</td><td class="ok">passa</td></tr>
   </table>
   <p>Esse teste com MySQL real encontrou dois defeitos que o H2 não revelava (parâmetro de codificação da conexão e health check de e-mail derrubando a aplicação); ambos já foram corrigidos.</p>
@@ -519,7 +599,7 @@
   <h2>O que ainda não foi verificado</h2>
   <ul>
     <li>O <code>docker compose up --build</code> completo, com as imagens do backend e do frontend rodando em contêiner (as peças foram testadas separadamente).</li>
-    <li>AWS S3 e envio de e-mail reais (foram usados simuladores).</li>
+    <li>AWS S3 e envio de e-mail reais (foram usados simuladores; o envio de e-mail das automações foi verificado com um servidor de e-mail simulado nos testes, e o webhook com um servidor HTTP local).</li>
     <li>Desempenho e carga, e comportamento com muitas empresas e processos.</li>
     <li>Navegadores além do Chromium, aparelhos móveis e acessibilidade formal.</li>
     <li>Testes automáticos do frontend (hoje só há o build e verificação manual automatizada).</li>

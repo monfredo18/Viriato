@@ -59,6 +59,13 @@ backend/src/main/java/br/com/viriato/
 - Novo processo: administrador informa empresa, departamento, entrega e responsável; gestor, empresa, entrega e responsável (departamento é o dele); usuário, só empresa e entrega (departamento e responsável são os dele). Só aparecem as entregas que o setor faz.
 - Cada setor vê apenas os próprios processos; só o administrador vê os de todos os setores.
 
+### Controle do processo e automações
+- **Requisitos por etapa:** em *Fluxos → Configurar*, cada etapa pode exigir documentos anexados ou confirmações para o processo sair dela. O servidor bloqueia o avanço enquanto houver pendência (voltar de etapa não exige; ao reentrar, exige de novo).
+- **Aprovação:** cada etapa define quem pode mover processos para ela (qualquer responsável, gestor ou só administrador). Quem não pode, solicita; gestor/administrador aprova (e o processo avança) ou recusa com motivo.
+- **Painel:** aba com atrasados por setor, tempo médio por etapa e carga por funcionário (administrador vê todos os setores; os demais, o próprio).
+- **Automações** (ao entrar numa etapa ou ao cancelar): gerar a ficha do processo em PDF, avisar a empresa por e-mail (cadastre o e-mail em *Cadastros → Empresas*) e chamar um webhook (https, endereço público, JSON assinado com HMAC-SHA256). Falha nunca desfaz o movimento e fica registrada no processo.
+- Documentos em disco, sem S3, para desenvolvimento: `ARMAZENAMENTO=local`.
+
 ### Acesso e senhas
 - Entra-se com **nome e senha**. O nome não diferencia maiúsculas de minúsculas e é único na empresa (não aceita `@`). Contas antigas ainda podem entrar com o e-mail.
 - Não há cadastro aberto de empresas: o primeiro administrador nasce da configuração (`ADMIN_NOME`, `ADMIN_SENHA`, `ADMIN_EMPRESA`) quando o banco está vazio. Para reativar o cadastro aberto (uso em testes), defina `CADASTRO_EMPRESA_ABERTO=true`.
