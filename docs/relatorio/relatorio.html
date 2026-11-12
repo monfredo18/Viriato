@@ -288,7 +288,7 @@
     <tr><td>Alterar o setor de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Alterar o papel de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Ativar ou desativar funcionário</td><td class="c ok">qualquer um</td><td class="c">só os de papel Usuário</td><td class="c no">não</td></tr>
-    <tr><td>Apagar funcionário</td><td class="c ok">qualquer um, menos a si mesmo; se não for responsável por processo em andamento</td><td class="c">só os de papel Usuário</td><td class="c no">não</td></tr>
+    <tr><td>Apagar funcionário</td><td class="c ok">qualquer um, menos a si mesmo; processos em andamento passam para herdeiros</td><td class="c">só os de papel Usuário do próprio setor</td><td class="c no">não</td></tr>
   </table>
   <p>Detalhes de comportamento:</p>
   <ul>
@@ -297,10 +297,10 @@
     <li>O administrador não consegue desativar nem rebaixar a si mesmo, para evitar ficar sem acesso.</li>
     <li>Gestor sem setor definido não gera relatório: o sistema avisa para pedir ao administrador que defina o setor.</li>
     <li>Recursos de outra empresa respondem 404, como se não existissem.</li>
-    <li><strong>Apagar nunca leva processos junto.</strong> Só processo <em>em andamento</em> impede apagar uma empresa, um setor, uma entrega, um fluxo ou um funcionário: o sistema recusa, informa quantos processos estão ligados e orienta a concluí-los ou cancelá-los (ou a desativar o cadastro). Processos <em>concluídos ou cancelados</em> não bloqueiam; eles continuam existindo, apenas sem o vínculo com o item apagado (a lista mostra "—"; o título gerado e o histórico mantêm a informação).</li>
+    <li><strong>Apagar nunca leva processos junto.</strong> Só processo <em>em andamento</em> impede apagar uma empresa, um setor, uma entrega ou um fluxo (no funcionário, os processos em andamento são passados a herdeiros, como descrito abaixo): o sistema recusa, informa quantos processos estão ligados e orienta a concluí-los ou cancelá-los (ou a desativar o cadastro). Processos <em>concluídos ou cancelados</em> não bloqueiam; eles continuam existindo, apenas sem o vínculo com o item apagado (a lista mostra "—"; o título gerado e o histórico mantêm a informação).</li>
     <li>Apagar uma entrega a remove da lista dos setores; apagar um setor deixa os funcionários dele sem setor.</li>
     <li>Um fluxo não é apagado se alguma entrega ainda o usa (a mensagem cita as entregas) nem se há processo em andamento nele. Ao apagar, suas etapas e transições saem junto; os processos encerrados ficam sem fluxo e sem etapa atual, e o histórico, que guarda os nomes das etapas, continua legível.</li>
-    <li>Um funcionário responsável por processo em andamento só é apagado depois que esse processo for passado a outra pessoa; nos processos já encerrados ele simplesmente deixa de constar como responsável. Os avisos dele são removidos; o histórico permanece, com o autor indicado como <em>usuário removido</em>. Quem foi apagado deixa de conseguir entrar.</li>
+    <li><strong>Apagar funcionário com processos.</strong> Administrador e gestor (este só os de papel Usuário do próprio setor) clicam no <strong>X</strong>. Se o funcionário tem processos, abre um aviso com a quantidade (em andamento, atrasados, concluídos e cancelados) e dois botões: <em>Desistir de apagar</em> e <em>Apagar mesmo assim</em>. Ao seguir, se há processos em andamento, abre o painel para escolher <strong>um ou mais funcionários que herdam</strong> (ativos, do setor dele; o administrador também pode herdar) e informar o <strong>novo prazo</strong>, que vale para todos os processos passados e não pode ser anterior a hoje. Os processos em andamento, inclusive os atrasados, são divididos igualmente entre os escolhidos, o prazo da etapa é substituído e o histórico registra a herança. Os <strong>concluídos e cancelados continuam existindo com o nome dele</strong>, marcado como <em>(removido)</em>, e passam a ser visíveis somente ao <strong>gestor do setor</strong> e ao administrador: os demais funcionários e outros setores não os enxergam. Funcionários comuns não têm o botão de apagar. Os avisos do apagado são removidos, o histórico permanece (autor indicado como <em>usuário removido</em>) e quem foi apagado deixa de conseguir entrar.</li>
     <li>Na tela, o botão <strong>X</strong> sempre pede confirmação, e a ação não pode ser desfeita.</li>
     <li>O usuário comum pode abrir um processo e atribuí-lo a qualquer colega ativo; a partir daí, só o responsável (ou um gestor) mexe nele.</li>
     <li>O gestor ativa e desativa apenas funcionários com papel Usuário; não mexe na situação do administrador nem de outros gestores. Um funcionário desativado deixa de conseguir entrar.</li>
@@ -312,7 +312,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em seis migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) e <code>V6</code> (detalhes da notificação).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em sete migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) e <code>V7</code> (nome do responsável apagado no processo).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -381,7 +381,9 @@
     <tr><td>GET</td><td><code>/relatorios/processos/pdf</code></td><td>Gera o PDF do relatório, com os mesmos filtros</td><td>todos, dentro do papel</td></tr>
     <tr><td>DELETE</td><td><code>/clientes/{id}</code>, <code>/setores/{id}</code>, <code>/entregas/{id}</code></td><td>Apaga o cadastro (recusa se houver processo em andamento ligado)</td><td>Admin, Gestor</td></tr>
     <tr><td>DELETE</td><td><code>/fluxos/{id}</code></td><td>Apaga o fluxo, com etapas e transições (recusa se uma entrega o usa ou se há processo em andamento nele)</td><td>Admin, Gestor</td></tr>
-    <tr><td>DELETE</td><td><code>/usuarios/{id}</code></td><td>Apaga funcionário (recusa se for responsável por processo em andamento ou se for o próprio usuário)</td><td>Admin; Gestor (só Usuário)</td></tr>
+    <tr><td>GET</td><td><code>/usuarios/{id}/pendencias</code></td><td>Quantos processos o funcionário tem (em andamento, atrasados, concluídos, cancelados), para o aviso antes de apagar</td><td>Admin; Gestor (só Usuário do seu setor)</td></tr>
+    <tr><td>POST</td><td><code>/usuarios/{id}/apagar</code></td><td>Apaga passando os processos em andamento aos <code>herdeiroIds</code>, com o novo <code>prazo</code></td><td>Admin; Gestor (só Usuário do seu setor)</td></tr>
+    <tr><td>DELETE</td><td><code>/usuarios/{id}</code></td><td>Apaga funcionário sem processos em andamento (recusa se houver ou se for o próprio usuário)</td><td>Admin; Gestor (só Usuário)</td></tr>
     <tr><td>POST, PATCH</td><td><code>/setores</code>, <code>/setores/{id}</code></td><td>Cria e altera setor (nome, ativo, lista de entregas)</td><td>Admin, Gestor</td></tr>
     <tr><td>POST, PATCH</td><td><code>/entregas</code>, <code>/entregas/{id}</code></td><td>Cria e altera entrega (nome, fluxo, ativo)</td><td>Admin, Gestor</td></tr>
     <tr><td>GET</td><td><code>/fluxos</code>, <code>/fluxos/{id}</code></td><td>Lista e detalha fluxos com etapas e transições</td><td>todos</td></tr>

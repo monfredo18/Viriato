@@ -73,7 +73,7 @@ O botão **X** apaga empresas, setores, entregas, fluxos e funcionários (sempre
 - **Só processo em andamento impede apagar.** Processo concluído ou cancelado não bloqueia; ele continua existindo, apenas sem o vínculo com o que foi apagado (aparece "—"; o título e o histórico permanecem).
 - Apagar uma **entrega** tira ela da lista dos setores; apagar um **setor** deixa seus funcionários sem setor.
 - **Fluxo:** não apaga se alguma entrega usa o fluxo nem se há processo em andamento nele. As etapas e transições são apagadas junto.
-- **Funcionário:** responsável por processo em andamento só é apagado depois de passar o processo adiante; ninguém apaga a si mesmo. O histórico permanece (o autor aparece como "usuário removido").
+- **Funcionário:** ninguém apaga a si mesmo; o gestor só apaga os do próprio setor. Se ele tem processos, aparece um aviso ("Apagar mesmo assim" / "Desistir de apagar"). Os processos em andamento e atrasados passam para os herdeiros escolhidos, com um novo prazo; os concluídos e cancelados ficam com o nome dele ("(removido)") e só o gestor do setor e o administrador os veem. O histórico permanece (o autor aparece como "usuário removido").
 
 ### Papéis
 Todos enxergam tudo (processos, cadastros, fluxos e equipe); o que muda é quem altera.
