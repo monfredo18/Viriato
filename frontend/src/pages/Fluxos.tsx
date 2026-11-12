@@ -77,6 +77,7 @@ export default function Fluxos() {
                     <span className="etapa-nome"><b>{e.nome}</b>
                       {e.prazoDias !== null && <small> · prazo {e.prazoDias} d</small>}
                       {e.inicial && <small> · inicial</small>}{e.finalEtapa && <small> · final</small>}
+                      {e.papelMinimo !== 'USUARIO' && <small className="so-gestor"> · {e.papelMinimo === 'ADMIN' ? 'só administrador' : 'só gestor'} move para cá</small>}
                     </span>
                     {e.requisitos.length > 0 && (
                       <ul className="etapa-reqs">
