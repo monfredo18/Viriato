@@ -114,10 +114,7 @@ public class ProcessoService {
         p = processos.save(p);
 
         registrar(p, quem.id(), "CRIADO", null, inicial.getNome(), null);
-        if (responsavelId != null && !responsavelId.equals(quem.id())) {
-            notificacoes.notificar(tid, responsavelId, "Novo processo atribuído a você",
-                    p.getNumero() + " - " + p.getTitulo(), p.getId());
-        }
+        notificacoes.notificar(p, "Novo processo aberto", null, quem.id());
         return paraDto(p);
     }
 
@@ -187,11 +184,8 @@ public class ProcessoService {
         p = processos.save(p);
         registrar(p, quem.id(), "MOVIDO", origem.getNome(), destino.getNome(), comentario);
 
-        if (p.getResponsavelId() != null && !p.getResponsavelId().equals(quem.id())) {
-            notificacoes.notificar(quem.tenantId(), p.getResponsavelId(),
-                    destino.isFinalEtapa() ? "Processo concluído" : "Processo movido para " + destino.getNome(),
-                    p.getNumero() + " - " + p.getTitulo(), p.getId());
-        }
+        String detalhe = origem.getNome() + " → " + destino.getNome() + (comentario == null || comentario.isBlank() ? "" : ". " + comentario);
+        notificacoes.notificar(p, destino.isFinalEtapa() ? "Processo concluído" : "Processo movido para " + destino.getNome(), detalhe, quem.id());
         return paraDto(p);
     }
 
@@ -200,10 +194,7 @@ public class ProcessoService {
         Processo p = buscar(id, quem.tenantId());
         exigirPodeMexer(quem, p);
         registrar(p, quem.id(), "COMENTARIO", null, null, texto);
-        if (p.getResponsavelId() != null && !p.getResponsavelId().equals(quem.id())) {
-            notificacoes.notificar(quem.tenantId(), p.getResponsavelId(), "Novo comentário em " + p.getNumero(),
-                    texto, p.getId());
-        }
+        notificacoes.notificar(p, "Novo comentário", texto, quem.id());
     }
 
     @Transactional
@@ -220,10 +211,7 @@ public class ProcessoService {
         p = processos.save(p);
         String nome = responsavelId == null ? "ninguém" : usuarios.findById(responsavelId).map(Usuario::getNome).orElse("?");
         registrar(p, quem.id(), "ATRIBUIDO", null, null, "Responsável: " + nome);
-        if (responsavelId != null && !responsavelId.equals(quem.id())) {
-            notificacoes.notificar(quem.tenantId(), responsavelId, "Processo atribuído a você",
-                    p.getNumero() + " - " + p.getTitulo(), p.getId());
-        }
+        notificacoes.notificar(p, "Processo atribuído a " + nome, null, quem.id());
         return paraDto(p);
     }
 
@@ -236,6 +224,7 @@ public class ProcessoService {
         p.setPrazoEtapa(null);
         p = processos.save(p);
         registrar(p, quem.id(), "CANCELADO", null, null, motivo);
+        notificacoes.notificar(p, "Processo cancelado", motivo, quem.id());
         return paraDto(p);
     }
 
