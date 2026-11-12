@@ -132,6 +132,7 @@ public class UsuarioController {
         if (u.getId().equals(quem.id())) throw new NegocioException("Você não pode zerar a sua própria senha");
         u.setSenhaHash(encoder.encode(req.senha()));
         u.setSenhaProvisoria(true);
+        u.setVersaoSessao(u.getVersaoSessao() + 1);   // encerra as sessões abertas da pessoa
         repo.save(u);
     }
 

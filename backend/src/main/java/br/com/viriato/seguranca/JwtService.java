@@ -35,19 +35,24 @@ public class JwtService {
                 .subject(String.valueOf(u.getId()))
                 .claim("tid", u.getTenantId())
                 .claim("papel", u.getPapel().name())
+                .claim("v", u.getVersaoSessao())
                 .issuedAt(Date.from(agora))
                 .expiration(Date.from(agora.plus(expiracao)))
                 .signWith(chave)
                 .compact();
     }
 
-    public Optional<UsuarioLogado> validar(String token) {
+    /** Identidade do token e a versão de sessão em que foi emitido (tokens antigos, sem versão, contam como 0). */
+    public record TokenValido(UsuarioLogado usuario, int versaoSessao) {}
+
+    public Optional<TokenValido> validar(String token) {
         try {
             Claims c = Jwts.parser().verifyWith(chave).build().parseSignedClaims(token).getPayload();
-            return Optional.of(new UsuarioLogado(
+            Integer versao = c.get("v", Integer.class);
+            return Optional.of(new TokenValido(new UsuarioLogado(
                     Long.valueOf(c.getSubject()),
                     c.get("tid", Long.class),
-                    Papel.valueOf(c.get("papel", String.class))));
+                    Papel.valueOf(c.get("papel", String.class))), versao == null ? 0 : versao));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

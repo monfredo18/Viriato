@@ -17,6 +17,8 @@ public class Usuario {
     @Column(name = "senha_hash") private String senhaHash;
     /** Senha inicial ou zerada pelo administrador: a pessoa precisa criar a própria antes de usar o sistema. */
     @Column(name = "senha_provisoria") private boolean senhaProvisoria;
+    /** Sobe quando a senha é zerada: tokens emitidos antes deixam de valer. */
+    @Column(name = "versao_sessao") private int versaoSessao;
     @Enumerated(EnumType.STRING) private Papel papel;
     private boolean ativo = true;
     @Column(name = "setor_id") private Long setorId;

@@ -18,7 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Valida o token e confere o usuário no banco a cada requisição: quem foi desativado ou apagado perde o acesso
- * na hora, o papel vale o atual, e quem ainda está com senha provisória só consegue consultar {@code /api/me}
+ * na hora, quem teve a senha zerada perde as sessões antigas, o papel vale o atual, e quem ainda está com senha provisória só consegue consultar {@code /api/me}
  * e definir a própria senha.
  */
 @Component
@@ -37,7 +37,8 @@ public class JwtFilter extends OncePerRequestFilter {
         String header = req.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             Optional<Usuario> atual = jwt.validar(header.substring(7))
-                    .flatMap(t -> usuarios.findByIdAndTenantId(t.id(), t.tenantId()))
+                    .flatMap(t -> usuarios.findByIdAndTenantId(t.usuario().id(), t.usuario().tenantId())
+                            .filter(u -> u.getVersaoSessao() == t.versaoSessao()))
                     .filter(Usuario::isAtivo);
             if (atual.isPresent()) {
                 Usuario u = atual.get();

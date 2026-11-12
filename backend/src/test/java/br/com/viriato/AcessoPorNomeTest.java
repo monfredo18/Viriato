@@ -144,7 +144,9 @@ class AcessoPorNomeTest {
         // o admin zera (e já informa a nova senha provisória)
         zerar(c.admin(), id, "zerada-12345").andExpect(status().isNoContent());
         login(nome, "senha-do-func-1").andExpect(status().isUnauthorized());              // a senha antiga morreu
-        ler(tokenFunc, "/api/processos").andExpect(status().isForbidden());              // a sessão antiga também fica travada
+        ler(tokenFunc, "/api/processos").andExpect(status().isUnauthorized());           // a sessão antiga é encerrada
+        ler(tokenFunc, "/api/me").andExpect(status().isUnauthorized());
+        trocar(tokenFunc, "invasor-12345").andExpect(status().isUnauthorized());          // e não dá para tomar a conta com ela
         var s = corpo(login(nome, "zerada-12345").andExpect(status().isOk()));
         assertThat(s.get("usuario").get("deveTrocarSenha").asBoolean()).isTrue();         // e a pessoa troca no próximo acesso
         trocar(s.get("token").asText(), "zerada-12345").andExpect(status().isUnprocessableEntity());

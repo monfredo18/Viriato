@@ -1,5 +1,6 @@
 package br.com.viriato.usuario;
 
+import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.seguranca.Contexto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.Valid;
@@ -9,7 +10,6 @@ import jakarta.validation.constraints.Size;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api")
@@ -44,7 +44,7 @@ public class AuthController {
     @PostMapping("/auth/registrar-empresa")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthService.Sessao registrar(@Valid @RequestBody RegistroReq r) {
-        if (!cadastroAberto) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (!cadastroAberto) throw new NaoEncontradoException("Cadastro de empresas");
         return auth.registrarEmpresa(r.empresa(), r.nome(), r.email(), r.senha());
     }
 
