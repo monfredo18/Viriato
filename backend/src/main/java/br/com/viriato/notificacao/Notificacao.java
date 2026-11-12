@@ -15,6 +15,9 @@ public class Notificacao {
     @Column(name = "usuario_id") private Long usuarioId;
     private String titulo;
     private String mensagem;
+    @Column(name = "empresa_nome") private String empresaNome;
+    @Column(name = "entrega_nome") private String entregaNome;
+    @Column(name = "autor_nome") private String autorNome;
     @Column(name = "processo_id") private Long processoId;
     private boolean lida;
     @Column(name = "criado_em", insertable = false, updatable = false)

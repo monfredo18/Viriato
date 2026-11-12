@@ -34,8 +34,7 @@ public class PrazoScheduler {
         for (Processo p : processos.pendentesDeAlerta(hoje.plusDays(antecedenciaDias))) {
             boolean vencido = p.getPrazoEtapa().isBefore(hoje);
             String titulo = vencido ? "Prazo vencido" : "Prazo próximo do vencimento";
-            notificacoes.notificar(p.getTenantId(), p.getResponsavelId(), titulo,
-                    p.getNumero() + " - " + p.getTitulo() + " (prazo: " + p.getPrazoEtapa() + ")", p.getId());
+            notificacoes.notificar(p, p.getResponsavelId(), titulo, "Prazo da etapa: " + p.getPrazoEtapa(), null);
             p.setPrazoAlertado(true);
             n++;
         }
