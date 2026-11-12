@@ -90,7 +90,6 @@ main > h2::after, .barra h2::after { content: ''; position: absolute; left: 0; b
   position: sticky; top: 0; z-index: 5;
 }
 .marca { display: inline-flex; align-items: center; gap: .7rem; }
-.marca-nome { font-size: 15px; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: #fff; }
 .topo nav { display: flex; align-self: stretch; gap: .15rem; margin-left: 1.75rem; }
 .topo nav a {
   display: flex; align-items: center; padding: 0 .9rem; color: var(--cab-texto); text-decoration: none;
@@ -109,7 +108,7 @@ main > h2::after, .barra h2::after { content: ''; position: absolute; left: 0; b
 .perfil-txt b { color: #fff; font-size: 13px; font-weight: 600; }
 .perfil-txt small { color: var(--cab-texto); font-size: 11px; }
 @media (max-width: 1180px) { .perfil-txt { display: none; } .topo { padding: 0 1rem; } .topo nav { margin-left: 1rem; } .topo nav a { padding: 0 .65rem; } }
-@media (max-width: 980px) { .marca-nome { display: none; } .topo nav { margin-left: .5rem; } .topo nav a { padding: 0 .5rem; letter-spacing: .05em; } }
+@media (max-width: 980px) { .topo nav { margin-left: .5rem; } .topo nav a { padding: 0 .5rem; letter-spacing: .05em; } }
 
 /* ---------- formulários ---------- */
 input, select, textarea, button { font: inherit; color: inherit; }
@@ -374,3 +373,8 @@ tr.linha-atrasada td:nth-child(5) { color: var(--vermelho); font-weight: 600; }
 .login-lado::before { content: ''; position: absolute; top: 0; left: 0; width: 96px; height: 4px; background: var(--vermelho-solido); }
 .login-form .cartao { position: relative; border-top: 1px solid var(--borda); }
 .login-form .cartao::before { content: ''; position: absolute; left: -1px; right: -1px; top: -3px; height: 3px; background: linear-gradient(90deg, var(--azul) 0 70%, var(--ouro) 70% 90%, var(--vermelho-solido) 90%); }
+
+/* Marca (imagem de fundo transparente) sobre painel branco */
+.logo-selo { display: inline-flex; align-items: center; background: #fff; border-radius: 4px; padding: 2px 6px; line-height: 0; }
+.logo-selo img { display: block; image-rendering: auto; }
+.login-marca .logo-selo { padding: 8px 14px; border-radius: 6px; }

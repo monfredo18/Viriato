@@ -31,7 +31,7 @@ export default function DefinirSenha() {
   return (
     <div className="login">
       <aside className="login-lado">
-        <div className="login-marca"><Logo tamanho={40} /><span>Viriato</span></div>
+        <div className="login-marca"><Logo altura={92} /></div>
         <div className="login-texto">
           <h1>Primeiro acesso</h1>
           <p>Por segurança, a senha inicial é provisória. Crie a sua senha para começar a usar o sistema.</p>

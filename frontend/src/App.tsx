@@ -20,7 +20,7 @@ function Layout() {
   return (
     <>
       <header className="topo">
-        <span className="marca"><Logo tamanho={30} /><span className="marca-nome">Viriato</span></span>
+        <span className="marca"><Logo altura={42} /></span>
         <nav>
           <NavLink to="/processos">Processos</NavLink>
           <NavLink to="/cadastros">Cadastros</NavLink>
