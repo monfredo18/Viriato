@@ -14,7 +14,7 @@ export default function Usuarios() {
   const { usuario: eu, ehAdmin, podeGerenciar } = useAuth()
   const [lista, setLista] = useState<Usuario[]>([])
   const [setores, setSetores] = useState<Setor[]>([])
-  const [f, setF] = useState({ nome: '', email: '', senha: '', papel: 'USUARIO' as Papel, setorId: '' })
+  const [f, setF] = useState({ nome: '', senha: '', papel: 'USUARIO' as Papel, setorId: '' })
   const [erro, setErro] = useState('')
 
   const carregar = () => api.get<Usuario[]>('/usuarios').then(setLista)
@@ -27,8 +27,9 @@ export default function Usuarios() {
     e.preventDefault()
     setErro('')
     try {
-      await api.post('/usuarios', { ...f, setorId: f.setorId ? Number(f.setorId) : null })
-      setF({ nome: '', email: '', senha: '', papel: 'USUARIO', setorId: '' })
+      // gestor não escolhe setor: o servidor usa o do gestor
+      await api.post('/usuarios', { ...f, setorId: ehAdmin && f.setorId ? Number(f.setorId) : null })
+      setF({ nome: '', senha: '', papel: 'USUARIO', setorId: '' })
       carregar()
     } catch (err) {
       setErro((err as Error).message)
@@ -40,6 +41,8 @@ export default function Usuarios() {
 
   const meuSetorId = lista.find((u) => u.id === eu?.id)?.setorId ?? null
   const [apagando, setApagando] = useState<{ u: Usuario; p: PendenciasUsuario } | null>(null)
+  const [zerando, setZerando] = useState<Usuario | null>(null)
+  const meuSetorNome = lista.find((u) => u.id === eu?.id)?.setorNome ?? null
 
   // Sem processos: confirmação simples. Com processos: aviso com "Apagar mesmo assim" / "Desistir de apagar".
   const apagar = async (u: Usuario) => {
@@ -63,17 +66,17 @@ export default function Usuarios() {
       <h2>Usuários</h2>
       {!podeGerenciar && <p className="sub">Somente consulta. Quem pode alterar: administrador e gestor.</p>}
       {podeGerenciar && !ehAdmin && (
-        <p className="sub">Você pode adicionar funcionários e ativar ou desativar os de papel Usuário, e apagar os do seu setor. Papel e setor só o administrador altera.</p>
+        <p className="sub">Você pode adicionar funcionários ao seu setor (informando nome, senha inicial e papel) e ativar, desativar ou apagar os de papel Usuário do seu setor. Papel, setor e senha zerada só o administrador altera.</p>
       )}
       {erro && <p className="erro">{erro}</p>}
-      <div className="grade">
+      <div className="grade usuarios">
         <section className="cartao">
           <table>
             <thead><tr><th>Nome</th><th>Papel</th><th>Setor</th><th>Situação</th>{podeGerenciar && <th></th>}</tr></thead>
             <tbody>
               {lista.map((u) => (
                 <tr key={u.id}>
-                  <td>{u.nome}<small className="bloco">{u.email}</small></td>
+                  <td>{u.nome}</td>
                   <td>
                     {ehAdmin ? (
                       <select value={u.papel} disabled={u.id === eu?.id} onChange={(e) => patch(u.id, { papel: e.target.value })}>
@@ -101,7 +104,10 @@ export default function Usuarios() {
                     ) : <span className={`selo ${u.ativo ? 'aberto' : 'cancelado'}`}>{u.ativo ? 'Ativo' : 'Inativo'}</span>}
                   </td>
                   {podeGerenciar && (
-                    <td>
+                    <td className="acoes-linha">
+                      {ehAdmin && u.id !== eu?.id && (
+                        <button type="button" className="perigo-txt" onClick={() => setZerando(u)}>Zerar senha</button>
+                      )}
                       {u.id !== eu?.id && (ehAdmin || (u.papel === 'USUARIO' && meuSetorId !== null && u.setorId === meuSetorId)) && (
                         <BotaoApagar nome={u.nome} semConfirmar apagar={() => apagar(u)} />
                       )}
@@ -117,24 +123,30 @@ export default function Usuarios() {
           <form className="cartao" onSubmit={criar}>
             <h3>Novo funcionário</h3>
             <label>Nome<input required value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></label>
-            <label>E-mail<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
-            <label>Senha inicial<input type="password" required minLength={8} value={f.senha} onChange={(e) => setF({ ...f, senha: e.target.value })} /></label>
+            <label>Senha inicial<input type="password" required minLength={8} autoComplete="new-password" value={f.senha} onChange={(e) => setF({ ...f, senha: e.target.value })} /></label>
+            <small>Mínimo de 8 caracteres. No primeiro acesso, a pessoa cria a própria senha.</small>
             <label>Papel
               <select value={f.papel} disabled={!ehAdmin} onChange={(e) => setF({ ...f, papel: e.target.value as Papel })}>
                 {(ehAdmin ? (Object.keys(ROTULO_PAPEL) as Papel[]) : (['USUARIO'] as Papel[])).map((p) => <option key={p} value={p}>{ROTULO_PAPEL[p]}</option>)}
               </select>
             </label>
-            <label>Setor
-              <select value={f.setorId} onChange={(e) => setF({ ...f, setorId: e.target.value })}>
-                <option value="">— sem setor —</option>
-                {setoresAtivos.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
-              </select>
-            </label>
+            {ehAdmin ? (
+              <label>Setor
+                <select value={f.setorId} onChange={(e) => setF({ ...f, setorId: e.target.value })}>
+                  <option value="">— sem setor —</option>
+                  {setoresAtivos.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                </select>
+              </label>
+            ) : (
+              <small>{meuSetorNome ? `O funcionário ficará no seu setor (${meuSetorNome}).` : 'Seu usuário não tem setor definido: peça ao administrador antes de adicionar funcionários.'}</small>
+            )}
             {!ehAdmin && <small>Gestores adicionam funcionários com papel Usuário.</small>}
             <button className="primario">Adicionar funcionário</button>
           </form>
         )}
       </div>
+
+      {zerando && <ZerarSenha alvo={zerando} fechar={() => setZerando(null)} />}
 
       {apagando && (
         <ApagarFuncionario
@@ -146,6 +158,55 @@ export default function Usuarios() {
         />
       )}
     </>
+  )
+}
+
+/** O administrador zera a senha de outra conta e já informa a nova (provisória): a pessoa a troca no próximo acesso. */
+function ZerarSenha({ alvo, fechar }: { alvo: Usuario; fechar: () => void }) {
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [feito, setFeito] = useState(false)
+
+  const enviar = async (e: FormEvent) => {
+    e.preventDefault()
+    setErro('')
+    setEnviando(true)
+    try {
+      await api.put(`/usuarios/${alvo.id}/senha`, { senha })
+      setFeito(true)
+    } catch (err) {
+      setErro((err as Error).message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div className="fundo" onClick={fechar}>
+      <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={enviar}>
+        <h3>Zerar a senha de {alvo.nome}</h3>
+        {feito ? (
+          <>
+            <p className="sub">Senha zerada. Informe a nova senha a {alvo.nome}: no próximo acesso será pedido que crie uma senha própria.</p>
+            <div className="acoes"><button type="button" className="primario" onClick={fechar}>Concluir</button></div>
+          </>
+        ) : (
+          <>
+            <p className="sub">A senha atual deixa de valer e a sessão aberta é encerrada. Crie agora a nova senha; {alvo.nome} a trocará por uma própria ao entrar.</p>
+            <label>Nova senha
+              <input required minLength={8} maxLength={72} autoFocus autoComplete="off" value={senha} onChange={(e) => setSenha(e.target.value)} />
+            </label>
+            <small>Mínimo de 8 caracteres. Anote para informar à pessoa.</small>
+            {erro && <p className="erro">{erro}</p>}
+            <div className="acoes">
+              <button type="button" onClick={fechar}>Cancelar</button>
+              <button className="perigo" disabled={enviando || senha.length < 8}>Zerar senha</button>
+            </div>
+          </>
+        )}
+      </form>
+    </div>
   )
 }
 

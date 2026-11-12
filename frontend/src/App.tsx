@@ -10,6 +10,7 @@ import Cadastros from './pages/Cadastros'
 import Fluxos from './pages/Fluxos'
 import Usuarios from './pages/Usuarios'
 import Relatorios from './pages/Relatorios'
+import DefinirSenha from './pages/DefinirSenha'
 
 const iniciais = (nome?: string) =>
   (nome ?? '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
@@ -57,5 +58,7 @@ function Layout() {
 export default function App() {
   const { usuario, carregando } = useAuth()
   if (carregando) return <p className="centro">Carregando…</p>
-  return usuario ? <Layout /> : <Login />
+  if (!usuario) return <Login />
+  // Senha inicial ou zerada: nada do sistema abre antes de a pessoa criar a própria senha.
+  return usuario.deveTrocarSenha ? <DefinirSenha /> : <Layout />
 }

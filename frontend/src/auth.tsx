@@ -6,6 +6,7 @@ interface AuthCtx {
   empresa: string
   carregando: boolean
   entrar: (s: Sessao) => void
+  atualizarUsuario: (u: Usuario) => void
   sair: () => void
   podeGerenciar: boolean
   ehAdmin: boolean
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const papel = usuario?.papel
   return (
-    <Ctx.Provider value={{ usuario, empresa, carregando, entrar, sair, podeGerenciar: papel === 'ADMIN' || papel === 'GESTOR', ehAdmin: papel === 'ADMIN' }}>
+    <Ctx.Provider value={{ usuario, empresa, carregando, entrar, atualizarUsuario: setUsuario, sair, podeGerenciar: papel === 'ADMIN' || papel === 'GESTOR', ehAdmin: papel === 'ADMIN' }}>
       {children}
     </Ctx.Provider>
   )
