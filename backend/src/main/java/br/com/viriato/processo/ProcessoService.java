@@ -13,6 +13,7 @@ import br.com.viriato.comum.NegocioException;
 import br.com.viriato.fluxo.*;
 import br.com.viriato.fluxo.FluxoService.EtapaDto;
 import br.com.viriato.notificacao.NotificacaoService;
+import br.com.viriato.processo.ProcessoDto.AprovacaoDto;
 import br.com.viriato.processo.ProcessoDto.Detalhe;
 import br.com.viriato.processo.ProcessoDto.HistoricoDto;
 import br.com.viriato.seguranca.UsuarioLogado;
@@ -52,12 +53,14 @@ public class ProcessoService {
     private final ObjectMapper json;
     private final RequisitoService requisitos;
     private final ProcessoRequisitoRepository confirmacoes;
+    private final ProcessoAprovacaoRepository aprovacoes;
 
     public ProcessoService(ProcessoRepository processos, ProcessoHistoricoRepository historicos,
                            FluxoRepository fluxos, EtapaRepository etapas, TransicaoRepository transicoes,
                            UsuarioRepository usuarios, NotificacaoService notificacoes, CadastroService cadastros,
                            ClienteRepository clientes, EntregaRepository entregasRepo, SetorRepository setoresRepo,
-                           ObjectMapper json, RequisitoService requisitos, ProcessoRequisitoRepository confirmacoes) {
+                           ObjectMapper json, RequisitoService requisitos, ProcessoRequisitoRepository confirmacoes,
+                           ProcessoAprovacaoRepository aprovacoes) {
         this.processos = processos;
         this.historicos = historicos;
         this.fluxos = fluxos;
@@ -72,6 +75,7 @@ public class ProcessoService {
         this.json = json;
         this.requisitos = requisitos;
         this.confirmacoes = confirmacoes;
+        this.aprovacoes = aprovacoes;
     }
 
     public record Filtro(StatusProcesso status, Long etapaId, Long responsavelId, Long clienteId, Long setorId,
@@ -181,7 +185,29 @@ public class ProcessoService {
                         h.getParaEtapa(), h.getComentario(), h.getCriadoEm()))
                 .toList();
         Integer ordem = p.getEtapaAtualId() == null ? null : etapas.findById(p.getEtapaAtualId()).map(Etapa::getOrdem).orElse(null);
-        return new Detalhe(paraDto(p), proximas, hist, p.getStatus() == StatusProcesso.ABERTO ? requisitos.situacao(p) : List.of(), ordem);
+        return new Detalhe(paraDto(p), proximas, hist, p.getStatus() == StatusProcesso.ABERTO ? requisitos.situacao(p) : List.of(), ordem, aprovacoesDto(p));
+    }
+
+    /** Pedidos de aprovação do processo, do mais recente para o mais antigo (até 10). */
+    private List<AprovacaoDto> aprovacoesDto(Processo p) {
+        List<ProcessoAprovacao> lista = aprovacoes.findByProcessoIdAndTenantIdOrderByIdDesc(p.getId(), p.getTenantId()).stream().limit(10).toList();
+        if (lista.isEmpty()) return List.of();
+        Set<Long> usuarioIds = new HashSet<>();
+        lista.forEach(a -> { if (a.getSolicitadoPor() != null) usuarioIds.add(a.getSolicitadoPor()); if (a.getDecididoPor() != null) usuarioIds.add(a.getDecididoPor()); });
+        Map<Long, String> nomes = usuarios.findAllById(usuarioIds).stream().collect(Collectors.toMap(Usuario::getId, Usuario::getNome));
+        Map<Long, Etapa> destinos = etapas.findAllById(lista.stream().map(ProcessoAprovacao::getEtapaDestinoId).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(Etapa::getId, Function.identity()));
+        return lista.stream().map(a -> {
+            Etapa d = destinos.get(a.getEtapaDestinoId());
+            return new AprovacaoDto(a.getId(), a.getEtapaDestinoId(), d == null ? null : d.getNome(), d == null ? Papel.GESTOR : d.getPapelMinimo(),
+                    a.getSolicitadoPor(), nomes.get(a.getSolicitadoPor()), a.getSolicitadoEm(), a.getComentario(), a.getStatus(),
+                    nomes.get(a.getDecididoPor()), a.getDecididoEm(), a.getMotivo());
+        }).toList();
+    }
+
+    /** Registra um evento no histórico do processo (usado também pelo fluxo de aprovações). */
+    public void registrarEvento(Processo p, Long usuarioId, String acao, String comentario) {
+        registrar(p, usuarioId, acao, null, null, comentario);
     }
 
     // ---------- operações ----------
@@ -193,13 +219,36 @@ public class ProcessoService {
         exigirPodeMexer(quem, p);
         Etapa destino = etapas.findByIdAndTenantId(etapaDestinoId, quem.tenantId())
                 .orElseThrow(() -> new NaoEncontradoException("Etapa"));
-        if (!transicoes.existsByDeEtapaAndParaEtapaAndTenantId(p.getEtapaAtualId(), destino.getId(), quem.tenantId())) {
-            throw new NegocioException("Transição não permitida pelo fluxo");
+        exigirPapelParaEtapa(quem, destino);
+        return movimentar(quem, p, destino, comentario);
+    }
+
+    /** Etapas que só gestor (ou só administrador) pode receber: os demais precisam pedir aprovação. */
+    public void exigirPapelParaEtapa(UsuarioLogado quem, Etapa destino) {
+        if (!quem.papel().atende(destino.getPapelMinimo())) {
+            throw new NegocioException("Mover para \"" + destino.getNome() + "\" exige " + rotuloPapelMinimo(destino.getPapelMinimo())
+                    + ". Solicite a aprovação.");
         }
+    }
+
+    public static String rotuloPapelMinimo(Papel minimo) {
+        return minimo == Papel.ADMIN ? "administrador" : "gestor ou administrador";
+    }
+
+    /**
+     * Núcleo do movimento, já autorizado por quem chama (avançar direto ou aprovação): confere a transição e os
+     * requisitos da etapa de origem, atualiza o processo, registra no histórico e avisa o gestor do setor. Pedidos de
+     * aprovação que estavam pendentes perdem o sentido e são cancelados.
+     */
+    @Transactional
+    public ProcessoDto movimentar(UsuarioLogado quem, Processo p, Etapa destino, String comentario) {
+        exigirTransicaoPermitida(p, destino);
         Etapa origem = etapas.findById(p.getEtapaAtualId()).orElseThrow();
         // Avançar exige os requisitos da etapa de origem; voltar para uma etapa anterior não exige nada.
         if (destino.getOrdem() > origem.getOrdem()) requisitos.exigirCumpridos(p, origem);
 
+        aprovacoes.cancelarPendentes(p.getId(), Instant.now());
+        p = processos.findById(p.getId()).orElseThrow();   // a atualização em lote limpa o contexto de persistência
         p.setEtapaAtualId(destino.getId());
         p.setEtapaDesde(Instant.now());
         p.setPrazoAlertado(false);
@@ -270,6 +319,8 @@ public class ProcessoService {
         Processo p = buscar(quem, id);   // antes da checagem de papel: processo de outro setor é sempre "não encontrado"
         if (quem.papel() == Papel.USUARIO) throw new NegocioException("Apenas gestores podem cancelar processos");
         exigirAberto(p);
+        aprovacoes.cancelarPendentes(p.getId(), Instant.now());
+        p = processos.findById(p.getId()).orElseThrow();
         p.setStatus(StatusProcesso.CANCELADO);
         p.setPrazoEtapa(null);
         p = processos.save(p);
@@ -335,7 +386,13 @@ public class ProcessoService {
 
     // ---------- auxiliares ----------
 
-    private void exigirAberto(Processo p) {
+    public void exigirTransicaoPermitida(Processo p, Etapa destino) {
+        if (!transicoes.existsByDeEtapaAndParaEtapaAndTenantId(p.getEtapaAtualId(), destino.getId(), p.getTenantId())) {
+            throw new NegocioException("Transição não permitida pelo fluxo");
+        }
+    }
+
+    public void exigirAberto(Processo p) {
         if (p.getStatus() != StatusProcesso.ABERTO) throw new NegocioException("Processo não está aberto");
     }
 

@@ -17,8 +17,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/processos")
 public class ProcessoController {
     private final ProcessoService service;
+    private final AprovacaoService aprovacoes;
 
-    public ProcessoController(ProcessoService service) { this.service = service; }
+    public ProcessoController(ProcessoService service, AprovacaoService aprovacoes) {
+        this.service = service;
+        this.aprovacoes = aprovacoes;
+    }
 
     /**
      * Empresa e entrega são sempre obrigatórias. Setor só vale para o administrador e responsável só para
@@ -36,6 +40,9 @@ public class ProcessoController {
     public record ComentarioReq(@NotBlank @Size(max = 2000) String texto) {}
     public record AtribuirReq(Long responsavelId) {}
     public record RequisitoReq(boolean cumprido) {}
+    public record SolicitarAprovacaoReq(@NotNull Long etapaId, @Size(max = 2000) String comentario) {}
+    public record AprovarReq(@Size(max = 2000) String comentario) {}
+    public record RecusarReq(@NotBlank @Size(max = 2000) String motivo) {}
     public record CancelarReq(@NotBlank @Size(max = 2000) String motivo) {}
 
     @GetMapping
@@ -93,5 +100,30 @@ public class ProcessoController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void requisito(@PathVariable Long id, @PathVariable Long requisitoId, @RequestBody RequisitoReq r) {
         service.definirRequisito(Contexto.atual(), id, requisitoId, r.cumprido());
+    }
+
+    // ---- aprovação para etapas que exigem gestor (ou administrador) ----
+
+    @PostMapping("/{id}/aprovacoes")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void solicitarAprovacao(@PathVariable Long id, @Valid @RequestBody SolicitarAprovacaoReq r) {
+        aprovacoes.solicitar(Contexto.atual(), id, r.etapaId(), r.comentario());
+    }
+
+    @PostMapping("/{id}/aprovacoes/{aprovacaoId}/aprovar")
+    public ProcessoDto aprovar(@PathVariable Long id, @PathVariable Long aprovacaoId, @Valid @RequestBody(required = false) AprovarReq r) {
+        return aprovacoes.aprovar(Contexto.atual(), id, aprovacaoId, r == null ? null : r.comentario());
+    }
+
+    @PostMapping("/{id}/aprovacoes/{aprovacaoId}/recusar")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void recusar(@PathVariable Long id, @PathVariable Long aprovacaoId, @Valid @RequestBody RecusarReq r) {
+        aprovacoes.recusar(Contexto.atual(), id, aprovacaoId, r.motivo());
+    }
+
+    @DeleteMapping("/{id}/aprovacoes/{aprovacaoId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancelarAprovacao(@PathVariable Long id, @PathVariable Long aprovacaoId) {
+        aprovacoes.cancelar(Contexto.atual(), id, aprovacaoId);
     }
 }

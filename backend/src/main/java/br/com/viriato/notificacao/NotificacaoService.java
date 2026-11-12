@@ -8,6 +8,7 @@ import br.com.viriato.processo.Processo;
 import br.com.viriato.usuario.Papel;
 import br.com.viriato.usuario.Usuario;
 import br.com.viriato.usuario.UsuarioRepository;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,13 +39,26 @@ public class NotificacaoService {
     @Transactional
     public void notificar(Processo p, String acao, String detalhe, Long autorId) {
         if (p.getSetorId() == null) return;
+        enviar(p, usuarios.findByTenantIdAndPapelAndSetorIdAndAtivoTrue(p.getTenantId(), Papel.GESTOR, p.getSetorId()), acao, detalhe, autorId);
+    }
+
+    /**
+     * Pedidos de aprovação de etapas que só o ADMINISTRADOR pode aprovar: avisa os administradores ativos da empresa
+     * (o gestor do setor não consegue aprovar, então não é o destinatário). Mesmas regras de conteúdo de {@link #notificar}.
+     */
+    @Transactional
+    public void notificarAdministradores(Processo p, String acao, String detalhe, Long autorId) {
+        enviar(p, usuarios.findByTenantIdAndPapelInAndAtivoTrue(p.getTenantId(), List.of(Papel.ADMIN)), acao, detalhe, autorId);
+    }
+
+    private void enviar(Processo p, List<Usuario> destinatarios, String acao, String detalhe, Long autorId) {
         Long tenantId = p.getTenantId();
         String empresa = p.getClienteId() == null ? null : clientes.findByIdAndTenantId(p.getClienteId(), tenantId).map(Cliente::getNome).orElse(null);
         String entrega = p.getEntregaId() == null ? null : entregas.findByIdAndTenantId(p.getEntregaId(), tenantId).map(Entrega::getNome).orElse(null);
         String autor = autorId == null ? null : usuarios.findByIdAndTenantId(autorId, tenantId).map(Usuario::getNome).orElse("Usuário removido");
         String titulo = autor == null ? acao : acao + " - " + autor;
 
-        for (Usuario gestor : usuarios.findByTenantIdAndPapelAndSetorIdAndAtivoTrue(tenantId, Papel.GESTOR, p.getSetorId())) {
+        for (Usuario gestor : destinatarios) {
             if (gestor.getId().equals(autorId)) continue;
 
             Notificacao n = new Notificacao();
