@@ -336,3 +336,41 @@ td.num { font-family: var(--mono); font-weight: 500; font-size: 13px; }
 .grade.usuarios { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 .grade.usuarios td select { min-width: 8.5rem; }
 @media (max-width: 1280px) { .grade.usuarios { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+   Acentos: dourado e vermelho. O azul continua sendo a cor principal (botões, links, foco);
+   o dourado aparece em filetes e marcas (nunca como texto sobre fundo claro, exceto --ouro-texto)
+   e o vermelho em tudo que pede atenção (atraso, cancelamento, ações destrutivas).
+   ========================================================================== */
+::selection { background: var(--ouro-vivo); color: #0b1430; }
+a:hover { text-decoration-line: underline; text-decoration-color: var(--ouro); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+/* barra superior: filete dourado embaixo, com um trecho vermelho na ponta; aba ativa marcada em vermelho no topo */
+.topo { border-bottom: 0; }
+.topo::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--vermelho-solido) 0 120px, var(--ouro-vivo) 120px); }
+.topo nav a.active { border-top-color: var(--vermelho-solido); }
+
+/* títulos: filete dourado seguido de uma marca vermelha */
+main > h2::after, .barra h2::after { width: 54px; background: linear-gradient(90deg, var(--ouro) 0 38px, transparent 38px 43px, var(--vermelho-solido) 43px); }
+.cartao > h3::after, .modal > h3::after { background: var(--ouro); }
+.cartao { border-top: 2px solid var(--ouro-borda); }
+
+/* janelas de confirmação com ação destrutiva ficam em vermelho */
+.modal:has(button.perigo) { border-top-color: var(--vermelho-solido); }
+.modal:has(button.perigo) > h3::after { background: var(--vermelho-solido); }
+
+/* tabelas: cabeçalho com filete dourado; linha sob o cursor ganha marca dourada; prazo vencido em vermelho */
+th { border-bottom: 2px solid var(--ouro); }
+tbody tr:not(.linha-atrasada):hover td:first-child { box-shadow: inset 3px 0 0 var(--ouro); }
+tr.linha-atrasada td:nth-child(5) { color: var(--vermelho); font-weight: 600; }
+
+/* situação: cancelado também em vermelho (atrasado é o vermelho cheio) */
+.selo.cancelado { background: var(--vermelho-fundo); border-color: var(--vermelho); color: var(--vermelho); }
+
+/* histórico: o registro mais recente em dourado */
+.historico li:first-child::before { background: var(--ouro); border-color: var(--ouro); }
+
+/* login: faixa vermelha no topo do painel azul e barra azul, dourada e vermelha no cartão */
+.login-lado::before { content: ''; position: absolute; top: 0; left: 0; width: 96px; height: 4px; background: var(--vermelho-solido); }
+.login-form .cartao { position: relative; border-top: 1px solid var(--borda); }
+.login-form .cartao::before { content: ''; position: absolute; left: -1px; right: -1px; top: -3px; height: 3px; background: linear-gradient(90deg, var(--azul) 0 70%, var(--ouro) 70% 90%, var(--vermelho-solido) 90%); }
