@@ -115,7 +115,14 @@ export default function ProcessoDetalhe() {
             acao(() => api.upload(`/processos/${p.id}/documentos`, form))
             e.target.value = ''
           }} />
-          {podeMexer && <button onClick={() => input.current?.click()}>⬆ Enviar arquivo</button>}
+          {podeMexer && (
+            <button onClick={() => input.current?.click()}>
+              <svg className="icone-btn" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
+              </svg>
+              Enviar arquivo
+            </button>
+          )}
           <ul className="docs">
             {docs.map((x) => (
               <li key={x.id}>

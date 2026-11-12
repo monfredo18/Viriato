@@ -31,10 +31,19 @@ export default function Login() {
 
   return (
     <div className="login">
+      <aside className="login-lado">
+        <div className="login-marca"><Logo tamanho={40} /><span>Viriato</span></div>
+        <div className="login-texto">
+          <h1>Controle de processos</h1>
+          <p>Etapas, prazos, responsáveis e documentos de cada processo, com histórico completo.</p>
+        </div>
+        <p className="login-rodape">Acesso restrito a usuários autorizados.</p>
+      </aside>
+      <div className="login-form">
       <BotaoTema className="tema-flutuante" />
       <form className="cartao" onSubmit={enviar}>
-        <div className="login-marca"><Logo tamanho={40} /><h1>Viriato</h1></div>
-        <p className="sub">{registro ? 'Cadastre sua empresa para começar' : 'Entre para acompanhar seus processos'}</p>
+        <h2>{registro ? 'Cadastrar empresa' : 'Acessar o sistema'}</h2>
+        <p className="sub">{registro ? 'Crie a conta da sua empresa e o primeiro acesso de administrador.' : 'Informe suas credenciais para continuar.'}</p>
         {registro && (
           <>
             <label>Empresa<input required value={f.empresa} onChange={set('empresa')} /></label>
@@ -50,6 +59,7 @@ export default function Login() {
           {registro ? 'Já tenho conta' : 'Cadastrar minha empresa'}
         </button>
       </form>
+      </div>
     </div>
   )
 }

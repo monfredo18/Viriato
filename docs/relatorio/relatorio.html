@@ -5,10 +5,10 @@
 <title>Viriato — Relatório do Sistema</title>
 <style>
   @page { size: A4; }
-  :root { --cor: #2754d7; --texto: #101828; --suave: #667085; --borda: #e4e7ec; --fundo: #f5f7fa; --tint: #eef3ff; }
+  :root { --cor: #2b59c3; --marinho: #0c1530; --ouro: #c9a227; --vermelho: #e11d2e; --texto: #101828; --suave: #667085; --borda: #e4e7ec; --fundo: #f5f7fa; --tint: #eef3ff; }
   * { box-sizing: border-box; }
   body { margin: 0; color: var(--texto); font: 10.5pt/1.5 Inter, "Liberation Sans", Arial, sans-serif; }
-  h1 { break-after: avoid; font-size: 17pt; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 2px solid var(--cor); letter-spacing: -.01em; }
+  h1 { break-after: avoid; font-size: 17pt; margin: 0 0 4mm; padding-bottom: 2mm; color: var(--marinho); border-bottom: 2px solid var(--ouro); letter-spacing: -.01em; }
   h2 { font-size: 12.5pt; margin: 7mm 0 2mm; color: var(--cor); break-after: avoid; }
   h3 { font-size: 10.8pt; margin: 5mm 0 1.5mm; break-after: avoid; }
   p { margin: 0 0 2.5mm; }
@@ -29,13 +29,14 @@
   figcaption { font-size: 8.8pt; color: var(--suave); margin-top: 1.2mm; }
   .caixa { background: var(--tint); border-left: 1.2mm solid var(--cor); padding: 3mm 4mm; margin: 3mm 0 4mm; break-inside: avoid; border-radius: 0 1.5mm 1.5mm 0; }
   .aviso { background: #fff7e6; border-left-color: #b26a00; }
-  .ok { color: #1f7a35; font-weight: 700; } .no { color: #b42318; font-weight: 700; }
+  .ok { color: var(--cor); font-weight: 700; } .no { color: var(--vermelho); font-weight: 700; }
   svg text { font-family: Inter, "Liberation Sans", Arial, sans-serif; }
 
   /* capa */
-  .capa { break-before: auto; height: 262mm; padding: 26mm 24mm 6mm; border-top: 3mm solid var(--cor); display: flex; flex-direction: column; }
-  .capa .marca { display: flex; align-items: center; gap: 4mm; font-size: 20pt; font-weight: 700; }
-  .capa h1 { font-size: 30pt; border: none; margin: 30mm 0 4mm; line-height: 1.1; padding: 0; }
+  .capa { break-before: auto; height: 262mm; padding: 26mm 24mm 6mm; border-top: 4mm solid var(--marinho); display: flex; flex-direction: column; }
+  .capa .marca { display: flex; align-items: center; gap: 4mm; font-size: 17pt; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: var(--marinho); }
+  .capa h1 { font-size: 30pt; border: none; margin: 30mm 0 6mm; line-height: 1.1; padding: 0 0 6mm; position: relative; }
+  .capa h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 24mm; height: 1.3mm; background: var(--ouro); }
   .capa .sub { font-size: 13pt; color: var(--suave); max-width: 120mm; }
   .capa .meta { margin-top: auto; font-size: 9.5pt; }
   .capa .meta td { border: none; padding: .8mm 0; } .capa .meta td:first-child { color: var(--suave); width: 38mm; }
@@ -48,14 +49,14 @@
 <!-- ============================ CAPA ============================ -->
 <div class="capa">
   <div class="marca">
-    <svg width="44" height="44" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#2754d7"/><path d="M9 21l7-10 7 10" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="21" r="3" fill="#fff"/><circle cx="16" cy="11" r="3" fill="#fff"/><circle cx="23" cy="21" r="3" fill="#fff"/></svg>
+    <svg width="44" height="44" viewBox="0 0 32 32"><rect width="32" height="32" rx="3" fill="#6b97ff"/><path d="M7.5 8.5L16 24l8.5-15.5" fill="none" stroke="#0b1430" stroke-width="4" stroke-linejoin="miter"/><path d="M0 27.5h32V29a3 3 0 0 1-3 3H3a3 3 0 0 1-3-3z" fill="#d4af37"/></svg>
     Viriato
   </div>
   <h1>Relatório do Sistema</h1>
   <p class="sub">Controle de processos multi-empresa: como o sistema funciona, como foi construído e quais são seus limites atuais.</p>
   <table class="meta">
-    <tr><td>Versão do código</td><td>commit <code>6930597</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
-    <tr><td>Data</td><td>11 de novembro de 2026</td></tr>
+    <tr><td>Versão do código</td><td>commit <code>cfb7f77</code> (branch <code>claude/awesome-hopper-3on31d</code>)</td></tr>
+    <tr><td>Data</td><td>12 de novembro de 2026</td></tr>
     <tr><td>Estágio</td><td>MVP funcional, ainda não preparado para produção</td></tr>
     <tr><td>Repositório</td><td>github.com/monfredo18/Viriato</td></tr>
   </table>
@@ -81,7 +82,7 @@
     <li><strong>Histórico:</strong> cada ação fica registrada com autor, data e comentário.</li>
     <li><strong>Documentos:</strong> upload e download de arquivos por processo, guardados no AWS S3.</li>
     <li><strong>Prazos e notificações:</strong> aviso dentro do sistema (sininho) e por e-mail, com alerta automático de prazo vencendo ou vencido.</li>
-    <li><strong>Interface:</strong> tema claro e escuro com botão de lua e sol.</li>
+    <li><strong>Interface:</strong> visual sóbrio, em azul com detalhes em vermelho (o que exige atenção) e dourado (marca e filetes), nos temas claro e escuro, com botão de lua e sol.</li>
   </ul>
 
   <h2>Glossário</h2>
@@ -108,9 +109,9 @@
     <svg viewBox="0 0 700 250" width="100%" role="img" aria-label="Diagrama de arquitetura">
       <defs><marker id="s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker></defs>
       <g font-size="12" text-anchor="middle">
-        <rect x="10" y="95" width="120" height="60" rx="8" fill="#eef3ff" stroke="#2754d7"/><text x="70" y="122" font-weight="700">Navegador</text><text x="70" y="140" fill="#667085" font-size="10.5">React + TypeScript</text>
-        <rect x="175" y="95" width="120" height="60" rx="8" fill="#eef3ff" stroke="#2754d7"/><text x="235" y="122" font-weight="700">Nginx</text><text x="235" y="140" fill="#667085" font-size="10.5">site estático + /api</text>
-        <rect x="340" y="60" width="150" height="130" rx="8" fill="#fff" stroke="#2754d7" stroke-width="1.5"/><text x="415" y="82" font-weight="700">Backend</text><text x="415" y="98" fill="#667085" font-size="10.5">Java 21 · Spring Boot</text>
+        <rect x="10" y="95" width="120" height="60" rx="8" fill="#eef3ff" stroke="#2b59c3"/><text x="70" y="122" font-weight="700">Navegador</text><text x="70" y="140" fill="#667085" font-size="10.5">React + TypeScript</text>
+        <rect x="175" y="95" width="120" height="60" rx="8" fill="#eef3ff" stroke="#2b59c3"/><text x="235" y="122" font-weight="700">Nginx</text><text x="235" y="140" fill="#667085" font-size="10.5">site estático + /api</text>
+        <rect x="340" y="60" width="150" height="130" rx="8" fill="#fff" stroke="#2b59c3" stroke-width="1.5"/><text x="415" y="82" font-weight="700">Backend</text><text x="415" y="98" fill="#667085" font-size="10.5">Java 21 · Spring Boot</text>
         <rect x="352" y="108" width="126" height="22" rx="4" fill="#f5f7fa" stroke="#d0d5dd"/><text x="415" y="123" font-size="10.5">API REST + JWT</text>
         <rect x="352" y="136" width="126" height="22" rx="4" fill="#f5f7fa" stroke="#d0d5dd"/><text x="415" y="151" font-size="10.5">Regras de negócio</text>
         <rect x="352" y="164" width="126" height="20" rx="4" fill="#f5f7fa" stroke="#d0d5dd"/><text x="415" y="178" font-size="10.5">Agendador de prazos</text>
@@ -182,16 +183,16 @@
     <svg viewBox="0 0 700 182" width="100%" role="img" aria-label="Fluxo padrão e estados do processo">
       <defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker></defs>
       <g font-size="12" text-anchor="middle">
-        <rect x="8" y="14" width="136" height="48" rx="8" fill="#eef3ff" stroke="#2754d7"/><text x="76" y="35" font-weight="700">Abertura</text><text x="76" y="51" fill="#667085" font-size="10.5">inicial · prazo 2 dias</text>
+        <rect x="8" y="14" width="136" height="48" rx="8" fill="#eef3ff" stroke="#2b59c3"/><text x="76" y="35" font-weight="700">Abertura</text><text x="76" y="51" fill="#667085" font-size="10.5">inicial · prazo 2 dias</text>
         <rect x="190" y="14" width="136" height="48" rx="8" fill="#fff" stroke="#667085"/><text x="258" y="35" font-weight="700">Análise</text><text x="258" y="51" fill="#667085" font-size="10.5">prazo 5 dias</text>
         <rect x="372" y="14" width="136" height="48" rx="8" fill="#fff" stroke="#667085"/><text x="440" y="35" font-weight="700">Revisão</text><text x="440" y="51" fill="#667085" font-size="10.5">prazo 3 dias</text>
-        <rect x="554" y="14" width="138" height="48" rx="8" fill="#dcf3e1" stroke="#1f7a35"/><text x="623" y="35" font-weight="700">Concluído</text><text x="623" y="51" fill="#667085" font-size="10.5">final · sem prazo</text>
+        <rect x="554" y="14" width="138" height="48" rx="8" fill="#f8f0d3" stroke="#7a5c05"/><text x="623" y="35" font-weight="700">Concluído</text><text x="623" y="51" fill="#667085" font-size="10.5">final · sem prazo</text>
       </g>
       <g stroke="#667085" stroke-width="1.4" fill="none" marker-end="url(#f)"><path d="M144 38H187"/><path d="M326 38H369"/><path d="M508 38H551"/></g>
       <g font-size="11.5" text-anchor="middle">
         <text x="350" y="92" font-weight="700" fill="#101828">Estado do processo</text>
-        <rect x="60" y="104" width="100" height="26" rx="13" fill="#e3ebff" stroke="#1d44b4"/><text x="110" y="121" fill="#1d44b4" font-weight="600">ABERTO</text>
-        <rect x="280" y="104" width="110" height="26" rx="13" fill="#dcf3e1" stroke="#1f7a35"/><text x="335" y="121" fill="#1f7a35" font-weight="600">CONCLUIDO</text>
+        <rect x="60" y="104" width="100" height="26" rx="13" fill="#e3ebff" stroke="#2b59c3"/><text x="110" y="121" fill="#2b59c3" font-weight="600">ABERTO</text>
+        <rect x="280" y="104" width="110" height="26" rx="13" fill="#f8f0d3" stroke="#7a5c05"/><text x="335" y="121" fill="#7a5c05" font-weight="600">CONCLUIDO</text>
         <rect x="550" y="104" width="110" height="26" rx="13" fill="#eceef2" stroke="#5b6472"/><text x="605" y="121" fill="#5b6472" font-weight="600">CANCELADO</text>
       </g>
       <g stroke="#667085" stroke-width="1.4" fill="none" marker-end="url(#f)"><path d="M160 117H277"/><path d="M110 132C110 160 605 160 605 132"/></g>
@@ -304,7 +305,7 @@
         <rect x="350" y="20" width="130" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="415" y="42">entrega</text>
         <rect x="510" y="20" width="130" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="575" y="42">fluxo</text>
         <rect x="30" y="140" width="130" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="95" y="162">usuario</text>
-        <rect x="270" y="140" width="130" height="34" rx="6" fill="#eef3ff" stroke="#2754d7"/><text x="335" y="162">processo</text>
+        <rect x="270" y="140" width="130" height="34" rx="6" fill="#eef3ff" stroke="#2b59c3"/><text x="335" y="162">processo</text>
         <rect x="510" y="140" width="130" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="575" y="162">etapa</text>
         <rect x="30" y="245" width="130" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="95" y="267">notificacao</text>
         <rect x="190" y="245" width="150" height="34" rx="6" fill="#fff" stroke="#667085"/><text x="265" y="267">processo_historico</text>
@@ -519,6 +520,9 @@
     <tr><td><code>20aa1c1</code></td><td>Backend: apagar fluxos (migração V4)</td></tr>
     <tr><td><code>2015019</code></td><td>Frontend: botão X no lugar do texto apagar</td></tr>
     <tr><td><code>6930597</code></td><td>Frontend: apagar fluxos pela tela</td></tr>
+    <tr><td><code>35d6a9c</code></td><td>Relatório e README: nova regra de apagar e fluxos</td></tr>
+    <tr><td><code>621e744</code></td><td>Fontes IBM Plex instaladas localmente</td></tr>
+    <tr><td><code>cfb7f77</code></td><td>Frontend: identidade visual sóbria em azul, vermelho e dourado</td></tr>
   </table>
 </section>
 
