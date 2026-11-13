@@ -5,6 +5,8 @@ import Icone, { type NomeIcone } from './Icones'
 import { useAuth } from './auth'
 import Sino from './Sino'
 import Ajuda from './Ajuda'
+import Avatar from './Avatar'
+import Perfil from './Perfil'
 import BotaoTema from './tema'
 import Logo from './Logo'
 import Login from './pages/Login'
@@ -17,9 +19,6 @@ import Relatorios from './pages/Relatorios'
 import DefinirSenha from './pages/DefinirSenha'
 import Painel from './pages/Painel'
 import Inicio from './pages/Inicio'
-
-const iniciais = (nome?: string) =>
-  (nome ?? '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
 
 const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean }[] = [
   { para: '/inicio', rotulo: 'Início', icone: 'inicio' },
@@ -38,6 +37,7 @@ function Layout() {
   const [menuAberto, setMenuAberto] = useState(false)
   const [busca, setBusca] = useState('')
   const [minhas, setMinhas] = useState(0)
+  const [perfilAberto, setPerfilAberto] = useState(false)
 
   // O menu lateral fecha ao trocar de tela (no celular ele abre sobre o conteúdo).
   useEffect(() => { setMenuAberto(false) }, [local.pathname, local.search])
@@ -88,13 +88,13 @@ function Layout() {
           <BotaoTema />
           <Ajuda />
           <Sino />
-          <div className="perfil">
-            <span className="avatar" aria-hidden="true">{iniciais(usuario?.nome)}</span>
+          <button type="button" className="perfil" onClick={() => setPerfilAberto(true)} title="Meu perfil e foto">
+            <Avatar id={usuario?.id} nome={usuario?.nome} versao={usuario?.fotoVersao} tamanho={40} />
             <span className="perfil-txt">
               <b>{usuario?.nome}</b>
               <small>{usuario ? ROTULO_PAPEL[usuario.papel] : ''}{usuario?.setorNome ? ` · ${usuario.setorNome}` : ''}</small>
             </span>
-          </div>
+          </button>
           <button className="sair" onClick={sair} title="Sair do sistema"><Icone nome="sair" tamanho={16} /><span>Sair</span></button>
         </header>
         <main>
@@ -111,6 +111,7 @@ function Layout() {
           </Routes>
         </main>
       </div>
+      {perfilAberto && <Perfil fechar={() => setPerfilAberto(false)} />}
     </div>
   )
 }

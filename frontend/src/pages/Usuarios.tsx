@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api, ROTULO_PAPEL, type Papel, type PendenciasUsuario, type Setor, type Usuario } from '../api'
 import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
+import Avatar from '../Avatar'
 
 /**
  * Todos veem a equipe (papel e setor). Administrador altera papel, situação e setor e adiciona
@@ -76,7 +77,7 @@ export default function Usuarios() {
             <tbody>
               {lista.map((u) => (
                 <tr key={u.id}>
-                  <td>{u.nome}</td>
+                  <td><span className="pessoa"><Avatar id={u.id} nome={u.nome} versao={u.fotoVersao} tamanho={30} />{u.nome}</span></td>
                   <td>
                     {ehAdmin ? (
                       <select value={u.papel} disabled={u.id === eu?.id} onChange={(e) => patch(u.id, { papel: e.target.value })}>

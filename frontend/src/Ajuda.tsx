@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type Keyboard
 import { createPortal } from 'react-dom'
 import { api, type ConversaAjuda, type ConversaAjudaAberta, type MensagemAjuda } from './api'
 import { useAuth } from './auth'
+import Avatar from './Avatar'
 import Icone from './Icones'
 
 const MAX = 2000
@@ -127,6 +128,7 @@ function Atendimento({ aoMudar }: { aoMudar: () => void }) {
       <>
         <div className="chat-sub">
           <button className="link" onClick={() => { setAberta(null); aoMudar() }}><Icone nome="voltar" tamanho={16} />Conversas</button>
+          <Avatar id={aberta.usuarioId} nome={aberta.pessoa} versao={aberta.fotoVersao} tamanho={28} />
           <span><b>{aberta.pessoa}</b>{aberta.setor && <small> · {aberta.setor}</small>}</span>
         </div>
         <Conversa
@@ -146,7 +148,7 @@ function Atendimento({ aoMudar }: { aoMudar: () => void }) {
       {conversas?.length === 0 && <p className="chat-vazio">Nenhuma conversa ainda. Quando alguém pedir ajuda, aparece aqui.</p>}
       {conversas?.map((c) => (
         <button key={c.id} className={`conversa-item ${c.naoLidas > 0 ? 'nova' : ''}`} onClick={() => setAberta(c)}>
-          <span className="avatar-mini" aria-hidden="true">{c.pessoa.slice(0, 1).toUpperCase()}</span>
+          <Avatar id={c.usuarioId} nome={c.pessoa} versao={c.fotoVersao} tamanho={38} />
           <span className="conversa-txt">
             <b>{c.pessoa}{c.setor && <small> · {c.setor}</small>}</b>
             <span>{c.ultimaDeAdmin ? 'Você: ' : ''}{c.ultimaTexto}</span>

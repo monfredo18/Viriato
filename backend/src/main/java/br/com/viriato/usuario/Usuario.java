@@ -22,6 +22,10 @@ public class Usuario {
     @Enumerated(EnumType.STRING) private Papel papel;
     private boolean ativo = true;
     @Column(name = "setor_id") private Long setorId;
+    /** Foto de perfil (opcional): chave no armazenamento, tipo e versão (instante do envio, em milissegundos). */
+    @Column(name = "foto_chave") private String fotoChave;
+    @Column(name = "foto_tipo") private String fotoTipo;
+    @Column(name = "foto_versao") private Long fotoVersao;
     @Column(name = "criado_em", insertable = false, updatable = false)
     private Instant criadoEm;
 }
