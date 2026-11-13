@@ -10,6 +10,7 @@ Sistema web multi-empresa (SaaS) para cadastrar, acompanhar e automatizar proces
 | Arquivos | AWS S3 (S3 local em dev) |
 | Notificações | In-app (sininho) |
 | Ajuda | Chat interno com os administradores (botão "Ajuda") |
+| Foto de perfil | Mesmo armazenamento dos documentos (S3 ou disco) |
 | Infra | Docker / Docker Compose |
 
 > 📄 **[Relatório completo do sistema (PDF)](docs/relatorio-viriato.pdf)**: como funciona, arquitetura, regras, segurança, limitações conhecidas e próximos passos. A fonte está em `docs/relatorio/` (regerar: `node docs/relatorio/gerar-pdf.js`).

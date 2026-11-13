@@ -87,7 +87,7 @@
     <li><strong>Documentos:</strong> upload e download de arquivos por processo, guardados no AWS S3.</li>
     <li><strong>Prazos e notificações:</strong> aviso dentro do sistema (sininho), com alerta automático de prazo vencendo ou vencido.</li>
     <li><strong>Relatórios em PDF:</strong> lista dos processos com filtros por setor, responsável, empresa, período e situação, dentro do que o papel de cada pessoa permite.</li>
-    <li><strong>Interface:</strong> menu lateral com ícones (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatórios e Minhas tarefas, com a quantidade de processos em aberto sob sua responsabilidade), barra superior com busca de processos, avisos, tema claro/escuro e perfil, e uma tela de <strong>Início</strong> com os indicadores do momento (em andamento, atrasados, concluídos e tempo médio), a carga por setor ou por funcionário, os processos recentes, os prazos mais próximos e atalhos (novo processo, consultar, minhas tarefas, relatório). O azul é a cor principal, com detalhes em dourado (filetes, títulos, cabeçalhos de tabela, painéis) e em vermelho (atrasos, cancelamentos, ações destrutivas). Em telas estreitas o menu vira uma gaveta aberta pelo botão de menu.</li>
+    <li><strong>Interface:</strong> visual limpo e sóbrio: fundos lisos, bordas leves, muito espaço em branco e rótulos em texto normal. Menu lateral com ícones (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatórios e Minhas tarefas, com a quantidade de processos em aberto sob sua responsabilidade), barra superior com busca de processos, botão Ajuda, avisos, tema claro/escuro e perfil com foto, e uma tela de <strong>Início</strong> com os indicadores do momento (em andamento, atrasados, concluídos e tempo médio), a carga por setor ou por funcionário, os processos recentes, os prazos mais próximos e atalhos. O azul é a cor principal; o vermelho e o dourado aparecem só quando significam algo (atrasos, cancelamentos, ações destrutivas, avisos novos e o anel da foto). Em telas estreitas o menu vira uma gaveta aberta pelo botão de menu.</li>
   </ul>
   <figure><img src="img/inicio-escuro.png" alt="Tela de início"><figcaption>Tela de início (tema escuro): indicadores, carga por setor, atalhos, processos recentes e prazos próximos.</figcaption></figure>
 
@@ -335,6 +335,16 @@
     <li>A janela atualiza a cada poucos segundos (consulta periódica, sem conexão permanente); fora dela, o aviso no botão é conferido a cada 15 segundos.</li>
   </ul>
   <figure><img src="img/ajuda-chat.png" alt="Atendimento de ajuda"><figcaption>Figura 17 — Atendimento: o administrador responde a uma pessoa da empresa.</figcaption></figure>
+
+  <h2>3.15 Foto de perfil</h2>
+  <p>Clicando no próprio nome, na barra superior, abre-se <em>Meu perfil</em>, onde cada pessoa escolhe, troca ou remove a própria foto. Sem foto, aparecem as iniciais. A foto aparece na barra superior, na lista de usuários e no chat de ajuda.</p>
+  <ul>
+    <li><strong>Preparo no navegador:</strong> a imagem é recortada em quadrado (pelo centro) e reduzida para 320 × 320 antes do envio, então pesa poucos KB, qualquer que seja a original.</li>
+    <li><strong>Validação no servidor:</strong> aceita JPEG, PNG e WebP, de até 2 MB, e o tipo é decidido pelo <em>conteúdo</em> do arquivo (não pelo nome nem pelo tipo informado). O arquivo é guardado com nome gerado pelo sistema, no mesmo armazenamento dos documentos (S3 ou disco). Ao trocar ou remover, o arquivo antigo é apagado; ao apagar a pessoa, a foto também.</li>
+    <li><strong>Quem vê e quem mexe:</strong> qualquer pessoa da mesma empresa vê a foto (outra empresa recebe “não encontrado”); cada um troca ou remove apenas a própria; o administrador pode remover a de outra pessoa.</li>
+    <li>O navegador guarda a foto por pessoa e versão, então trocar a foto atualiza na hora e o resto vem da memória, sem novas requisições.</li>
+  </ul>
+  <figure><img src="img/perfil-foto.png" alt="Meu perfil com foto"><figcaption>Figura 18 — Meu perfil: escolher, trocar ou remover a foto.</figcaption></figure>
 </section>
 
 <!-- ============================ 4 ============================ -->
@@ -387,7 +397,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em catorze migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações) <code>V12</code> (servidor de e-mail da empresa) <code>V13</code> (retira o envio de e-mail: apaga as automações de e-mail e o servidor de e-mail guardado) e <code>V14</code> (chat de ajuda com os administradores).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em quinze migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações) <code>V12</code> (servidor de e-mail da empresa) <code>V13</code> (retira o envio de e-mail: apaga as automações de e-mail e o servidor de e-mail guardado) <code>V14</code> (chat de ajuda com os administradores) e <code>V15</code> (foto de perfil).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -583,7 +593,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>91 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>95 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>
