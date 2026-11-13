@@ -320,6 +320,21 @@
     <li>Cada etapa aceita até 10 automações; regras podem ser desligadas sem apagar.</li>
   </ul>
   <figure><img src="img/automacoes.png" alt="Automações de uma etapa"><figcaption>Figura 16 — Janela da etapa: quem pode mover para ela, requisitos e automações.</figcaption></figure>
+
+  <h2>3.14 Ajuda: chat com os administradores</h2>
+  <p>O botão <strong>Ajuda</strong>, na barra superior, abre um chat direto com os administradores da empresa. Serve para tirar uma dúvida ou relatar um problema sem sair do sistema.</p>
+  <table>
+    <tr><th style="width:44mm">Quem</th><th>Como usa</th></tr>
+    <tr><td>Gestor e usuário</td><td>Têm <strong>uma conversa própria</strong> com a administração. Escrevem, e as respostas chegam na mesma janela, sem recarregar a página. Um aviso vermelho no botão indica resposta nova.</td></tr>
+    <tr><td>Administrador</td><td>O botão abre o <strong>atendimento</strong>: a lista de conversas da empresa (com quem escreveu, o setor, a última mensagem e quantas ainda não viu). <strong>Qualquer administrador</strong> responde; a mensagem mostra o nome de quem respondeu. O aviso no botão soma as mensagens não vistas de todas as conversas.</td></tr>
+  </table>
+  <ul>
+    <li>Cada pessoa só vê a própria conversa; as rotas do atendimento são exclusivas de administrador, e conversas de outra empresa respondem “não encontrado”.</li>
+    <li>Mensagens de até 2.000 caracteres (Enter envia; Shift+Enter quebra a linha). O histórico mostra as 200 mais recentes.</li>
+    <li>Ao apagar uma pessoa, a conversa dela é apagada junto. O nome de quem respondeu fica guardado na mensagem, mesmo que o administrador seja removido depois.</li>
+    <li>A janela atualiza a cada poucos segundos (consulta periódica, sem conexão permanente); fora dela, o aviso no botão é conferido a cada 15 segundos.</li>
+  </ul>
+  <figure><img src="img/ajuda-chat.png" alt="Atendimento de ajuda"><figcaption>Figura 17 — Atendimento: o administrador responde a uma pessoa da empresa.</figcaption></figure>
 </section>
 
 <!-- ============================ 4 ============================ -->
@@ -372,7 +387,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em treze migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações) <code>V12</code> (servidor de e-mail da empresa) e <code>V13</code> (retira o envio de e-mail: apaga as automações de e-mail e o servidor de e-mail guardado).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em catorze migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações) <code>V12</code> (servidor de e-mail da empresa) <code>V13</code> (retira o envio de e-mail: apaga as automações de e-mail e o servidor de e-mail guardado) e <code>V14</code> (chat de ajuda com os administradores).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -568,7 +583,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>87 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>91 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>

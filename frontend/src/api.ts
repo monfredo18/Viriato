@@ -121,3 +121,6 @@ export const ROTULO_AUTOMACAO: Record<TipoAutomacao, string> = {
   GERAR_DOCUMENTO: 'Gerar a ficha do processo (PDF)', WEBHOOK: 'Chamar outro sistema (webhook)',
 }
 export interface Notificacao { id: number; titulo: string; mensagem: string | null; empresaNome: string | null; entregaNome: string | null; autorNome: string | null; processoId: number | null; lida: boolean; criadoEm: string }
+export interface MensagemAjuda { id: number; autorNome: string; deAdmin: boolean; texto: string; criadoEm: string }
+export interface ConversaAjuda { id: number; pessoa: string; setor: string | null; ultimaTexto: string | null; ultimaDeAdmin: boolean; atualizadoEm: string; naoLidas: number }
+export interface ConversaAjudaAberta { id: number; pessoa: string; setor: string | null; mensagens: MensagemAjuda[] }
