@@ -9,6 +9,7 @@ Sistema web multi-empresa (SaaS) para cadastrar, acompanhar e automatizar proces
 | Banco | MySQL 8 (migrações com Flyway) |
 | Arquivos | AWS S3 (S3 local em dev) |
 | Notificações | In-app (sininho) |
+| Ajuda | Chat interno com os administradores (botão "Ajuda") |
 | Infra | Docker / Docker Compose |
 
 > 📄 **[Relatório completo do sistema (PDF)](docs/relatorio-viriato.pdf)**: como funciona, arquitetura, regras, segurança, limitações conhecidas e próximos passos. A fonte está em `docs/relatorio/` (regerar: `node docs/relatorio/gerar-pdf.js`).
@@ -42,6 +43,7 @@ backend/src/main/java/br/com/viriato/
   processo/    processos, movimentação, histórico, atribuição, cancelamento
   documento/   upload/download (S3), nomes sanitizados
   notificacao/ avisos no sistema + agendador de prazos
+  ajuda/       chat de ajuda entre as pessoas da empresa e os administradores
   comum/       tratamento de erros, datas
 ```
 
