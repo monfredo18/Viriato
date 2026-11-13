@@ -9,7 +9,7 @@ const dec = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1,
 const duracao = (horas: number) => (horas < 24 ? `${Math.max(1, Math.round(horas))} h` : `${dec(horas / 24)} d`)
 
 /** Barra fina dividida em "no prazo" (azul) e "atrasados" (vermelho); o comprimento é proporcional ao maior total da lista. */
-function BarraCarga({ abertos, atrasados, maximo, rotulo }: { abertos: number; atrasados: number; maximo: number; rotulo: string }) {
+export function BarraCarga({ abertos, atrasados, maximo, rotulo }: { abertos: number; atrasados: number; maximo: number; rotulo: string }) {
   const noPrazo = abertos - atrasados
   const largura = maximo > 0 ? (abertos / maximo) * 100 : 0
   return (
