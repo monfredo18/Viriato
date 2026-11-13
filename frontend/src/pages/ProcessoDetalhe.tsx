@@ -178,10 +178,10 @@ export default function ProcessoDetalhe() {
               <ul>
                 {execucoes.map((x) => (
                   <li key={x.id} className={`exec-${x.status.toLowerCase()}`}>
-                    <span className="req-marca" aria-hidden="true">{x.status === 'OK' ? '✓' : x.status === 'FALHA' ? '✕' : '–'}</span>
+                    <span className="req-marca" aria-hidden="true">{x.status === 'OK' ? '✓' : '✕'}</span>
                     <span className="req-texto">
                       <b>{ROTULO_AUTOMACAO[x.tipo]}{x.evento === 'CANCELADO' ? ' (ao cancelar)' : x.etapa ? ` — ao entrar em ${x.etapa}` : ''}</b>
-                      <small>{{ OK: 'Feito', FALHA: 'Falhou', IGNORADA: 'Não executada' }[x.status]}{x.mensagem && <> · {x.mensagem}</>} · {new Date(x.executadoEm).toLocaleString('pt-BR')}</small>
+                      <small>{{ OK: 'Feito', FALHA: 'Falhou' }[x.status]}{x.mensagem && <> · {x.mensagem}</>} · {new Date(x.executadoEm).toLocaleString('pt-BR')}</small>
                     </span>
                   </li>
                 ))}

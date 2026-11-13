@@ -81,11 +81,11 @@
     <li><strong>Processos:</strong> abertos com empresa e entrega (o departamento e o responsável dependem do papel de quem abre); cada setor só vê os próprios processos, e só o administrador vê todos; busca e filtros, movimentação entre etapas respeitando as regras do fluxo, atribuição, comentários e cancelamento.</li>
     <li><strong>Requisitos por etapa:</strong> cada etapa pode exigir documentos anexados ou confirmações antes de o processo avançar.</li>
     <li><strong>Aprovação em etapas:</strong> etapas que só gestor (ou só administrador) pode receber; os demais pedem aprovação.</li>
-    <li><strong>Automações:</strong> ao entrar numa etapa (ou ao cancelar), o sistema gera a ficha do processo em PDF, avisa a empresa atendida por e-mail e chama outro sistema por webhook.</li>
+    <li><strong>Automações:</strong> ao entrar numa etapa (ou ao cancelar), o sistema gera a ficha do processo em PDF e chama outro sistema por webhook.</li>
     <li><strong>Painel de indicadores:</strong> atrasados por setor, tempo médio por etapa e carga por funcionário.</li>
     <li><strong>Histórico:</strong> cada ação fica registrada com autor, data e comentário.</li>
     <li><strong>Documentos:</strong> upload e download de arquivos por processo, guardados no AWS S3.</li>
-    <li><strong>Prazos e notificações:</strong> aviso dentro do sistema (sininho) e por e-mail, com alerta automático de prazo vencendo ou vencido.</li>
+    <li><strong>Prazos e notificações:</strong> aviso dentro do sistema (sininho), com alerta automático de prazo vencendo ou vencido.</li>
     <li><strong>Relatórios em PDF:</strong> lista dos processos com filtros por setor, responsável, empresa, período e situação, dentro do que o papel de cada pessoa permite.</li>
     <li><strong>Interface:</strong> visual sóbrio, com o azul como cor principal e detalhes constantes em dourado (filete sob a barra superior, títulos, cabeçalhos de tabela, painéis, histórico e seleção de texto) e em vermelho (aba ativa, atrasos, cancelamentos, janelas de ação destrutiva e a ponta da barra superior), nos temas claro e escuro, com botão de lua e sol.</li>
   </ul>
@@ -122,10 +122,9 @@
         <rect x="352" y="164" width="126" height="20" rx="4" fill="#f5f7fa" stroke="#d0d5dd"/><text x="415" y="178" font-size="10.5">Agendador de prazos</text>
         <rect x="570" y="12" width="120" height="52" rx="8" fill="#fff" stroke="#667085"/><text x="630" y="36" font-weight="700">MySQL 8</text><text x="630" y="52" fill="#667085" font-size="10.5">dados + Flyway</text>
         <rect x="570" y="99" width="120" height="52" rx="8" fill="#fff" stroke="#667085"/><text x="630" y="123" font-weight="700">AWS S3</text><text x="630" y="139" fill="#667085" font-size="10.5">documentos</text>
-        <rect x="570" y="186" width="120" height="52" rx="8" fill="#fff" stroke="#667085"/><text x="630" y="210" font-weight="700">SMTP / SES</text><text x="630" y="226" fill="#667085" font-size="10.5">e-mails</text>
       </g>
       <g stroke="#667085" stroke-width="1.4" fill="none" marker-end="url(#s)">
-        <path d="M130 125H172"/><path d="M295 125H337"/><path d="M490 100C530 100 530 40 567 40"/><path d="M490 125H567"/><path d="M490 150C530 150 530 212 567 212"/>
+        <path d="M130 125H172"/><path d="M295 125H337"/><path d="M490 100C530 100 530 40 567 40"/><path d="M490 125H567"/>
       </g>
     </svg>
     <figcaption>Figura 1 — Visão geral. O navegador só fala com o Nginx; o Nginx entrega o site e repassa <code>/api</code> ao backend.</figcaption>
@@ -135,11 +134,10 @@
   <table>
     <tr><th style="width:32mm">Camada</th><th>Tecnologia</th><th>Papel</th></tr>
     <tr><td>Interface</td><td>React 18, TypeScript, Vite, React Router</td><td>Telas, rotas, tema claro/escuro</td></tr>
-    <tr><td>Backend</td><td>Java 21, Spring Boot 3.3 (Web, Data JPA, Security, Validation, Mail)</td><td>API REST, regras, segurança</td></tr>
+    <tr><td>Backend</td><td>Java 21, Spring Boot 3.3 (Web, Data JPA, Security, Validation)</td><td>API REST, regras, segurança</td></tr>
     <tr><td>Banco</td><td>MySQL 8.4, Flyway</td><td>Dados e versionamento do esquema</td></tr>
     <tr><td>Autenticação</td><td>JWT (jjwt), BCrypt</td><td>Login sem sessão no servidor</td></tr>
     <tr><td>Arquivos</td><td>AWS S3 (SDK v2)</td><td>Documentos anexados</td></tr>
-    <tr><td>E-mail</td><td>Spring Mail (SMTP; AWS SES em produção)</td><td>Notificações por e-mail</td></tr>
     <tr><td>Documentação da API</td><td>springdoc OpenAPI / Swagger UI</td><td>Referência interativa em <code>/swagger-ui.html</code></td></tr>
     <tr><td>Infraestrutura</td><td>Docker, Docker Compose, Nginx</td><td>Execução local e base para produção</td></tr>
     <tr><td>Qualidade</td><td>JUnit 5, MockMvc, H2, GitHub Actions</td><td>Testes automáticos e CI</td></tr>
@@ -153,7 +151,7 @@
     <tr><td><code>fluxo</code></td><td>Fluxos, etapas e transições por empresa.</td></tr>
     <tr><td><code>processo</code></td><td>Núcleo do sistema: processos, movimentação, histórico, atribuição, cancelamento.</td></tr>
     <tr><td><code>documento</code></td><td>Upload, download e remoção de arquivos, com armazenamento abstraído (S3).</td></tr>
-    <tr><td><code>notificacao</code></td><td>Avisos no sistema, envio de e-mail e agendador de prazos.</td></tr>
+    <tr><td><code>notificacao</code></td><td>Avisos no sistema e agendador de prazos.</td></tr>
     <tr><td><code>comum</code></td><td>Tratamento padronizado de erros e utilitários de data.</td></tr>
   </table>
 </section>
@@ -167,7 +165,7 @@
   <p>Entra-se com <strong>nome e senha</strong>; não há campo de e-mail e <em>não existe cadastro aberto de empresas</em>. O primeiro administrador nasce da configuração do ambiente (<code>ADMIN_NOME</code>, <code>ADMIN_SENHA</code> e <code>ADMIN_EMPRESA</code>) na primeira vez em que o sistema sobe com o banco vazio; nesse momento o sistema também cria o setor <strong>Geral</strong>, a entrega <strong>Atendimento geral</strong> e um <strong>fluxo padrão</strong>. As empresas atendidas são cadastradas depois pelo administrador ou pelo gestor.</p>
   <figure><img src="img/login.png" alt="Tela de login"><figcaption>Figura 2 — Tela de login: apenas Nome e Senha.</figcaption></figure>
   <p>A <strong>senha inicial é provisória</strong>. Isso vale para o administrador criado pela configuração, para quem é cadastrado por administrador ou gestor e para quem teve a senha zerada. Ao entrar com uma senha provisória, a pessoa vê somente a tela <em>Crie a sua senha</em> (duas digitações iguais, mínimo de 8 caracteres e diferente da senha inicial); o <strong>servidor</strong> também bloqueia todo o resto da API até a troca ser feita, então não dá para contornar pela tela. Depois disso a senha inicial deixa de valer.</p>
-  <p>O <strong>nome</strong> é a identificação de acesso: não diferencia maiúsculas de minúsculas, é único na empresa e não aceita <code>@</code>. Se duas contas ativas tiverem o mesmo nome e a mesma senha, o acesso é recusado até o administrador diferenciar os nomes. Contas criadas antes desta versão ainda podem entrar com o e-mail; o e-mail não é mais pedido, exibido nem exposto pela API, e os avisos por e-mail só chegam a quem tem um e-mail cadastrado (as contas novas não têm).</p>
+  <p>O <strong>nome</strong> é a identificação de acesso: não diferencia maiúsculas de minúsculas, é único na empresa e não aceita <code>@</code>. Se duas contas ativas tiverem o mesmo nome e a mesma senha, o acesso é recusado até o administrador diferenciar os nomes. Contas criadas antes desta versão ainda podem entrar com o e-mail; o e-mail não é mais pedido, exibido nem exposto pela API.</p>
   <p><strong>Zerar senha:</strong> somente o administrador, e vale para funcionário, gestor ou outro administrador (não para a própria conta). Ao zerar, ele informa na hora a nova senha (provisória); a senha antiga deixa de valer, <strong>as sessões abertas da pessoa são encerradas</strong> e, no próximo acesso, ela cria uma senha própria.</p>
 
   <h2>3.2 Login e sessão</h2>
@@ -258,7 +256,7 @@
 
   <h2>3.8 Prazos e notificações</h2>
   <p>Uma tarefa agendada roda todos os dias às 08:00 (America/Sao_Paulo). Ela procura processos abertos, com responsável, cujo prazo vence em até 1 dia ou já venceu e que ainda não foram alertados naquela etapa. Para cada um, avisa o responsável (<em>Prazo próximo do vencimento</em> ou <em>Prazo vencido</em>) e marca como alertado. O resultado é <strong>um alerta por etapa</strong>; ele volta a valer quando o processo muda de etapa ou de responsável.</p>
-  <p>Cada notificação diz <strong>o que foi feito e quem fez</strong>, no título (por exemplo <em>Processo movido para Revisão - Nome do funcionário</em>), e informa a <strong>empresa</strong>, a <strong>entrega</strong>, a <strong>data</strong> e a <strong>hora</strong>. Quem recebe é <strong>somente o gestor do setor</strong> do processo: o responsável, os demais funcionários, o administrador e os gestores de outros setores não são avisados, e quem fez a ação também não é avisado de si mesmo. O alerta de prazo segue a mesma regra (autor: Sistema). A notificação é gravada no sistema (sininho no topo, com contador de não lidas, atualizado a cada 30 segundos) e enviada por e-mail, com as mesmas informações, de forma assíncrona. O e-mail é <em>best-effort</em>: se o servidor de e-mail falhar, isso é registrado em log e a operação principal não é afetada.</p>
+  <p>Cada notificação diz <strong>o que foi feito e quem fez</strong>, no título (por exemplo <em>Processo movido para Revisão - Nome do funcionário</em>), e informa a <strong>empresa</strong>, a <strong>entrega</strong>, a <strong>data</strong> e a <strong>hora</strong>. Quem recebe é <strong>somente o gestor do setor</strong> do processo: o responsável, os demais funcionários, o administrador e os gestores de outros setores não são avisados, e quem fez a ação também não é avisado de si mesmo. O alerta de prazo segue a mesma regra (autor: Sistema). A notificação é gravada no sistema (sininho no topo, com contador de não lidas, atualizado a cada 30 segundos). O sistema não envia e-mail.</p>
   <figure><img src="img/notificacoes.png" alt="Notificações"><figcaption>Figura 10 — Painel de notificações; as não lidas têm destaque e levam direto ao processo.</figcaption></figure>
   <h2>3.9 Relatórios</h2>
   <p>A aba <em>Relatórios</em> gera um PDF com os processos, e está aberta a todos os papéis. O que cada pessoa pode abranger é decidido pelo servidor, a partir do papel, e não pelo que a tela envia:</p>
@@ -307,28 +305,17 @@
   </ul>
   <figure><img src="img/painel.png" alt="Painel de indicadores"><figcaption>Figura 15 — Painel do administrador: atrasados por setor, tempo médio por etapa e carga por funcionário.</figcaption></figure>
 
-  <h2>3.13 Servidor de e-mail</h2>
-  <p>Para os e-mails chegarem de verdade, o <strong>administrador</strong> configura o servidor SMTP da empresa em <em>Cadastros → E-mail</em>: provedor (Gmail, Microsoft 365, Brevo ou outro), servidor, porta, segurança (STARTTLS, SSL ou nenhuma), usuário, senha e e-mail do remetente. O botão <strong>Enviar e-mail de teste</strong> usa a configuração salva e, se falhar, mostra o motivo em linguagem comum (usuário ou senha recusados, com a dica da <em>senha de aplicativo</em> do Gmail e do Microsoft 365; servidor não encontrado; conexão recusada; falha de TLS/SSL).</p>
-  <ul>
-    <li>Com o servidor configurado, as <strong>automações</strong> e os <strong>avisos por e-mail</strong> da empresa saem por ele; sem configuração vale o servidor padrão do sistema (variáveis <code>MAIL_*</code>; no Docker local, o <em>Mailpit</em>, que só <strong>captura</strong> e-mails de teste e nunca entrega em caixas de entrada reais; a tela avisa quando é esse o caso).</li>
-    <li>A <strong>senha é guardada criptografada</strong> (AES-256-GCM) e nunca volta pela API; deixar o campo em branco ao salvar mantém a senha guardada. A chave vem de <code>CHAVE_CIFRA</code> (ou do <code>JWT_SECRET</code>): se mudar, é preciso informar a senha de novo.</li>
-    <li>Com STARTTLS, o sistema exige a criptografia (não cai para texto puro) e confere o certificado do servidor. Em produção o servidor <strong>não pode ser da rede interna</strong>.</li>
-    <li>Cada empresa tem o seu servidor; uma não vê nem herda a configuração da outra.</li>
-  </ul>
-
-  <h2>3.14 Automações</h2>
+  <h2>3.13 Automações</h2>
   <p>Em <em>Fluxos → Configurar</em> (etapa) e <em>Ao cancelar</em> (fluxo), administrador e gestor definem regras que o sistema executa sozinho <strong>depois que o processo entra na etapa</strong> (inclusive a inicial, na criação) ou é <strong>cancelado</strong>:</p>
   <table>
     <tr><th style="width:44mm">Regra</th><th>O que faz</th></tr>
     <tr><td>Gerar a ficha do processo</td><td>Cria um PDF com os dados e o histórico do processo e o anexa a ele, marcado como <em>gerado automaticamente</em>. Uma por etapa.</td></tr>
-    <tr><td>Avisar a empresa por e-mail</td><td>Envia ao e-mail da empresa atendida (cadastrado em <em>Cadastros → Empresas</em>, opcional) um texto com variáveis (<code>{{empresa}}</code>, <code>{{numero}}</code>, <code>{{titulo}}</code>, <code>{{entrega}}</code>, <code>{{setor}}</code>, <code>{{responsavel}}</code>, <code>{{etapa}}</code>, <code>{{prazo}}</code>, <code>{{situacao}}</code>), com a ficha em anexo se a regra de documento rodou antes.</td></tr>
     <tr><td>Chamar outro sistema (webhook)</td><td>Envia um POST com JSON do processo (evento <code>ENTROU_NA_ETAPA</code> ou <code>CANCELADO</code>). Com segredo, o cabeçalho <code>X-Viriato-Assinatura</code> traz <code>sha256=</code> e o HMAC-SHA256 do corpo, para quem recebe conferir a origem.</td></tr>
   </table>
   <p>Garantias e cuidados:</p>
   <ul>
-    <li><strong>Falha nunca desfaz o movimento.</strong> As regras rodam depois da confirmação no banco, em segundo plano, na ordem documento, e-mail, webhook. Cada execução fica registrada no processo (<em>Feito</em>, <em>Falhou</em> ou <em>Não executada</em>, por exemplo empresa sem e-mail ou envio de e-mail desligado no ambiente).</li>
+    <li><strong>Falha nunca desfaz o movimento.</strong> As regras rodam depois da confirmação no banco, em segundo plano, na ordem documento, webhook. Cada execução fica registrada no processo (<em>Feito</em> ou <em>Falhou</em>, com a mensagem do que aconteceu).</li>
     <li><strong>Webhook seguro:</strong> só <code>https://</code>, sem usuário e senha na URL e <strong>nunca para a rede interna</strong> (localhost, endereços privados, 169.254.x.x e semelhantes são recusados na configuração e de novo, resolvendo o nome, na hora de enviar); sem redirecionamentos e com prazo de 10 s. O segredo nunca volta pela API, e só administrador e gestor consultam as regras.</li>
-    <li>O assunto do e-mail não aceita quebra de linha (evita injeção de cabeçalhos).</li>
     <li>Cada etapa aceita até 10 automações; regras podem ser desligadas sem apagar.</li>
   </ul>
   <figure><img src="img/automacoes.png" alt="Automações de uma etapa"><figcaption>Figura 16 — Janela da etapa: quem pode mover para ela, requisitos e automações.</figcaption></figure>
@@ -384,7 +371,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em doze migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações e e-mail da empresa) e <code>V12</code> (servidor de e-mail da empresa).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em treze migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações) <code>V12</code> (servidor de e-mail da empresa) e <code>V13</code> (retira o envio de e-mail: apaga as automações de e-mail e o servidor de e-mail guardado).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -428,8 +415,7 @@
     <tr><td><code>etapa</code></td><td>Nome, ordem, <code>prazo_dias</code> (opcional), flags <code>inicial</code> e <code>final_</code>.</td></tr>
     <tr><td><code>etapa_requisito</code></td><td>Requisitos para sair da etapa: tipo (DOCUMENTO ou CONFIRMACAO) e descrição. <code>processo_requisito</code> guarda as confirmações feitas em cada processo (quem e quando).</td></tr>
     <tr><td><code>processo_aprovacao</code></td><td>Pedidos de aprovação: etapa de origem e destino, quem pediu e quando, status (PENDENTE, APROVADA, RECUSADA, CANCELADA), quem decidiu e o motivo. A etapa tem também <code>papel_minimo</code> (quem pode movê-la para lá).</td></tr>
-    <tr><td><code>tenant_email</code></td><td>Servidor SMTP da empresa: servidor, porta, segurança, usuário, <strong>senha criptografada</strong> e remetente.</td></tr>
-    <tr><td><code>automacao_regra</code></td><td>Regras por fluxo: evento (ENTRAR_ETAPA ou CANCELADO), etapa, tipo, assunto e mensagem do e-mail, URL e segredo do webhook, ativa. <code>automacao_execucao</code> registra cada execução (status e mensagem).</td></tr>
+    <tr><td><code>automacao_regra</code></td><td>Regras por fluxo: evento (ENTRAR_ETAPA ou CANCELADO), etapa, tipo, URL e segredo do webhook, ativa. <code>automacao_execucao</code> registra cada execução (status e mensagem).</td></tr>
     <tr><td><code>transicao</code></td><td>Par de etapas (de, para), único; define os movimentos permitidos.</td></tr>
     <tr><td><code>processo</code></td><td>Número (o da empresa; repete entre processos da mesma empresa), título (gerado), descrição, <code>cliente_id</code>, <code>entrega_id</code>, <code>setor_id</code>, fluxo, etapa atual, responsável, status, <code>prazo_etapa</code>, <code>prazo_alertado</code>, <code>campos_extras</code> (JSON livre em texto).</td></tr>
     <tr><td><code>processo_historico</code></td><td>Ação (CRIADO, MOVIDO, COMENTARIO, ATRIBUIDO, CANCELADO), autor, etapas de origem e destino, comentário, data.</td></tr>
@@ -469,8 +455,6 @@
     <tr><td>POST, PATCH, DELETE</td><td><code>/fluxos/{id}/etapas/{etapaId}/requisitos[/{reqId}]</code></td><td>Cria, renomeia e remove requisitos para sair da etapa (<code>tipo</code>, <code>descricao</code>)</td><td>Admin, Gestor</td></tr>
     <tr><td>PATCH</td><td><code>/fluxos/{id}/etapas/{etapaId}</code></td><td>Define quem pode mover processos para a etapa (<code>papelMinimo</code>: USUARIO, GESTOR ou ADMIN)</td><td>Admin, Gestor</td></tr>
     <tr><td>GET, POST, PATCH, DELETE</td><td><code>/fluxos/{id}/automacoes[/{regraId}]</code></td><td>Lista e gerencia as regras de automação do fluxo (o segredo nunca volta)</td><td>Admin, Gestor</td></tr>
-    <tr><td>GET, PUT, DELETE</td><td><code>/configuracao/email</code></td><td>Consulta, grava e remove o servidor de e-mail da empresa (a senha nunca volta; vazio ao gravar mantém a atual)</td><td>Admin</td></tr>
-    <tr><td>POST</td><td><code>/configuracao/email/teste</code></td><td>Envia um e-mail de teste (<code>para</code>) e devolve o resultado ou o motivo da falha</td><td>Admin</td></tr>
     <tr><td>GET</td><td><code>/indicadores</code></td><td>Painel: <code>dias</code> (período) e <code>setorId</code> (só vale para o administrador)</td><td>todos, dentro do papel</td></tr>
     <tr><td>PATCH</td><td><code>/fluxos/{id}</code></td><td>Ativa ou desativa</td><td>Admin, Gestor</td></tr>
     <tr><td>GET</td><td><code>/processos</code></td><td>Lista com filtros: <code>status</code>, <code>etapaId</code>, <code>responsavelId</code>, <code>clienteId</code>, <code>setorId</code>, <code>entregaId</code>, <code>busca</code>, <code>atrasados</code>, <code>meus</code>, <code>pagina</code>, <code>tamanho</code></td><td>todos</td></tr>
@@ -552,7 +536,6 @@
     <tr><td>backend</td><td>API Spring Boot</td><td>localhost:8080 (Swagger em <code>/swagger-ui.html</code>)</td></tr>
     <tr><td>mysql</td><td>Banco MySQL 8.4, com volume persistente</td><td>interno</td></tr>
     <tr><td>s3</td><td>S3 simulado (<code>adobe/s3mock</code>) só para desenvolvimento</td><td>localhost:9090</td></tr>
-    <tr><td>mailpit</td><td>Captura os e-mails enviados</td><td>localhost:8025</td></tr>
   </table>
 
   <h2>Configuração por variáveis de ambiente</h2>
@@ -562,10 +545,8 @@
     <tr><td><code>ADMIN_NOME</code>, <code>ADMIN_SENHA</code>, <code>ADMIN_EMPRESA</code></td><td>Primeiro administrador e nome da empresa, criados só com o banco vazio; a senha é provisória. Defina uma senha inicial própria.</td></tr>
     <tr><td><code>DB_URL</code>, <code>DB_USER</code>, <code>DB_PASSWORD</code></td><td>Conexão com o MySQL.</td></tr>
     <tr><td><code>S3_BUCKET</code>, <code>S3_REGIAO</code></td><td>Bucket real. Sem <code>S3_ENDPOINT</code>, usa a AWS com credenciais da função (IAM Role).</td></tr>
-    <tr><td><code>MAIL_*</code></td><td>Servidor SMTP (por exemplo AWS SES) e remetente.</td></tr>
     <tr><td><code>ARMAZENAMENTO</code>, <code>ARMAZENAMENTO_PASTA</code></td><td><code>s3</code> (padrão) ou <code>local</code> (disco, só para desenvolvimento sem S3).</td></tr>
-    <tr><td><code>AUTOMACAO_ASSINCRONA</code>, <code>AUTOMACAO_PERMITIR_REDE_INTERNA</code></td><td>Executar as automações em segundo plano (padrão) e permitir webhook em <code>http://</code> e servidor de e-mail na rede interna (<strong>só desenvolvimento</strong>; em produção deixe desligado).</td></tr>
-    <tr><td><code>CHAVE_CIFRA</code></td><td>Chave para criptografar segredos guardados no banco (senha do servidor de e-mail). Sem ela, usa o <code>JWT_SECRET</code>; se a chave mudar, a senha do e-mail precisa ser informada de novo.</td></tr>
+    <tr><td><code>AUTOMACAO_ASSINCRONA</code>, <code>AUTOMACAO_PERMITIR_REDE_INTERNA</code></td><td>Executar as automações em segundo plano (padrão) e permitir webhook em <code>http://</code> e na rede interna (<strong>só desenvolvimento</strong>; em produção deixe desligado).</td></tr>
     <tr><td><code>CORS_ORIGINS</code></td><td>Origens permitidas.</td></tr>
     <tr><td><code>PRAZOS_CRON</code>, <code>PRAZOS_ANTECEDENCIA_DIAS</code></td><td>Horário do alerta de prazo e antecedência em dias.</td></tr>
   </table>
@@ -575,7 +556,6 @@
     <li><strong>ECS Fargate</strong> para backend e frontend (imagens dos Dockerfiles), atrás de um balanceador com HTTPS.</li>
     <li><strong>RDS MySQL</strong> com backups automáticos.</li>
     <li><strong>S3</strong> com bloqueio de acesso público e versionamento; a função do ECS com permissão só nesse bucket.</li>
-    <li><strong>SES</strong> para o envio de e-mails e um domínio verificado.</li>
     <li>Segredos no AWS Secrets Manager, logs no CloudWatch.</li>
   </ul>
   <p>A integração contínua (GitHub Actions) compila e testa o backend e compila o frontend a cada envio.</p>
@@ -587,11 +567,11 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>99 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>87 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>
-    <tr><td>Automações: configuração e permissões, ficha em PDF, e-mail com variáveis e anexo, webhook assinado (servidor local), falha isolada do movimento, proteção contra rede interna, armazenamento local</td><td class="ok">coberto por teste (15 testes)</td></tr>
+    <tr><td>Automações: configuração e permissões, ficha em PDF, webhook assinado (servidor local), falha isolada do movimento, proteção contra rede interna, armazenamento local</td><td class="ok">coberto por teste (10 testes)</td></tr>
     <tr><td>Ciclo completo do processo: criar, avançar por todas as etapas, concluir, histórico</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Isolamento entre empresas (processo, comentário, documentos, download, fluxo alheio)</td><td class="ok">coberto por teste</td></tr>
     <tr><td>Permissões por papel e transição fora do fluxo</td><td class="ok">coberto por teste</td></tr>
@@ -605,7 +585,6 @@
     <tr><td>Migrações V1 a V5 e a aplicação contra MySQL 8 e S3 simulado reais (teste ponta a ponta via HTTP), incluindo as exclusões com chaves estrangeiras, a V5 aplicada sobre dados da versão anterior e a geração do PDF com várias páginas</td><td class="ok">executado, incluindo acentuação, permissões e isolamento</td></tr>
     <tr><td>Interface em navegador automatizado: os três papéis (o que cada um vê e pode alterar), formulário de processo com entrega dependente do setor, colunas da lista, situação de funcionários, apagar cadastros e fluxos pelo X com confirmação, recusa de item em uso, concluir processo e então apagar, número da empresa e dos processos, aba Relatórios com download e leitura do PDF por papel, dois temas</td><td class="ok">executado (103 verificações em 5 suítes, todas concluídas)</td></tr>
     <tr><td>Novas telas em navegador automatizado: configuração de requisitos, aprovação e automações pelo gestor; checklist, pedido de aprovação e execução das automações pelo funcionário; painel nos três papéis e nos dois temas</td><td class="ok">verificado</td></tr>
-    <tr><td>Servidor de e-mail: só administrador, validações, senha criptografada e nunca devolvida, teste com servidor SMTP que exige autenticação (senha errada, certa, porta fechada), volta ao padrão, isolamento entre empresas, uso pelas automações, rede interna recusada em produção</td><td class="ok">coberto por teste (8 testes) e em navegador contra um servidor SMTP com senha</td></tr>
     <tr><td>Build do frontend com verificação de tipos</td><td class="ok">passa</td></tr>
   </table>
   <p>Esse teste com MySQL real encontrou dois defeitos que o H2 não revelava (parâmetro de codificação da conexão e health check de e-mail derrubando a aplicação); ambos já foram corrigidos.</p>
@@ -613,7 +592,7 @@
   <h2>O que ainda não foi verificado</h2>
   <ul>
     <li>O <code>docker compose up --build</code> completo, com as imagens do backend e do frontend rodando em contêiner (as peças foram testadas separadamente).</li>
-    <li>AWS S3 e envio de e-mail por provedores reais como Gmail ou Microsoft 365 (foram usados simuladores, inclusive um servidor SMTP com autenticação; STARTTLS/SSL com certificado real não foi exercitado; o envio de e-mail das automações foi verificado com um servidor de e-mail simulado nos testes, e o webhook com um servidor HTTP local).</li>
+    <li>AWS S3 real (foi usado um simulador).</li>
     <li>Desempenho e carga, e comportamento com muitas empresas e processos.</li>
     <li>Navegadores além do Chromium, aparelhos móveis e acessibilidade formal.</li>
     <li>Testes automáticos do frontend (hoje só há o build e verificação manual automatizada).</li>
@@ -666,7 +645,7 @@
   <h2>Antes de qualquer uso real (segurança)</h2>
   <ol>
     <li>Validar o usuário a cada requisição (ou usar tokens curtos com renovação) para que desativar e mudar papel tenham efeito imediato.</li>
-    <li>Limite de tentativas de login e recuperação de senha por e-mail.</li>
+    <li>Limite de tentativas de login e recuperação de senha.</li>
     <li>Trocar o segredo JWT e tirar valores padrão do ambiente de produção.</li>
     <li>Lista de tipos de arquivo permitidos e verificação de vírus nos uploads.</li>
   </ol>

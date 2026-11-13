@@ -1,8 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { api, ROTULO_AUTOMACAO, type Etapa, type EventoAutomacao, type Fluxo, type RegraAutomacao, type TipoAutomacao } from '../api'
 
-const VARIAVEIS = ['empresa', 'numero', 'titulo', 'entrega', 'setor', 'responsavel', 'etapa', 'prazo', 'situacao']
-
 /**
  * Regras de automação de uma etapa (ao entrar nela) ou do fluxo (ao cancelar um processo, quando {@code etapa} é nula).
  * Cada alteração grava na hora e pede à tela de fluxos que recarregue.
@@ -13,8 +11,8 @@ export function AutomacoesSecao({ fluxo, etapa, regras, recarregar }: {
   const evento: EventoAutomacao = etapa ? 'ENTRAR_ETAPA' : 'CANCELADO'
   const minhas = regras.filter((r) => r.evento === evento && (!etapa || r.etapaId === etapa.id))
   const jaGera = minhas.some((r) => r.tipo === 'GERAR_DOCUMENTO')
-  const [tipo, setTipo] = useState<TipoAutomacao>('EMAIL_EMPRESA')
-  const [f, setF] = useState({ assunto: '', mensagem: '', anexar: false, url: '', segredo: '' })
+  const [tipo, setTipo] = useState<TipoAutomacao>('WEBHOOK')
+  const [f, setF] = useState({ url: '', segredo: '' })
   const [erro, setErro] = useState('')
   const base = `/fluxos/${fluxo.id}/automacoes`
 
@@ -33,15 +31,13 @@ export function AutomacoesSecao({ fluxo, etapa, regras, recarregar }: {
     tentar(async () => {
       await api.post(base, {
         evento, etapaId: etapa?.id ?? null, tipo,
-        ...(tipo === 'EMAIL_EMPRESA' ? { assunto: f.assunto, mensagem: f.mensagem, anexarDocumento: f.anexar } : {}),
         ...(tipo === 'WEBHOOK' ? { url: f.url, segredo: f.segredo || null } : {}),
       })
-      setF({ assunto: '', mensagem: '', anexar: false, url: '', segredo: '' })
+      setF({ url: '', segredo: '' })
     })
   }
 
   const resumo = (r: RegraAutomacao) => {
-    if (r.tipo === 'EMAIL_EMPRESA') return `Assunto: ${r.assunto}${r.anexarDocumento ? ' · com a ficha em anexo' : ''}`
     if (r.tipo === 'WEBHOOK') return `${r.url}${r.temSegredo ? ' · assinado' : ' · sem assinatura'}`
     return 'Anexa a ficha ao processo'
   }
@@ -69,16 +65,7 @@ export function AutomacoesSecao({ fluxo, etapa, regras, recarregar }: {
           ))}
         </select>
 
-        {tipo === 'GERAR_DOCUMENTO' && <small>Gera um PDF com os dados e o histórico do processo e o anexa a ele. Se houver e-mail na mesma etapa, a ficha pode seguir em anexo.</small>}
-
-        {tipo === 'EMAIL_EMPRESA' && (
-          <>
-            <input required maxLength={200} placeholder="Assunto. Ex.: Processo {{numero}} em {{etapa}}" value={f.assunto} onChange={(e) => setF({ ...f, assunto: e.target.value })} />
-            <textarea required rows={4} maxLength={5000} placeholder="Mensagem. Ex.: Olá, {{empresa}}! Sua entrega {{entrega}} chegou à etapa {{etapa}}." value={f.mensagem} onChange={(e) => setF({ ...f, mensagem: e.target.value })} />
-            <small>Variáveis: {VARIAVEIS.map((v) => `{{${v}}}`).join(' ')}. Vai para o e-mail da empresa atendida (cadastrado em Cadastros → Empresas).</small>
-            <label className="chk"><input type="checkbox" checked={f.anexar} onChange={(e) => setF({ ...f, anexar: e.target.checked })} /> Anexar a ficha do processo (exige a regra “Gerar a ficha” nesta etapa)</label>
-          </>
-        )}
+        {tipo === 'GERAR_DOCUMENTO' && <small>Gera um PDF com os dados e o histórico do processo e o anexa a ele.</small>}
 
         {tipo === 'WEBHOOK' && (
           <>
