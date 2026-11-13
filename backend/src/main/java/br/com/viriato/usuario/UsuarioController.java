@@ -49,10 +49,11 @@ public class UsuarioController {
     private final NotificacaoRepository notificacoes;
     private final ProcessoService processoService;
     private final AjudaService ajuda;
+    private final FotoService fotos;
 
     public UsuarioController(UsuarioRepository repo, SetorRepository setores, CadastroService cadastros,
                              PasswordEncoder encoder, ProcessoRepository processos, NotificacaoRepository notificacoes,
-                             ProcessoService processoService, AjudaService ajuda) {
+                             ProcessoService processoService, AjudaService ajuda, FotoService fotos) {
         this.repo = repo;
         this.setores = setores;
         this.cadastros = cadastros;
@@ -61,6 +62,7 @@ public class UsuarioController {
         this.notificacoes = notificacoes;
         this.processoService = processoService;
         this.ajuda = ajuda;
+        this.fotos = fotos;
     }
 
     /** O acesso é por nome e senha; o e-mail é opcional (e a tela não o pede). */
@@ -237,6 +239,7 @@ public class UsuarioController {
         processos.desvincularResponsavel(quem.tenantId(), u.getId(), u.getNome());   // encerrados guardam o nome
         notificacoes.deleteByUsuarioIdAndTenantId(u.getId(), quem.tenantId());       // avisos dele não fazem mais sentido
         ajuda.apagarDe(u.getId(), quem.tenantId());                                 // a conversa de ajuda dele some junto
+        fotos.apagarArquivoDe(u);                                                   // e a foto de perfil
         repo.delete(u);
     }
 }

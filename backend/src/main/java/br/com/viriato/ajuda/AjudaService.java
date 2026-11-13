@@ -31,8 +31,8 @@ public class AjudaService {
     static final int MAX_MENSAGENS = 200;
 
     public record MensagemDto(Long id, String autorNome, boolean deAdmin, String texto, Instant criadoEm) {}
-    public record ConversaResumo(Long id, String pessoa, String setor, String ultimaTexto, boolean ultimaDeAdmin, Instant atualizadoEm, int naoLidas) {}
-    public record ConversaDetalhe(Long id, String pessoa, String setor, List<MensagemDto> mensagens) {}
+    public record ConversaResumo(Long id, Long usuarioId, String pessoa, Long fotoVersao, String setor, String ultimaTexto, boolean ultimaDeAdmin, Instant atualizadoEm, int naoLidas) {}
+    public record ConversaDetalhe(Long id, Long usuarioId, String pessoa, Long fotoVersao, String setor, List<MensagemDto> mensagens) {}
 
     private final AjudaConversaRepository conversas;
     private final AjudaMensagemRepository mensagens;
@@ -133,7 +133,7 @@ public class AjudaService {
         Map<Long, String> nomesSetor = setores.findByTenantIdOrderByNome(quem.tenantId()).stream().collect(Collectors.toMap(Setor::getId, Setor::getNome));
         return conversas.findByTenantIdOrderByAtualizadoEmDesc(quem.tenantId()).stream().map(c -> {
             Usuario u = pessoas.get(c.getUsuarioId());
-            return new ConversaResumo(c.getId(), u == null ? "Usuário removido" : u.getNome(),
+            return new ConversaResumo(c.getId(), c.getUsuarioId(), u == null ? "Usuário removido" : u.getNome(), u == null ? null : u.getFotoVersao(),
                     u == null || u.getSetorId() == null ? null : nomesSetor.get(u.getSetorId()),
                     c.getUltimaTexto(), c.isUltimaDeAdmin(), c.getAtualizadoEm(), c.getNaoLidasAdmin());
         }).toList();
@@ -149,7 +149,7 @@ public class AjudaService {
         AjudaConversa c = daEmpresa(quem, id);
         if (c.getNaoLidasAdmin() > 0) conversas.zerarDosAdmins(c.getId());
         Usuario u = usuarios.findByIdAndTenantId(c.getUsuarioId(), quem.tenantId()).orElse(null);
-        return new ConversaDetalhe(c.getId(), u == null ? "Usuário removido" : u.getNome(), u == null ? null : nomeSetor(u), listar(c.getId(), quem.tenantId()));
+        return new ConversaDetalhe(c.getId(), c.getUsuarioId(), u == null ? "Usuário removido" : u.getNome(), u == null ? null : u.getFotoVersao(), u == null ? null : nomeSetor(u), listar(c.getId(), quem.tenantId()));
     }
 
     @Transactional

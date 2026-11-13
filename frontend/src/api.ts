@@ -46,6 +46,12 @@ export const api = {
   patch: <T,>(p: string, data: unknown) => request<T>(p, { method: 'PATCH', body: body(data) }),
   upload: <T,>(p: string, form: FormData) => request<T>(p, { method: 'POST', body: form }),
   del: (p: string) => request<void>(p, { method: 'DELETE' }),
+  /** Imagem autenticada (foto de perfil): baixa e devolve um endereço local que o <img> consegue usar. */
+  async imagem(p: string): Promise<string> {
+    const res = await fetch(`/api${p}`, { headers: { Authorization: `Bearer ${tokenStore.get()}` } })
+    if (!res.ok) throw new ApiError(res.status, 'Sem imagem')
+    return URL.createObjectURL(await res.blob())
+  },
   /** Download autenticado: baixa como blob e dispara o salvamento. */
   async download(p: string, nome: string) {
     const res = await fetch(`/api${p}`, { headers: { Authorization: `Bearer ${tokenStore.get()}` } })
@@ -68,7 +74,7 @@ export type Papel = 'ADMIN' | 'GESTOR' | 'USUARIO'
 export type Status = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO'
 
 export interface PendenciasUsuario { nome: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
-export interface Usuario { id: number; nome: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null; deveTrocarSenha: boolean }
+export interface Usuario { id: number; nome: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null; deveTrocarSenha: boolean; fotoVersao: number | null }
 export const ROTULO_PAPEL: Record<Papel, string> = { ADMIN: 'Administrador', GESTOR: 'Gestor', USUARIO: 'Usuário' }
 export interface Cliente { id: number; numero: string; nome: string; ativo: boolean }
 export interface EntregaResumo { id: number; nome: string; ativo: boolean }
@@ -122,5 +128,5 @@ export const ROTULO_AUTOMACAO: Record<TipoAutomacao, string> = {
 }
 export interface Notificacao { id: number; titulo: string; mensagem: string | null; empresaNome: string | null; entregaNome: string | null; autorNome: string | null; processoId: number | null; lida: boolean; criadoEm: string }
 export interface MensagemAjuda { id: number; autorNome: string; deAdmin: boolean; texto: string; criadoEm: string }
-export interface ConversaAjuda { id: number; pessoa: string; setor: string | null; ultimaTexto: string | null; ultimaDeAdmin: boolean; atualizadoEm: string; naoLidas: number }
-export interface ConversaAjudaAberta { id: number; pessoa: string; setor: string | null; mensagens: MensagemAjuda[] }
+export interface ConversaAjuda { id: number; usuarioId: number; fotoVersao: number | null; pessoa: string; setor: string | null; ultimaTexto: string | null; ultimaDeAdmin: boolean; atualizadoEm: string; naoLidas: number }
+export interface ConversaAjudaAberta { id: number; usuarioId: number; fotoVersao: number | null; pessoa: string; setor: string | null; mensagens: MensagemAjuda[] }
