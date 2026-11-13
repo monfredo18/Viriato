@@ -120,4 +120,9 @@ export interface ExecucaoAutomacao { id: number; tipo: TipoAutomacao; evento: Ev
 export const ROTULO_AUTOMACAO: Record<TipoAutomacao, string> = {
   GERAR_DOCUMENTO: 'Gerar a ficha do processo (PDF)', EMAIL_EMPRESA: 'Avisar a empresa por e-mail', WEBHOOK: 'Chamar outro sistema (webhook)',
 }
+export type SegurancaEmail = 'NENHUMA' | 'STARTTLS' | 'SSL'
+export interface ConfigEmail {
+  configurado: boolean; host: string | null; porta: number | null; seguranca: SegurancaEmail; usuario: string | null; temSenha: boolean
+  remetente: string | null; padrao: string; padraoSoCaptura: boolean
+}
 export interface Notificacao { id: number; titulo: string; mensagem: string | null; empresaNome: string | null; entregaNome: string | null; autorNome: string | null; processoId: number | null; lida: boolean; criadoEm: string }

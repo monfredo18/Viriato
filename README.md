@@ -21,7 +21,7 @@ docker compose up --build
 
 - App: http://localhost:3000 — entre com o administrador inicial (nome `Administrador`, senha `trocar-12345`, definidos por `ADMIN_NOME`/`ADMIN_SENHA` em `docker-compose.yml` ou `.env`). No primeiro acesso o sistema pede que ele crie a própria senha.
 - Swagger/OpenAPI: http://localhost:8080/swagger-ui.html
-- E-mails enviados (Mailpit): http://localhost:8025 — **o Mailpit só captura**: os e-mails aparecem lá e nunca chegam a uma caixa de entrada real. Para enviar de verdade, configure `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_AUTH`, `MAIL_STARTTLS` e `MAIL_REMETENTE` no `.env` (veja `.env.example`).
+- E-mails enviados (Mailpit): http://localhost:8025 — **o Mailpit só captura**: os e-mails aparecem lá e nunca chegam a uma caixa de entrada real. Para enviar de verdade, o administrador configura o servidor de e-mail **na própria tela** (*Cadastros → E-mail*, veja abaixo); como alternativa, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_AUTH`, `MAIL_STARTTLS` e `MAIL_REMETENTE` no `.env` valem como servidor padrão.
 
 Desenvolvimento sem Docker para o código:
 
@@ -65,6 +65,12 @@ backend/src/main/java/br/com/viriato/
 - **Painel:** aba com atrasados por setor, tempo médio por etapa e carga por funcionário (administrador vê todos os setores; os demais, o próprio).
 - **Automações** (ao entrar numa etapa ou ao cancelar): gerar a ficha do processo em PDF, avisar a empresa por e-mail (cadastre o e-mail em *Cadastros → Empresas*) e chamar um webhook (https, endereço público, JSON assinado com HMAC-SHA256). Falha nunca desfaz o movimento e fica registrada no processo.
 - Documentos em disco, sem S3, para desenvolvimento: `ARMAZENAMENTO=local`.
+
+### Servidor de e-mail (envio de verdade)
+Em **Cadastros → E-mail** (só administrador) informe o servidor SMTP da empresa: provedor (Gmail, Microsoft 365, Brevo ou outro), porta, segurança, usuário, senha e e-mail do remetente. Use **Enviar e-mail de teste**: se falhar, a mensagem diz o motivo (senha recusada, servidor inacessível, porta/segurança erradas). Com o servidor configurado, as automações e os avisos por e-mail passam a sair por ele; sem configuração vale o servidor padrão do sistema (no Docker local, o Mailpit, que só captura).
+- **Gmail:** usuário = o e-mail completo; senha = uma *senha de aplicativo* (exige verificação em duas etapas); porta 587, STARTTLS.
+- A senha é guardada **criptografada** (AES-GCM) e nunca é exibida. A chave vem de `CHAVE_CIFRA` (ou, na falta, do `JWT_SECRET`): se ela mudar, informe a senha do e-mail de novo.
+- Em produção o servidor não pode ser um endereço da rede interna (`AUTOMACAO_PERMITIR_REDE_INTERNA` só para desenvolvimento).
 
 ### Acesso e senhas
 - Entra-se com **nome e senha**. O nome não diferencia maiúsculas de minúsculas e é único na empresa (não aceita `@`). Contas antigas ainda podem entrar com o e-mail.

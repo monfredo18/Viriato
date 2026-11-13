@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { api, type Cliente, type Entrega, type Fluxo, type Setor } from '../api'
 import BotaoApagar from '../BotaoApagar'
+import ConfigEmail from './ConfigEmail'
 import { useAuth } from '../auth'
 
-type Aba = 'empresas' | 'setores' | 'entregas'
+type Aba = 'empresas' | 'setores' | 'entregas' | 'email'
 
 export default function Cadastros() {
-  const { podeGerenciar } = useAuth()
+  const { podeGerenciar, ehAdmin } = useAuth()
   const [aba, setAba] = useState<Aba>('empresas')
 
   return (
@@ -18,10 +19,12 @@ export default function Cadastros() {
         <button role="tab" aria-selected={aba === 'empresas'} className={aba === 'empresas' ? 'ativa' : ''} onClick={() => setAba('empresas')}>Empresas</button>
         <button role="tab" aria-selected={aba === 'setores'} className={aba === 'setores' ? 'ativa' : ''} onClick={() => setAba('setores')}>Setores</button>
         <button role="tab" aria-selected={aba === 'entregas'} className={aba === 'entregas' ? 'ativa' : ''} onClick={() => setAba('entregas')}>Entregas</button>
+        {ehAdmin && <button role="tab" aria-selected={aba === 'email'} className={aba === 'email' ? 'ativa' : ''} onClick={() => setAba('email')}>E-mail</button>}
       </div>
       {aba === 'empresas' && <Empresas pode={podeGerenciar} />}
       {aba === 'setores' && <Setores pode={podeGerenciar} />}
       {aba === 'entregas' && <Entregas pode={podeGerenciar} />}
+      {aba === 'email' && ehAdmin && <ConfigEmail />}
     </>
   )
 }

@@ -473,3 +473,10 @@ tr.linha-atrasada td:nth-child(5) { color: var(--vermelho); font-weight: 600; }
 .exec-falha .req-marca { color: var(--vermelho); }
 .exec-falha b { color: var(--vermelho); }
 .exec-ignorada .req-marca { color: var(--suave); }
+
+/* ---------- configuração de e-mail ---------- */
+.estado-email { margin: 0 0 1rem; padding: .7rem .9rem; background: var(--bg); border-left: 3px solid var(--borda-forte); }
+.ok-email { border-left-color: var(--ouro); }
+.alerta-email { border-left-color: var(--vermelho-solido); }
+.resultado-ok { color: var(--ouro-texto); margin: .6rem 0; font-weight: 600; }
+.duas-colunas { display: grid; grid-template-columns: 1fr 2fr; gap: .75rem; }
