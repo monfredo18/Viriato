@@ -20,6 +20,10 @@ const desenhos = {
   check: <><circle cx="12" cy="12" r="8.5" /><path d="m8.3 12.3 2.5 2.5 4.9-5.4" /></>,
   ampulheta: <><path d="M7 3h10M7 21h10M8 3c0 5 3 6 4 9-1 3-4 4-4 9M16 3c0 5-3 6-4 9 1 3 4 4 4 9" /></>,
   calendario: <><rect x="4" y="5" width="16" height="15" rx="2.5" /><path d="M8 3v4M16 3v4M4 10h16" /></>,
+  ajuda: <><circle cx="12" cy="12" r="9" /><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6M12 17.2v.1" /></>,
+  enviar: <><path d="M21 3 10.5 13.5M21 3l-6.8 18-3.7-7.5L3 9.8z" /></>,
+  fechar: <><path d="M6 6l12 12M18 6 6 18" /></>,
+  voltar: <><path d="M15 5l-7 7 7 7" /></>,
   sair: <><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" /></>,
 } satisfies Record<string, ReactNode>
 

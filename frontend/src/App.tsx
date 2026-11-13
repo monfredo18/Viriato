@@ -4,6 +4,7 @@ import { api, ROTULO_PAPEL, type Pagina, type Processo } from './api'
 import Icone, { type NomeIcone } from './Icones'
 import { useAuth } from './auth'
 import Sino from './Sino'
+import Ajuda from './Ajuda'
 import BotaoTema from './tema'
 import Logo from './Logo'
 import Login from './pages/Login'
@@ -85,6 +86,7 @@ function Layout() {
           </form>
           <span className="espaco" />
           <BotaoTema />
+          <Ajuda />
           <Sino />
           <div className="perfil">
             <span className="avatar" aria-hidden="true">{iniciais(usuario?.nome)}</span>

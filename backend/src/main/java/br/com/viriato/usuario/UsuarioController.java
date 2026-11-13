@@ -5,6 +5,7 @@ import br.com.viriato.cadastro.Setor;
 import br.com.viriato.cadastro.SetorRepository;
 import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.comum.NegocioException;
+import br.com.viriato.ajuda.AjudaService;
 import br.com.viriato.notificacao.NotificacaoRepository;
 import br.com.viriato.comum.Datas;
 import br.com.viriato.processo.ProcessoRepository;
@@ -47,10 +48,11 @@ public class UsuarioController {
     private final ProcessoRepository processos;
     private final NotificacaoRepository notificacoes;
     private final ProcessoService processoService;
+    private final AjudaService ajuda;
 
     public UsuarioController(UsuarioRepository repo, SetorRepository setores, CadastroService cadastros,
                              PasswordEncoder encoder, ProcessoRepository processos, NotificacaoRepository notificacoes,
-                             ProcessoService processoService) {
+                             ProcessoService processoService, AjudaService ajuda) {
         this.repo = repo;
         this.setores = setores;
         this.cadastros = cadastros;
@@ -58,6 +60,7 @@ public class UsuarioController {
         this.processos = processos;
         this.notificacoes = notificacoes;
         this.processoService = processoService;
+        this.ajuda = ajuda;
     }
 
     /** O acesso é por nome e senha; o e-mail é opcional (e a tela não o pede). */
@@ -233,6 +236,7 @@ public class UsuarioController {
     private void excluir(UsuarioLogado quem, Usuario u) {
         processos.desvincularResponsavel(quem.tenantId(), u.getId(), u.getNome());   // encerrados guardam o nome
         notificacoes.deleteByUsuarioIdAndTenantId(u.getId(), quem.tenantId());       // avisos dele não fazem mais sentido
+        ajuda.apagarDe(u.getId(), quem.tenantId());                                 // a conversa de ajuda dele some junto
         repo.delete(u);
     }
 }
