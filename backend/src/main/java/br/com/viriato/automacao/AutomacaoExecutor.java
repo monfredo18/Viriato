@@ -216,13 +216,13 @@ public class AutomacaoExecutor {
     /** @return {status, mensagem} */
     private String[] enviarEmail(Contexto c, AutomacaoRegra r, byte[] ficha, String nomeFicha) {
         if (c.clienteEmail() == null || c.clienteEmail().isBlank()) return new String[]{"IGNORADA", "A empresa atendida não tem e-mail cadastrado"};
-        if (!email.habilitado()) return new String[]{"IGNORADA", "O envio de e-mail está desligado neste ambiente"};
+        if (!email.habilitado(c.tenantId())) return new String[]{"IGNORADA", "O envio de e-mail está desligado neste ambiente. Configure o servidor de e-mail em Cadastros → E-mail."};
         String assunto = ModeloTexto.umaLinha(ModeloTexto.aplicar(r.getAssunto(), c.variaveis()));
         String texto = ModeloTexto.aplicar(r.getMensagem(), c.variaveis());
         boolean anexa = r.isAnexarDocumento() && ficha != null;
-        String erro = email.enviarAgora(c.clienteEmail(), assunto, texto, anexa ? nomeFicha : null, anexa ? ficha : null);
+        String erro = email.enviarAgora(c.tenantId(), c.clienteEmail(), assunto, texto, anexa ? nomeFicha : null, anexa ? ficha : null);
         if (erro != null) return new String[]{"FALHA", erro.length() > 300 ? erro.substring(0, 300) : erro};
-        return new String[]{"OK", "E-mail enviado para " + c.clienteEmail() + (anexa ? " com a ficha em anexo" : "")
+        return new String[]{"OK", "E-mail enviado para " + c.clienteEmail() + " pelo servidor " + email.servidorEmUso(c.tenantId()) + (anexa ? " com a ficha em anexo" : "")
                 + (r.isAnexarDocumento() && !anexa ? " (sem anexo: nenhuma regra de documento rodou antes)" : "")};
     }
 

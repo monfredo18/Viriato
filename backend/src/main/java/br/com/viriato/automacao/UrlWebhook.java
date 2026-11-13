@@ -57,6 +57,25 @@ public final class UrlWebhook {
         }
     }
 
+    /**
+     * Para servidores que o sistema acessa a pedido do administrador (como o SMTP): o nome é resolvido e recusado se
+     * qualquer endereço for da rede interna. {@code permitirRedeInterna} existe só para desenvolvimento e testes.
+     */
+    public static void exigirHostPublico(String host, boolean permitirRedeInterna) {
+        if (permitirRedeInterna) return;
+        String h = host.toLowerCase();
+        if (h.equals("localhost") || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) {
+            throw new NegocioException("O servidor de e-mail não pode ser um endereço da rede interna");
+        }
+        try {
+            for (InetAddress a : InetAddress.getAllByName(host)) {
+                if (interno(a)) throw new NegocioException("O servidor de e-mail não pode ser um endereço da rede interna");
+            }
+        } catch (UnknownHostException e) {
+            throw new NegocioException("Não encontrei o servidor \"" + host + "\". Confira o endereço.");
+        }
+    }
+
     static boolean interno(InetAddress a) {
         if (a.isAnyLocalAddress() || a.isLoopbackAddress() || a.isLinkLocalAddress() || a.isSiteLocalAddress() || a.isMulticastAddress()) return true;
         byte[] b = a.getAddress();

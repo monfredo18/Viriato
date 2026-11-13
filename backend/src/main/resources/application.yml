@@ -27,6 +27,9 @@ spring:
     username: ${MAIL_USER:}
     password: ${MAIL_PASSWORD:}
     properties:
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 15000
+      mail.smtp.writetimeout: 15000
       mail.smtp.auth: ${MAIL_AUTH:false}
       mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
 
@@ -38,6 +41,9 @@ viriato:
     nome: ${ADMIN_NOME:}
     senha: ${ADMIN_SENHA:}
     empresa: ${ADMIN_EMPRESA:Minha empresa}
+  cripto:
+    # Chave para criptografar segredos guardados no banco (senha do servidor de e-mail). Padrão: o próprio JWT_SECRET.
+    chave: ${CHAVE_CIFRA:${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}}
   jwt:
     # Em produção defina JWT_SECRET com no mínimo 32 caracteres.
     secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
