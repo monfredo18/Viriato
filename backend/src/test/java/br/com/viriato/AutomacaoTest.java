@@ -86,7 +86,7 @@ class AutomacaoTest {
         usuario(admin, "Ges-" + s, "GESTOR", setor);
         long u = usuario(admin, "Usu-" + s, "USUARIO", setor);
         usuario(admin, "GesO-" + s, "GESTOR", outro);
-        long cliente = corpo(enviar(admin, "/api/clientes", "{\"numero\":\"10\",\"nome\":\"Alfa Ltda\",\"email\":\"contato@alfa.com\"}").andExpect(status().isCreated())).get("id").asLong();
+        long cliente = corpo(enviar(admin, "/api/clientes", "{\"numero\":\"10\",\"nome\":\"Alfa Ltda\"}").andExpect(status().isCreated())).get("id").asLong();
         JsonNode fluxo = consultar(admin, "/api/fluxos").get(0);
         JsonNode et = fluxo.get("etapas");
         return new C(admin, TestesAuth.entrar(mvc, json, "Ges-" + s), TestesAuth.entrar(mvc, json, "Usu-" + s), TestesAuth.entrar(mvc, json, "GesO-" + s), u, cliente, setor, entrega,
@@ -125,8 +125,7 @@ class AutomacaoTest {
         String url = "/api/fluxos/" + c.fluxoId() + "/automacoes";
         enviar(c.usuario(), url, entrando(c.analise(), "\"tipo\":\"GERAR_DOCUMENTO\"")).andExpect(status().isForbidden());
         ler(c.usuario(), url).andExpect(status().isForbidden());                       // nem consulta: pode ter endereços e segredos
-        enviar(c.gestor(), url, entrando(c.analise(), "\"tipo\":\"EMAIL_EMPRESA\",\"assunto\":\" \",\"mensagem\":\"oi\"")).andExpect(status().isUnprocessableEntity());
-        enviar(c.gestor(), url, entrando(c.analise(), "\"tipo\":\"EMAIL_EMPRESA\",\"assunto\":\"x\",\"mensagem\":\"\"")).andExpect(status().isUnprocessableEntity());
+        enviar(c.gestor(), url, entrando(c.analise(), "\"tipo\":\"EMAIL_EMPRESA\"")).andExpect(status().isBadRequest());   // o envio de e-mail não existe mais
         enviar(c.gestor(), url, entrando(c.analise(), "\"tipo\":\"WEBHOOK\",\"url\":\"ftp://x.com/y\"")).andExpect(status().isUnprocessableEntity());
         enviar(c.gestor(), url, entrando(c.analise(), "\"tipo\":\"WEBHOOK\"")).andExpect(status().isUnprocessableEntity());
         enviar(c.gestor(), url, "{\"evento\":\"ENTRAR_ETAPA\",\"tipo\":\"GERAR_DOCUMENTO\"}").andExpect(status().isUnprocessableEntity());   // sem etapa
@@ -259,19 +258,6 @@ class AutomacaoTest {
         long p = processo(c);
         assertThat(execucoes(c.usuario(), p)).hasSize(1);
         ler(c.gestorOutroSetor(), "/api/processos/" + p + "/automacoes").andExpect(status().isNotFound());   // outro setor não enxerga
-    }
-
-    @Test
-    void emailDaEmpresaEhOpcionalEValidado() throws Exception {
-        C c = cenario();
-        String url = "/api/clientes/" + c.clienteId();
-        mvc.perform(patch(url).header("Authorization", "Bearer " + c.gestor()).contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"nao-e-email\"}")).andExpect(status().isBadRequest());
-        mvc.perform(patch(url).header("Authorization", "Bearer " + c.gestor()).contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"Novo@Alfa.com\"}")).andExpect(status().isOk());
-        assertThat(consultar(c.gestor(), "/api/clientes").get(0).get("email").asText()).isEqualTo("novo@alfa.com");
-        mvc.perform(patch(url).header("Authorization", "Bearer " + c.gestor()).contentType(MediaType.APPLICATION_JSON).content("{\"nome\":\"Alfa S/A\"}")).andExpect(status().isOk());
-        assertThat(consultar(c.gestor(), "/api/clientes").get(0).get("email").asText()).isEqualTo("novo@alfa.com");   // não mexer no e-mail mantém
-        mvc.perform(patch(url).header("Authorization", "Bearer " + c.gestor()).contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"\"}")).andExpect(status().isOk());
-        assertThat(consultar(c.gestor(), "/api/clientes").get(0).get("email").isNull()).isTrue();                     // vazio apaga
     }
 
     @Test

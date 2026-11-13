@@ -12,7 +12,6 @@ import br.com.viriato.documento.Documento;
 import br.com.viriato.documento.DocumentoRepository;
 import br.com.viriato.fluxo.Etapa;
 import br.com.viriato.fluxo.EtapaRepository;
-import br.com.viriato.notificacao.EmailService;
 import br.com.viriato.processo.Processo;
 import br.com.viriato.processo.ProcessoHistorico;
 import br.com.viriato.processo.ProcessoHistoricoRepository;
@@ -39,7 +38,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Executa as regras de automação depois que o movimento do processo foi confirmado no banco. Cada regra é
  * independente: a falha de uma (ou de todas) NUNCA desfaz nem trava o movimento do processo, só fica registrada.
- * Ordem: gerar documento, depois e-mail (que pode anexá-lo), depois webhook.
+ * Ordem: gerar documento, depois webhook.
  */
 @Component
 public class AutomacaoExecutor {
@@ -58,7 +57,6 @@ public class AutomacaoExecutor {
     private final EtapaRepository etapas;
     private final DocumentoRepository documentos;
     private final ArmazenamentoArquivos storage;
-    private final EmailService email;
     private final WebhookClient webhook;
     private final ObjectMapper json;
     private final PlatformTransactionManager tm;
@@ -67,7 +65,7 @@ public class AutomacaoExecutor {
     public AutomacaoExecutor(AutomacaoRegraRepository regras, AutomacaoExecucaoRepository execucoes, ProcessoRepository processos,
                              ProcessoHistoricoRepository historicos, ClienteRepository clientes, EntregaRepository entregas,
                              SetorRepository setores, UsuarioRepository usuarios, EtapaRepository etapas, DocumentoRepository documentos,
-                             ArmazenamentoArquivos storage, EmailService email, WebhookClient webhook, ObjectMapper json,
+                             ArmazenamentoArquivos storage, WebhookClient webhook, ObjectMapper json,
                              PlatformTransactionManager tm, @Qualifier("automacaoTaskExecutor") Executor executor) {
         this.regras = regras;
         this.execucoes = execucoes;
@@ -80,7 +78,6 @@ public class AutomacaoExecutor {
         this.etapas = etapas;
         this.documentos = documentos;
         this.storage = storage;
-        this.email = email;
         this.webhook = webhook;
         this.json = json;
         this.tm = tm;
@@ -98,8 +95,8 @@ public class AutomacaoExecutor {
         });
     }
 
-    /** Tudo o que as regras precisam, lido de uma vez para não segurar transação durante e-mail e webhook. */
-    private record Contexto(Long processoId, Long tenantId, String numero, String clienteEmail, Long clienteId, String etapaNome,
+    /** Tudo o que as regras precisam, lido de uma vez para não segurar transação durante o webhook. */
+    private record Contexto(Long processoId, Long tenantId, String numero, Long clienteId, String etapaNome,
                             Map<String, String> variaveis, List<AutomacaoRegra> regras, List<FichaProcessoPdf.Linha> historico) {}
 
     public void executar(AutomacaoEvento e) {
@@ -109,24 +106,17 @@ public class AutomacaoExecutor {
         Contexto c = tx.execute(s -> carregar(e));
         if (c == null) return;
 
-        byte[] ficha = null;
-        String nomeFicha = null;
         for (AutomacaoRegra r : c.regras()) {
             StatusExecucao status;
             String msg;
             try {
                 switch (r.getTipo()) {
                     case GERAR_DOCUMENTO -> {
-                        nomeFicha = nomeFicha(c);
-                        ficha = FichaProcessoPdf.gerar(c.variaveis(), DATA_HORA.format(Instant.now().atZone(Datas.ZONA)), c.historico());
+                        String nomeFicha = nomeFicha(c);
+                        byte[] ficha = FichaProcessoPdf.gerar(c.variaveis(), DATA_HORA.format(Instant.now().atZone(Datas.ZONA)), c.historico());
                         guardar(c, nomeFicha, ficha);
                         status = StatusExecucao.OK;
                         msg = "Documento \"" + nomeFicha + "\" anexado ao processo";
-                    }
-                    case EMAIL_EMPRESA -> {
-                        String[] r2 = enviarEmail(c, r, ficha, nomeFicha);
-                        status = StatusExecucao.valueOf(r2[0]);
-                        msg = r2[1];
                     }
                     case WEBHOOK -> {
                         int codigo = webhook.enviar(r.getUrl(), r.getSegredo(), nomeEvento(e.evento()), corpoWebhook(c, e));
@@ -181,7 +171,7 @@ public class AutomacaoExecutor {
                             + (h.getComentario() == null ? "" : h.getComentario())).trim(),
                     h.getUsuarioId() == null ? null : nomes.getOrDefault(h.getUsuarioId(), "usuário removido"))).toList();
         }
-        return new Contexto(p.getId(), tid, p.getNumero(), cli == null ? null : cli.getEmail(), cli == null ? null : cli.getId(),
+        return new Contexto(p.getId(), tid, p.getNumero(), cli == null ? null : cli.getId(),
                 etapa, v, rs, linhas);
     }
 
@@ -211,19 +201,6 @@ public class AutomacaoExecutor {
             storage.remover(chave);   // não deixa arquivo órfão
             throw ex;
         }
-    }
-
-    /** @return {status, mensagem} */
-    private String[] enviarEmail(Contexto c, AutomacaoRegra r, byte[] ficha, String nomeFicha) {
-        if (c.clienteEmail() == null || c.clienteEmail().isBlank()) return new String[]{"IGNORADA", "A empresa atendida não tem e-mail cadastrado"};
-        if (!email.habilitado(c.tenantId())) return new String[]{"IGNORADA", "O envio de e-mail está desligado neste ambiente. Configure o servidor de e-mail em Cadastros → E-mail."};
-        String assunto = ModeloTexto.umaLinha(ModeloTexto.aplicar(r.getAssunto(), c.variaveis()));
-        String texto = ModeloTexto.aplicar(r.getMensagem(), c.variaveis());
-        boolean anexa = r.isAnexarDocumento() && ficha != null;
-        String erro = email.enviarAgora(c.tenantId(), c.clienteEmail(), assunto, texto, anexa ? nomeFicha : null, anexa ? ficha : null);
-        if (erro != null) return new String[]{"FALHA", erro.length() > 300 ? erro.substring(0, 300) : erro};
-        return new String[]{"OK", "E-mail enviado para " + c.clienteEmail() + " pelo servidor " + email.servidorEmUso(c.tenantId()) + (anexa ? " com a ficha em anexo" : "")
-                + (r.isAnexarDocumento() && !anexa ? " (sem anexo: nenhuma regra de documento rodou antes)" : "")};
     }
 
     private String corpoWebhook(Contexto c, AutomacaoEvento e) throws Exception {

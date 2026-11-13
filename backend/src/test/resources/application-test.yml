@@ -7,8 +7,6 @@ spring:
     locations: classpath:db/migration
 viriato:
   cadastro-empresa-aberto: true   # os testes criam empresas pela API
-  mail:
-    habilitado: false
   automacao:
     assincrona: false          # as regras rodam na hora, para os testes conferirem o resultado
     permitir-rede-interna: true

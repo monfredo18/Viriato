@@ -5,7 +5,6 @@ import br.com.viriato.cadastro.CadastroService.EntregaDto;
 import br.com.viriato.cadastro.CadastroService.SetorDto;
 import br.com.viriato.seguranca.Contexto;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -28,9 +27,9 @@ public class CadastroController {
 
     /** Número da empresa: código interno, só dígitos (até 10), único entre as empresas atendidas. */
     public record NovoCliente(@NotBlank @Pattern(regexp = "\\d{1,10}", message = "deve ter de 1 a 10 dígitos") String numero,
-                              @NotBlank @Size(max = 150) String nome, @Email @Size(max = 190) String email) {}
+                              @NotBlank @Size(max = 150) String nome) {}
     public record AtualizaCliente(@Pattern(regexp = "\\d{1,10}", message = "deve ter de 1 a 10 dígitos") String numero,
-                                  @Size(max = 150) String nome, Boolean ativo, @Email @Size(max = 190) String email) {}
+                                  @Size(max = 150) String nome, Boolean ativo) {}
     public record NovaEntrega(@NotBlank @Size(max = 150) String nome, @NotNull Long fluxoId) {}
     public record AtualizaEntrega(@Size(max = 150) String nome, Long fluxoId, Boolean ativo) {}
     public record NovoSetor(@NotBlank @Size(max = 100) String nome, List<Long> entregaIds) {}
@@ -44,13 +43,13 @@ public class CadastroController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public ClienteDto criarCliente(@Valid @RequestBody NovoCliente r) {
-        return service.criarCliente(Contexto.tenantId(), r.numero(), r.nome(), r.email());
+        return service.criarCliente(Contexto.tenantId(), r.numero(), r.nome());
     }
 
     @PatchMapping("/clientes/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public ClienteDto atualizarCliente(@PathVariable Long id, @Valid @RequestBody AtualizaCliente r) {
-        return service.atualizarCliente(Contexto.tenantId(), id, r.numero(), r.nome(), r.ativo(), r.email());
+        return service.atualizarCliente(Contexto.tenantId(), id, r.numero(), r.nome(), r.ativo());
     }
 
     @DeleteMapping("/clientes/{id}")

@@ -16,21 +16,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificacaoService {
     private final NotificacaoRepository repo;
     private final UsuarioRepository usuarios;
-    private final EmailService email;
     private final ClienteRepository clientes;
     private final EntregaRepository entregas;
 
-    public NotificacaoService(NotificacaoRepository repo, UsuarioRepository usuarios, EmailService email,
+    public NotificacaoService(NotificacaoRepository repo, UsuarioRepository usuarios,
                               ClienteRepository clientes, EntregaRepository entregas) {
         this.repo = repo;
         this.usuarios = usuarios;
-        this.email = email;
         this.clientes = clientes;
         this.entregas = entregas;
     }
 
     /**
-     * Avisa o GESTOR DO SETOR do processo sobre uma ação (in-app + e-mail assíncrono). Só os gestores ativos do
+     * Avisa o GESTOR DO SETOR do processo sobre uma ação (no sistema, pelo sininho). Só os gestores ativos do
      * setor do processo recebem; funcionários, responsáveis, administradores e gestores de outros setores não.
      * Quem fez a ação não é avisado de si mesmo. O título já traz o nome de quem fez: "Processo movido para Revisão - Nome".
      *
@@ -72,12 +70,6 @@ public class NotificacaoService {
             n.setProcessoId(p.getId());
             repo.save(n);
 
-            StringBuilder txt = new StringBuilder(titulo).append("\n\n");
-            txt.append("Processo: ").append(p.getNumero()).append('\n');
-            if (empresa != null) txt.append("Empresa: ").append(empresa).append('\n');
-            if (entrega != null) txt.append("Entrega: ").append(entrega).append('\n');
-            if (detalhe != null && !detalhe.isBlank()) txt.append('\n').append(detalhe).append('\n');
-            if (gestor.getEmail() != null && !gestor.getEmail().isBlank()) email.enviar(tenantId, gestor.getEmail(), "[Viriato] " + titulo, txt.toString());
         }
     }
 }

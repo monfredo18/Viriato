@@ -9,7 +9,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @Configuration
 public class AutomacaoConfig {
 
-    /** As regras rodam fora da requisição (e-mail e webhook podem demorar). Nos testes ({@code assincrona=false}) rodam na hora. */
+    /** As regras rodam fora da requisição (o webhook pode demorar). Nos testes ({@code assincrona=false}) rodam na hora. */
     @Bean("automacaoTaskExecutor")
     Executor automacaoTaskExecutor(@Value("${viriato.automacao.assincrona:true}") boolean assincrona) {
         if (!assincrona) return Runnable::run;

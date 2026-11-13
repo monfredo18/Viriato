@@ -17,9 +17,6 @@ public class AutomacaoRegra {
     @Enumerated(EnumType.STRING) private EventoAutomacao evento;
     @Enumerated(EnumType.STRING) private TipoAutomacao tipo;
     private boolean ativo = true;
-    private String assunto;
-    private String mensagem;
-    @Column(name = "anexar_documento") private boolean anexarDocumento;
     private String url;
     private String segredo;
     @Column(name = "criado_em", insertable = false, updatable = false) private Instant criadoEm;

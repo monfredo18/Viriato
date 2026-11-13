@@ -21,10 +21,9 @@ public class AutomacaoService {
 
     /** O segredo nunca volta pela API: só se informa se existe. */
     public record RegraDto(Long id, Long fluxoId, Long etapaId, String etapaNome, EventoAutomacao evento, TipoAutomacao tipo, boolean ativo,
-                           String assunto, String mensagem, boolean anexarDocumento, String url, boolean temSegredo) {}
+                           String url, boolean temSegredo) {}
 
-    public record RegraReq(EventoAutomacao evento, Long etapaId, TipoAutomacao tipo, String assunto, String mensagem,
-                           Boolean anexarDocumento, String url, String segredo, Boolean ativo) {}
+    public record RegraReq(EventoAutomacao evento, Long etapaId, TipoAutomacao tipo, String url, String segredo, Boolean ativo) {}
 
     public record ExecucaoDto(Long id, TipoAutomacao tipo, EventoAutomacao evento, String etapa, StatusExecucao status, String mensagem, Instant executadoEm) {}
 
@@ -89,8 +88,6 @@ public class AutomacaoService {
         AutomacaoRegra r = repo.findByIdAndFluxoIdAndTenantId(id, fluxoId, tenantId).orElseThrow(() -> new NaoEncontradoException("Automação"));
         if (req.ativo() != null) r.setAtivo(req.ativo());
         aplicar(r, new RegraReq(r.getEvento(), r.getEtapaId(), r.getTipo(),
-                req.assunto() != null ? req.assunto() : r.getAssunto(), req.mensagem() != null ? req.mensagem() : r.getMensagem(),
-                req.anexarDocumento() != null ? req.anexarDocumento() : r.isAnexarDocumento(),
                 req.url() != null ? req.url() : r.getUrl(), req.segredo(), null));
         return dto(repo.save(r), nomesDoFluxo(tenantId, fluxoId));
     }
@@ -110,33 +107,14 @@ public class AutomacaoService {
     /** Valida os campos do tipo da regra e grava só os que valem para ele. */
     private void aplicar(AutomacaoRegra r, RegraReq req) {
         switch (r.getTipo()) {
-            case EMAIL_EMPRESA -> {
-                String assunto = req.assunto() == null ? "" : req.assunto().trim();
-                String mensagem = req.mensagem() == null ? "" : req.mensagem().trim();
-                if (assunto.isEmpty()) throw new NegocioException("Informe o assunto do e-mail");
-                if (assunto.length() > 200) throw new NegocioException("O assunto deve ter até 200 caracteres");
-                if (mensagem.isEmpty()) throw new NegocioException("Escreva a mensagem do e-mail");
-                if (mensagem.length() > 5000) throw new NegocioException("A mensagem deve ter até 5000 caracteres");
-                r.setAssunto(assunto);
-                r.setMensagem(mensagem);
-                r.setAnexarDocumento(Boolean.TRUE.equals(req.anexarDocumento()));
-                r.setUrl(null);
-                r.setSegredo(null);
-            }
             case WEBHOOK -> {
                 UrlWebhook.validar(req.url(), permitirRedeInterna);
                 String segredo = req.segredo();
                 if (segredo != null && segredo.length() > 200) throw new NegocioException("O segredo deve ter até 200 caracteres");
                 r.setUrl(req.url().trim());
                 if (segredo != null) r.setSegredo(segredo.isBlank() ? null : segredo);
-                r.setAssunto(null);
-                r.setMensagem(null);
-                r.setAnexarDocumento(false);
             }
             case GERAR_DOCUMENTO -> {
-                r.setAssunto(null);
-                r.setMensagem(null);
-                r.setAnexarDocumento(false);
                 r.setUrl(null);
                 r.setSegredo(null);
             }
@@ -149,6 +127,6 @@ public class AutomacaoService {
 
     private static RegraDto dto(AutomacaoRegra r, Map<Long, String> nomes) {
         return new RegraDto(r.getId(), r.getFluxoId(), r.getEtapaId(), r.getEtapaId() == null ? null : nomes.get(r.getEtapaId()), r.getEvento(), r.getTipo(),
-                r.isAtivo(), r.getAssunto(), r.getMensagem(), r.isAnexarDocumento(), r.getUrl(), r.getSegredo() != null && !r.getSegredo().isBlank());
+                r.isAtivo(), r.getUrl(), r.getSegredo() != null && !r.getSegredo().isBlank());
     }
 }
