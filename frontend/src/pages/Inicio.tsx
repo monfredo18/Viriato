@@ -70,7 +70,7 @@ export default function Inicio() {
         <Indicador icone="alerta" cor="vermelho" valor={r ? String(r.atrasados) : '—'} rotulo="Atrasados"
           nota={r && r.abertos > 0 ? `${Math.round((r.atrasados / r.abertos) * 100)}% dos em andamento` : undefined} />
         <Indicador icone="check" cor="verde" valor={r ? String(r.concluidos) : '—'} rotulo="Concluídos" nota="nos últimos 30 dias" />
-        <Indicador icone="ampulheta" cor="ouro" valor={r ? (r.tempoMedioConclusaoDias === null ? '—' : `${dec(r.tempoMedioConclusaoDias)} d`) : '—'} rotulo="Tempo médio" nota="até concluir, nos últimos 30 dias" />
+        <Indicador icone="ampulheta" cor="ouro" valor={r ? (r.tempoMedioConclusaoDias === null ? '—' : `${dec(r.tempoMedioConclusaoDias)} d`) : '—'} rotulo="Tempo médio" nota="até concluir (30 dias)" />
       </div>
 
       <div className="grade-inicio">

@@ -802,3 +802,90 @@ button.sair:hover:not(:disabled) { background: var(--vermelho-solido); border-co
 @media (max-width: 980px) { .chat { right: 1rem; } }
 @media (max-width: 560px) { .chat { inset: 68px .5rem .5rem .5rem; width: auto; max-width: none; height: auto; } }
 @media (prefers-reduced-motion: reduce) { .chat { animation: none; } }
+
+/* ==========================================================================
+   Visual limpo
+   Menos ornamento e mais respiro: fundos lisos, bordas leves, sem filetes decorativos, títulos e rótulos em
+   texto normal (sem caixa alta), tabelas leves. Dourado e vermelho ficam só onde significam algo: atraso,
+   cancelamento, ações destrutivas, aviso novo e o anel da foto.
+   ========================================================================== */
+:root {
+  --bg: #f5f7fb; --borda: #e6eaf2; --borda-forte: #d3dae8;
+  --raio: 8px; --raio-grande: 12px;
+  --sombra-card: 0 1px 2px rgba(15, 23, 42, .04);
+  --destaque: rgba(43, 89, 195, .045);
+}
+:root[data-tema='escuro'] {
+  --bg: #0a1122; --card: #101a31; --borda: #1c2a49; --borda-forte: #2a3b63;
+  --sombra-card: none; --destaque: rgba(107, 151, 255, .07);
+}
+body { background: var(--bg); }
+main { padding: 2rem 2.25rem 4rem; }
+a:hover { text-decoration-color: currentColor; text-decoration-thickness: 1px; }
+
+/* títulos e rótulos */
+main > h2::after, .barra h2::after { display: none; }
+main > h2, .barra h2 { font-size: 1.6rem; padding-bottom: 0; }
+.barra { margin-bottom: 1.25rem; }
+.cartao > h3, .modal > h3, .cartao > form > h3 { font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 0; margin: 0 0 1.1rem; border: 0; }
+.cartao > h3::after, .modal > h3::after { display: none; }
+dt, label, fieldset.caixas legend, .requisitos h4, .config-secao h4, .aprovacoes h4, .automacoes-exec h4, .menu-notif-topo strong {
+  text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600;
+}
+dt { font-weight: 500; font-size: 13.5px; }
+.resumo-caixas span { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; }
+
+/* cartões e janelas */
+.cartao { background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio-grande); box-shadow: var(--sombra-card); padding: 1.4rem 1.5rem 1.5rem; }
+.modal { border: 1px solid var(--borda); border-radius: var(--raio-grande); }
+.modal:has(button.perigo) { border-top: 3px solid var(--vermelho-solido); }
+.login-form .cartao::before, .login-lado::before { display: none; }
+
+/* tabelas: cabeçalho discreto, sem filete dourado */
+.tabela-wrap { background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio-grande); box-shadow: var(--sombra-card); }
+.cartao .tabela-wrap { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+thead, thead tr, th { background: transparent; }
+th { font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--suave); border-bottom: 1px solid var(--borda); padding-top: .75rem; padding-bottom: .75rem; }
+td { font-size: 14px; padding-top: .85rem; padding-bottom: .85rem; }
+tbody tr:not(.linha-atrasada):hover td:first-child { box-shadow: none; }
+
+/* botões e campos: planos */
+button.primario { background: var(--azul); border-color: var(--azul); box-shadow: none; }
+button.primario:hover:not(:disabled) { background: var(--azul-hover); border-color: var(--azul-hover); }
+input, select, textarea { box-shadow: none; border-color: var(--borda-forte); border-radius: var(--raio); }
+input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px var(--anel); }
+
+/* indicadores */
+.indicador, .kpis > div, .resumo-caixas > div { background: var(--card); box-shadow: var(--sombra-card); border: 1px solid var(--borda); border-left-width: 1px; border-radius: var(--raio-grande); }
+.indicador { padding: 1.25rem 1.4rem; }
+.indicador::after, .kpis > div::before, .resumo-caixas > div::before { display: none; }
+.kpis > div, .resumo-caixas > div { border-left-color: var(--borda) !important; padding-left: 1.3rem; }
+.indicador div b { font-size: 2rem; }
+
+/* menu lateral, barra superior e chat */
+.lateral { background: #0d1938; box-shadow: none; }
+:root[data-tema='escuro'] .lateral { background: #080f22; box-shadow: inset -1px 0 0 var(--borda); }
+.lateral::after, .topo::after, .chat-topo::after { display: none; }
+.lateral nav a.ativo { background: rgba(255, 255, 255, .09); box-shadow: none; }
+.lateral nav a.ativo svg { color: #fff; }
+.lateral-rodape { background: transparent; border-color: rgba(255, 255, 255, .1); }
+.topo { background: var(--card); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; }
+.data-hoje { box-shadow: none; }
+.chat-topo { background: #0d1938; }
+
+/* foto de perfil */
+.avatar { box-shadow: 0 0 0 2px var(--card), 0 0 0 3px rgba(212, 175, 55, .55); }
+img.avatar { display: block; object-fit: cover; background: var(--bg); }
+button.perfil { height: auto; padding: 0 0 0 1.1rem; margin-left: .35rem; background: none; border: 0; border-left: 1px solid var(--borda); border-radius: 0; text-align: left; font-weight: inherit; cursor: pointer; }
+button.perfil:hover:not(:disabled) { background: none; border-color: var(--borda); }
+button.perfil:hover .perfil-txt b { color: var(--link); }
+.pessoa { display: inline-flex; align-items: center; gap: .65rem; }
+.perfil-modal { max-width: 420px; }
+.perfil-foto { display: flex; align-items: center; gap: 1.2rem; margin: .4rem 0 1.3rem; }
+.perfil-foto b { display: block; font-size: 1.2rem; font-weight: 600; }
+.perfil-foto span { color: var(--suave); }
+.perfil-acoes { display: flex; gap: .6rem; margin-bottom: .7rem; }
+@media (max-width: 720px) { main { padding: 1.4rem 1rem 3rem; } button.perfil { padding-left: .6rem; margin-left: 0; } }
+.abas button { font-size: 13.5px; letter-spacing: 0; text-transform: none; font-weight: 600; }
+.selo { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
+.fundo { z-index: 50; }
