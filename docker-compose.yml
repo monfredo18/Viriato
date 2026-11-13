@@ -47,8 +47,15 @@ services:
       S3_ACCESS_KEY: dev
       S3_SECRET_KEY: dev
       S3_BUCKET: viriato-documentos
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
+      # Por padrão os e-mails vão para o Mailpit (http://localhost:8025), que apenas CAPTURA e nunca entrega na caixa
+      # de entrada de ninguém. Para enviar de verdade, defina MAIL_* no .env (veja .env.example).
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_AUTH: ${MAIL_AUTH:-false}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-false}
+      MAIL_REMETENTE: ${MAIL_REMETENTE:-no-reply@viriato.local}
       CORS_ORIGINS: http://localhost:3000
       # Primeiro administrador (criado só se o banco estiver vazio). A senha é provisória: ele cria a própria no primeiro acesso.
       ADMIN_NOME: ${ADMIN_NOME:-Administrador}

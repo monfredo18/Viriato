@@ -21,7 +21,7 @@ docker compose up --build
 
 - App: http://localhost:3000 — entre com o administrador inicial (nome `Administrador`, senha `trocar-12345`, definidos por `ADMIN_NOME`/`ADMIN_SENHA` em `docker-compose.yml` ou `.env`). No primeiro acesso o sistema pede que ele crie a própria senha.
 - Swagger/OpenAPI: http://localhost:8080/swagger-ui.html
-- E-mails enviados (Mailpit): http://localhost:8025
+- E-mails enviados (Mailpit): http://localhost:8025 — **o Mailpit só captura**: os e-mails aparecem lá e nunca chegam a uma caixa de entrada real. Para enviar de verdade, configure `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_AUTH`, `MAIL_STARTTLS` e `MAIL_REMETENTE` no `.env` (veja `.env.example`).
 
 Desenvolvimento sem Docker para o código:
 
