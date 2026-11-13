@@ -21,14 +21,6 @@ spring:
     multipart:
       max-file-size: 25MB
       max-request-size: 30MB
-  mail:
-    host: ${MAIL_HOST:localhost}
-    port: ${MAIL_PORT:1025}
-    username: ${MAIL_USER:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail.smtp.auth: ${MAIL_AUTH:false}
-      mail.smtp.starttls.enable: ${MAIL_STARTTLS:false}
 
 viriato:
   # Cadastro aberto de empresas (POST /api/auth/registrar-empresa). Desligado: o primeiro administrador
@@ -44,9 +36,6 @@ viriato:
     expiracao-horas: ${JWT_EXPIRACAO_HORAS:12}
   cors:
     origens: ${CORS_ORIGENS:http://localhost:5173,http://localhost:3000}
-  mail:
-    habilitado: ${MAIL_HABILITADO:true}
-    remetente: ${MAIL_REMETENTE:no-reply@viriato.local}
   # Onde ficam os documentos: "s3" (padrão) ou "local" (disco, só para desenvolvimento).
   armazenamento:
     tipo: ${ARMAZENAMENTO:s3}
@@ -58,14 +47,15 @@ viriato:
     endpoint: ${S3_ENDPOINT:}
     access-key: ${S3_ACCESS_KEY:}
     secret-key: ${S3_SECRET_KEY:}
+  automacao:
+    assincrona: ${AUTOMACAO_ASSINCRONA:true}
+    # Só para desenvolvimento: permite webhook em http:// e para endereços da rede interna (localhost etc.).
+    permitir-rede-interna: ${AUTOMACAO_PERMITIR_REDE_INTERNA:false}
   prazos:
     cron: ${PRAZOS_CRON:0 0 8 * * *}
     antecedencia-dias: ${PRAZOS_ANTECEDENCIA_DIAS:1}
 
 management:
-  health:
-    mail:
-      enabled: false   # e-mail é best-effort; não deve tirar a app do ar
   endpoints:
     web:
       exposure:

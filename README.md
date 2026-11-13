@@ -8,7 +8,7 @@ Sistema web multi-empresa (SaaS) para cadastrar, acompanhar e automatizar proces
 | Backend | Java 21 + Spring Boot 3 (monolito modular) |
 | Banco | MySQL 8 (migrações com Flyway) |
 | Arquivos | AWS S3 (S3 local em dev) |
-| Notificações | In-app (sininho) + e-mail (SMTP/AWS SES) |
+| Notificações | In-app (sininho) |
 | Infra | Docker / Docker Compose |
 
 > 📄 **[Relatório completo do sistema (PDF)](docs/relatorio-viriato.pdf)**: como funciona, arquitetura, regras, segurança, limitações conhecidas e próximos passos. A fonte está em `docs/relatorio/` (regerar: `node docs/relatorio/gerar-pdf.js`).
@@ -21,12 +21,11 @@ docker compose up --build
 
 - App: http://localhost:3000 — entre com o administrador inicial (nome `Administrador`, senha `trocar-12345`, definidos por `ADMIN_NOME`/`ADMIN_SENHA` em `docker-compose.yml` ou `.env`). No primeiro acesso o sistema pede que ele crie a própria senha.
 - Swagger/OpenAPI: http://localhost:8080/swagger-ui.html
-- E-mails enviados (Mailpit): http://localhost:8025
 
 Desenvolvimento sem Docker para o código:
 
 ```bash
-docker compose up -d mysql s3 mailpit   # dependências
+docker compose up -d mysql s3   # dependências
 cd backend && mvn spring-boot:run       # API em :8080
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
@@ -42,7 +41,7 @@ backend/src/main/java/br/com/viriato/
   fluxo/       fluxos, etapas e transições configuráveis por empresa
   processo/    processos, movimentação, histórico, atribuição, cancelamento
   documento/   upload/download (S3), nomes sanitizados
-  notificacao/ in-app + e-mail assíncrono + agendador de prazos
+  notificacao/ avisos no sistema + agendador de prazos
   comum/       tratamento de erros, datas
 ```
 
@@ -58,6 +57,13 @@ backend/src/main/java/br/com/viriato/
 - Cada **setor** define quais entregas faz; cada **entrega** define o fluxo (etapas) do processo.
 - Novo processo: administrador informa empresa, departamento, entrega e responsável; gestor, empresa, entrega e responsável (departamento é o dele); usuário, só empresa e entrega (departamento e responsável são os dele). Só aparecem as entregas que o setor faz.
 - Cada setor vê apenas os próprios processos; só o administrador vê os de todos os setores.
+
+### Controle do processo e automações
+- **Requisitos por etapa:** em *Fluxos → Configurar*, cada etapa pode exigir documentos anexados ou confirmações para o processo sair dela. O servidor bloqueia o avanço enquanto houver pendência (voltar de etapa não exige; ao reentrar, exige de novo).
+- **Aprovação:** cada etapa define quem pode mover processos para ela (qualquer responsável, gestor ou só administrador). Quem não pode, solicita; gestor/administrador aprova (e o processo avança) ou recusa com motivo.
+- **Painel:** aba com atrasados por setor, tempo médio por etapa e carga por funcionário (administrador vê todos os setores; os demais, o próprio).
+- **Automações** (ao entrar numa etapa ou ao cancelar): gerar a ficha do processo em PDF e chamar um webhook (https, endereço público, JSON assinado com HMAC-SHA256). Falha nunca desfaz o movimento e fica registrada no processo.
+- Documentos em disco, sem S3, para desenvolvimento: `ARMAZENAMENTO=local`.
 
 ### Acesso e senhas
 - Entra-se com **nome e senha**. O nome não diferencia maiúsculas de minúsculas e é único na empresa (não aceita `@`). Contas antigas ainda podem entrar com o e-mail.
@@ -106,12 +112,11 @@ Ver `.env.example` e `backend/src/main/resources/application.yml`. Obrigatórias
 | `JWT_SECRET` | ≥ 32 bytes. **Troque o valor padrão.** |
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | MySQL |
 | `S3_BUCKET`, `S3_REGIAO` | Bucket real. Sem `S3_ENDPOINT`, usa a AWS (credenciais via IAM Role) |
-| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_AUTH`, `MAIL_STARTTLS`, `MAIL_REMETENTE` | SMTP (ex.: AWS SES) |
 | `CORS_ORIGINS` | Origens permitidas (não necessário se front e API ficam no mesmo domínio via nginx) |
 
 ## Produção (sugestão AWS)
 
-ECS Fargate (backend + frontend) · RDS MySQL · S3 com bloqueio de acesso público e criptografia · SES para e-mail · Task Role do ECS com permissão só no bucket · HTTPS no ALB. As imagens são geradas pelos `Dockerfile` de `backend/` e `frontend/`.
+ECS Fargate (backend + frontend) · RDS MySQL · S3 com bloqueio de acesso público e criptografia · Task Role do ECS com permissão só no bucket · HTTPS no ALB. As imagens são geradas pelos `Dockerfile` de `backend/` e `frontend/`.
 
 ## Roadmap
 

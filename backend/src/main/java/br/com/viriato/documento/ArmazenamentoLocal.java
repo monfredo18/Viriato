@@ -23,8 +23,13 @@ public class ArmazenamentoLocal implements ArmazenamentoArquivos {
         this.base = Path.of(pasta).toAbsolutePath().normalize();
     }
 
+    /**
+     * O nome no disco só usa caracteres seguros (letras, números, ponto, hífen, sublinhado e a barra das pastas): acentos
+     * em nomes de arquivo quebram em servidores com codificação ASCII. A chave já tem um UUID, então não há colisão.
+     */
     private Path resolver(String chave) {
-        Path p = base.resolve(chave).normalize();
+        String seguro = chave.replaceAll("[^A-Za-z0-9._/-]", "_");
+        Path p = base.resolve(seguro).normalize();
         if (!p.startsWith(base)) throw new IllegalArgumentException("Chave inválida");
         return p;
     }

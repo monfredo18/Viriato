@@ -41,10 +41,10 @@ public class DocumentoService {
 
     /** {@code requisito}: descrição do requisito de etapa que este documento cumpre, se houver. */
     public record DocumentoDto(Long id, String nome, String contentType, long tamanho, Long enviadoPor, Instant criadoEm,
-                               Long requisitoId, String requisito) {
+                               Long requisitoId, String requisito, boolean automatico) {
         static DocumentoDto de(Documento d, String requisito) {
             return new DocumentoDto(d.getId(), d.getNomeOriginal(), d.getContentType(), d.getTamanho(),
-                    d.getEnviadoPor(), d.getCriadoEm(), d.getRequisitoId(), requisito);
+                    d.getEnviadoPor(), d.getCriadoEm(), d.getRequisitoId(), requisito, d.isAutomatico());
         }
     }
 

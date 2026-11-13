@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { api, ROTULO_QUEM_MOVE, type Etapa, type Fluxo, type Papel, type TipoRequisito } from '../api'
+import { api, ROTULO_QUEM_MOVE, type Etapa, type Fluxo, type Papel, type RegraAutomacao, type TipoRequisito } from '../api'
+import { AutomacoesSecao } from './AutomacoesSecao'
 
 export const ROTULO_TIPO: Record<TipoRequisito, string> = { DOCUMENTO: 'Anexar documento', CONFIRMACAO: 'Confirmação do responsável' }
 
@@ -7,8 +8,8 @@ export const ROTULO_TIPO: Record<TipoRequisito, string> = { DOCUMENTO: 'Anexar d
  * Configuração de uma etapa do fluxo (administrador e gestor). Cada seção grava na hora e pede à lista
  * de fluxos que recarregue, então a janela sempre mostra o que está salvo.
  */
-export default function ConfigurarEtapa({ fluxo, etapa, recarregar, fechar }: {
-  fluxo: Fluxo; etapa: Etapa; recarregar: () => Promise<unknown>; fechar: () => void
+export default function ConfigurarEtapa({ fluxo, etapa, regras, recarregar, fechar }: {
+  fluxo: Fluxo; etapa: Etapa; regras: RegraAutomacao[]; recarregar: () => Promise<unknown>; fechar: () => void
 }) {
   const [tipo, setTipo] = useState<TipoRequisito>('DOCUMENTO')
   const [descricao, setDescricao] = useState('')
@@ -79,6 +80,12 @@ export default function ConfigurarEtapa({ fluxo, etapa, recarregar, fechar }: {
               </form>
             </>
           )}
+        </section>
+
+        <section className="config-secao">
+          <h4>Automações ao entrar nesta etapa</h4>
+          <p className="sub">Rodam sozinhas, logo depois que o processo entra aqui. Se uma falhar, o processo anda do mesmo jeito e o resultado fica registrado no processo.</p>
+          <AutomacoesSecao fluxo={fluxo} etapa={etapa} regras={regras} recarregar={recarregar} />
         </section>
 
         <div className="acoes"><button type="button" onClick={fechar}>Fechar</button></div>
