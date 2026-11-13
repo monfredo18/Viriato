@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api, type Cliente, type Entrega, type Pagina, type Processo, type Setor, type Status, type Usuario } from '../api'
 import { useAuth } from '../auth'
 
@@ -13,10 +13,11 @@ export function Selo({ p }: { p: Processo }) {
 export default function Processos() {
   const [dados, setDados] = useState<Pagina<Processo> | null>(null)
   const [pagina, setPagina] = useState(0)
-  const [busca, setBusca] = useState('')
-  const [status, setStatus] = useState<Status | ''>('ABERTO')
-  const [meus, setMeus] = useState(false)
-  const [atrasados, setAtrasados] = useState(false)
+  const [params] = useSearchParams()
+  const [busca, setBusca] = useState(params.get('busca') ?? '')
+  const [status, setStatus] = useState<Status | ''>(params.get('busca') ? '' : 'ABERTO')
+  const [meus, setMeus] = useState(params.get('meus') === '1')
+  const [atrasados, setAtrasados] = useState(params.get('atrasados') === '1')
   const [clienteId, setClienteId] = useState('')
   const [setorId, setSetorId] = useState('')
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -36,6 +37,16 @@ export default function Processos() {
     if (setorId) q.set('setorId', setorId)
     api.get<Pagina<Processo>>(`/processos?${q}`).then(setDados).catch((e) => setErro(e.message))
   }, [pagina, busca, status, meus, atrasados, clienteId, setorId])
+
+  // Busca da barra superior e atalho "Minhas tarefas" chegam pela URL, inclusive quando já estamos nesta tela.
+  useEffect(() => {
+    const termo = params.get('busca') ?? ''
+    setBusca(termo)
+    setMeus(params.get('meus') === '1')
+    setAtrasados(params.get('atrasados') === '1')
+    setStatus(termo ? '' : 'ABERTO')
+    setPagina(0)
+  }, [params])
 
   useEffect(() => {
     api.get<Cliente[]>('/clientes').then(setClientes)
@@ -116,7 +127,7 @@ export default function Processos() {
  * entrega e responsável (o departamento é o dele); usuário informa só empresa e entrega (departamento e
  * responsável são os dele). O servidor aplica as mesmas regras, o formulário apenas não pede o que não vale.
  */
-function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => void }) {
+export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => void }) {
   const { usuario } = useAuth()
   const papel = usuario?.papel
   const [clientes, setClientes] = useState<Cliente[]>([])
