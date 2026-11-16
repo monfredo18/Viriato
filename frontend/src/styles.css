@@ -902,17 +902,17 @@ td .selo + .selo, td .selo + label { margin-left: .4rem; }
 .perfil-modal { max-height: calc(100vh - 2rem); overflow-y: auto; }
 
 /* ---------- tela de acesso: painel da esquerda claro, com a logo (sem fundo) centralizada ---------- */
-.login-lado { align-items: center; justify-content: center; text-align: center; background: #fff; color: var(--texto); }
+.login-lado { align-items: center; justify-content: center; padding-bottom: 9rem; text-align: center; background: #fff; color: var(--texto); }
 :root[data-tema='escuro'] .login-lado { background: var(--marinho); color: #e7ecf6; }
 .login-lado::before { display: none; }
 .login-marca { justify-content: center; }
-.login-logo { display: block; height: 150px; width: auto; }
+.login-logo { display: block; height: 210px; width: auto; }
 :root[data-tema='escuro'] .login-logo { filter: brightness(0) invert(1); }   /* logo de letras escuras vira branca no tema escuro */
-.login-texto { margin-top: 2.25rem; display: flex; flex-direction: column; align-items: center; }
+.login-texto { margin-top: 2rem; display: flex; flex-direction: column; align-items: center; }
 .login-texto h1 { color: var(--texto); max-width: none; font-size: 1.7rem; }
 .login-texto h1::after { left: 50%; transform: translateX(-50%); }
 .login-texto p { color: var(--suave); }
 :root[data-tema='escuro'] .login-texto h1 { color: #fff; }
 .login-rodape { position: absolute; left: 0; right: 0; bottom: 1.5rem; text-align: center; color: var(--suave); }
 :root[data-tema='escuro'] .login-rodape { color: #6f7ea6; }
-@media (max-width: 820px) { .login-logo { height: 84px; } .login-lado { padding: 1.25rem 1.5rem; } }
+@media (max-width: 820px) { .login-logo { height: 110px; } .login-lado { padding: 1.25rem 1.5rem; } }
