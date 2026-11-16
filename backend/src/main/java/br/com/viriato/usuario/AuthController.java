@@ -40,6 +40,10 @@ public class AuthController {
 
     public record NovaSenhaReq(@NotBlank @Size(min = 8, max = 72) String novaSenha) {}
 
+    /** Aberta a todos e sem consultar o banco: a tela a consulta de tempos em tempos para mostrar "Sistema online". */
+    @GetMapping("/auth/saude")
+    public java.util.Map<String, String> saude() { return java.util.Map.of("status", "ok"); }
+
     @PostMapping("/auth/login")
     public AuthService.Sessao login(@Valid @RequestBody LoginReq r) {
         return auth.login(r.usuario(), r.senha(), r.codigo());

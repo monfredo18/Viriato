@@ -32,6 +32,43 @@ const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean; so
   { para: '/auditoria', rotulo: 'Auditoria', icone: 'escudo', soAdmin: true },
 ]
 
+/**
+ * Indicador do rodapé do menu: confere o servidor a cada 30 s (a cada 10 s enquanto estiver fora). Verde só se a API
+ * respondeu agora; vermelho quando falha, o que também acontece se a internet de quem usa cair.
+ */
+function EstadoDoSistema({ empresa }: { empresa: string }) {
+  const [estado, setEstado] = useState<{ ok: boolean; em: Date } | null>(null)
+  useEffect(() => {
+    let vivo = true
+    let timer: ReturnType<typeof setTimeout>
+    const conferir = async () => {
+      let ok = false
+      const ctl = new AbortController()
+      const limite = setTimeout(() => ctl.abort(), 5000)
+      try { ok = (await fetch('/api/auth/saude', { signal: ctl.signal, cache: 'no-store' })).ok } catch { ok = false }
+      clearTimeout(limite)
+      if (!vivo) return
+      setEstado({ ok, em: new Date() })
+      timer = setTimeout(conferir, ok ? 30000 : 10000)
+    }
+    const aoMudarRede = () => { clearTimeout(timer); conferir() }
+    window.addEventListener('online', aoMudarRede)
+    window.addEventListener('offline', aoMudarRede)
+    conferir()
+    return () => { vivo = false; clearTimeout(timer); window.removeEventListener('online', aoMudarRede); window.removeEventListener('offline', aoMudarRede) }
+  }, [])
+  const ok = estado?.ok ?? true   // antes da primeira resposta não alarma
+  return (
+    <div className="lateral-rodape" role="status">
+      <span className={`ponto-online ${ok ? '' : 'fora'}`} aria-hidden="true" />
+      <span>
+        <b>{empresa || 'Viriato'}</b>
+        <small>{ok ? 'Sistema online' : 'Sem conexão com o servidor'}{estado ? ` · ${estado.em.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}</small>
+      </span>
+    </div>
+  )
+}
+
 function Layout() {
   const { usuario, empresa, sair, ehAdmin } = useAuth()
   const nav = useNavigate()
@@ -78,10 +115,7 @@ function Layout() {
             {minhas > 0 && <b className="contador">{minhas > 99 ? '99+' : minhas}</b>}
           </Link>
         </nav>
-        <div className="lateral-rodape">
-          <span className="ponto-online" aria-hidden="true" />
-          <span><b>{empresa || 'Viriato'}</b><small>Sistema online</small></span>
-        </div>
+        <EstadoDoSistema empresa={empresa} />
       </aside>
       <button type="button" className="menu-fundo" aria-label="Fechar menu" onClick={() => setMenuAberto(false)} />
 

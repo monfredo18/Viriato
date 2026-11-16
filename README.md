@@ -62,7 +62,7 @@ backend/src/main/java/br/com/viriato/
 - Coberto por testes (`FluxoCompletoTest`).
 
 ### Interface
-Menu lateral (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatórios e **Minhas tarefas**, com a contagem dos seus processos em aberto) e barra superior com busca de processos, botão **Ajuda**, avisos, tema claro/escuro e perfil. A tela **Início** resume em andamento, atrasados, concluídos, tempo médio, carga, processos recentes e prazos próximos. No celular o menu vira uma gaveta.
+Menu lateral (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatórios e **Minhas tarefas**, com a contagem dos seus processos em aberto) e barra superior com busca de processos, botão **Ajuda**, avisos, tema claro/escuro e perfil. A tela **Início** resume em andamento, atrasados, concluídos, tempo médio, carga, processos recentes e prazos próximos. No celular o menu vira uma gaveta. O indicador **Sistema online** do rodapé do menu é real: a tela consulta `GET /api/auth/saude` a cada 30 s e mostra vermelho ("Sem conexão com o servidor") quando a API não responde.
 
 - **Foto de perfil:** clicando no próprio nome abre-se *Meu perfil*, onde se escolhe, troca ou remove a foto (JPEG, PNG ou WebP, até 2 MB; o tipo é conferido pelo conteúdo do arquivo e o navegador reduz a imagem antes de enviar). O administrador pode remover a foto de outra pessoa pela API.
 - **Ajuda:** gestor e usuário têm uma conversa própria com os administradores; os administradores veem a lista de conversas da empresa e qualquer um responde. Aviso de mensagem nova no botão; a janela atualiza sozinha (consulta a cada poucos segundos).

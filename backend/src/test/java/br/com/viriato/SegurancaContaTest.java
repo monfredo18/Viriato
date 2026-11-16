@@ -178,6 +178,12 @@ class SegurancaContaTest {
     }
 
     @Test
+    void rotaDeSaudeEAbertaESemDados() throws Exception {
+        String corpo = mvc.perform(get("/api/auth/saude")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(corpo).isEqualTo("{\"status\":\"ok\"}");
+    }
+
+    @Test
     void segredoDeExemploNaoSobeSemPermissao() {
         String exemplo = "dev-only-secret-change-me-dev-only-secret-change-me";
         assertThatThrownBy(() -> new JwtService(exemplo, 12, false)).hasMessageContaining("JWT_SECRET");
