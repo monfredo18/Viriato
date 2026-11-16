@@ -1,6 +1,6 @@
 # Viriato — Controle de Processos
 
-Sistema web multi-empresa (SaaS) para cadastrar, acompanhar e automatizar processos com fluxos configuráveis, prazos, documentos e notificações.
+Sistema web multi-empresa (SaaS) para cadastrar, acompanhar e automatizar processos com fluxos configuráveis, prazos, documentos, notificações, chat de ajuda e relatórios.
 
 | Camada | Tecnologia |
 |---|---|
@@ -11,6 +11,7 @@ Sistema web multi-empresa (SaaS) para cadastrar, acompanhar e automatizar proces
 | Notificações | In-app (sininho) |
 | Ajuda | Chat interno com os administradores (botão "Ajuda") |
 | Foto de perfil | Mesmo armazenamento dos documentos (S3 ou disco) |
+| Relatórios | PDF gerado no servidor (OpenPDF) |
 | Infra | Docker / Docker Compose |
 
 > 📄 **[Relatório completo do sistema (PDF)](docs/relatorio-viriato.pdf)**: como funciona, arquitetura, regras, segurança, limitações conhecidas e próximos passos. A fonte está em `docs/relatorio/` (regerar: `node docs/relatorio/gerar-pdf.js`).
@@ -32,7 +33,7 @@ cd backend && mvn spring-boot:run       # API em :8080
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
 
-Testes: `cd backend && mvn test` (usa H2 em modo MySQL; não precisa de Docker).
+Testes: `cd backend && mvn test` (99 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
 
 ## Arquitetura
 
@@ -40,9 +41,14 @@ Testes: `cd backend && mvn test` (usa H2 em modo MySQL; não precisa de Docker).
 backend/src/main/java/br/com/viriato/
   seguranca/   JWT, filtro, config de segurança, CORS
   usuario/     login por nome, senha provisória, primeiro administrador, usuários e papéis
-  fluxo/       fluxos, etapas e transições configuráveis por empresa
-  processo/    processos, movimentação, histórico, atribuição, cancelamento
-  documento/   upload/download (S3), nomes sanitizados
+  cadastro/    empresas atendidas, setores e entregas
+  fluxo/       fluxos, etapas, requisitos e transições configuráveis por empresa
+  processo/    processos, movimentação, histórico, atribuição, cancelamento, aprovação
+  automacao/   regras por etapa: ficha em PDF e webhook
+  indicador/   painel de indicadores
+  relatorio/   relatórios de processos em PDF
+  documento/   upload/download (S3 ou disco), nomes sanitizados
+  tenant/      empresas (tenants)
   notificacao/ avisos no sistema + agendador de prazos
   ajuda/       chat de ajuda entre as pessoas da empresa e os administradores
   comum/       tratamento de erros, datas
@@ -54,6 +60,12 @@ backend/src/main/java/br/com/viriato/
 - Toda consulta filtra por `tenant_id`; recurso de outra empresa responde **404**.
 - Coberto por testes (`FluxoCompletoTest`).
 
+### Interface
+Menu lateral (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatórios e **Minhas tarefas**, com a contagem dos seus processos em aberto) e barra superior com busca de processos, botão **Ajuda**, avisos, tema claro/escuro e perfil. A tela **Início** resume em andamento, atrasados, concluídos, tempo médio, carga, processos recentes e prazos próximos. No celular o menu vira uma gaveta.
+
+- **Foto de perfil:** clicando no próprio nome abre-se *Meu perfil*, onde se escolhe, troca ou remove a foto (JPEG, PNG ou WebP, até 2 MB; o tipo é conferido pelo conteúdo do arquivo e o navegador reduz a imagem antes de enviar). O administrador pode remover a foto de outra pessoa pela API.
+- **Ajuda:** gestor e usuário têm uma conversa própria com os administradores; os administradores veem a lista de conversas da empresa e qualquer um responde. Aviso de mensagem nova no botão; a janela atualiza sozinha (consulta a cada poucos segundos).
+
 ### Cadastros e processos
 - **Empresas atendidas** (para quem o processo é feito), **setores** e **entregas** são cadastros da empresa.
 - Cada empresa atendida tem **número** (código interno de 1 a 10 dígitos, sem repetir) e **nome**. O **número do processo é o número da empresa**: processos da mesma empresa compartilham o número.
@@ -64,7 +76,7 @@ backend/src/main/java/br/com/viriato/
 ### Controle do processo e automações
 - **Requisitos por etapa:** em *Fluxos → Configurar*, cada etapa pode exigir documentos anexados ou confirmações para o processo sair dela. O servidor bloqueia o avanço enquanto houver pendência (voltar de etapa não exige; ao reentrar, exige de novo).
 - **Aprovação:** cada etapa define quem pode mover processos para ela (qualquer responsável, gestor ou só administrador). Quem não pode, solicita; gestor/administrador aprova (e o processo avança) ou recusa com motivo.
-- **Painel:** aba com atrasados por setor, tempo médio por etapa e carga por funcionário (administrador vê todos os setores; os demais, o próprio).
+- **Painel:** aba com atrasados por setor, tempo médio por etapa e carga por funcionário. O administrador vê todos os setores; gestor e usuário veem só o próprio setor, e na carga por funcionário só pessoas desse setor (nunca administradores).
 - **Automações** (ao entrar numa etapa ou ao cancelar): gerar a ficha do processo em PDF e chamar um webhook (https, endereço público, JSON assinado com HMAC-SHA256). Falha nunca desfaz o movimento e fica registrada no processo.
 - Documentos em disco, sem S3, para desenvolvimento: `ARMAZENAMENTO=local`.
 
@@ -90,10 +102,10 @@ O botão **X** apaga empresas, setores, entregas, fluxos e funcionários (sempre
 - **Só processo em andamento impede apagar.** Processo concluído ou cancelado não bloqueia; ele continua existindo, apenas sem o vínculo com o que foi apagado (aparece "—"; o título e o histórico permanecem).
 - Apagar uma **entrega** tira ela da lista dos setores; apagar um **setor** deixa seus funcionários sem setor.
 - **Fluxo:** não apaga se alguma entrega usa o fluxo nem se há processo em andamento nele. As etapas e transições são apagadas junto.
-- **Funcionário:** ninguém apaga a si mesmo; o gestor só apaga os do próprio setor. Se ele tem processos, aparece um aviso ("Apagar mesmo assim" / "Desistir de apagar"). Os processos em andamento e atrasados passam para os herdeiros escolhidos, com um novo prazo; os concluídos e cancelados ficam com o nome dele ("(removido)") e só o gestor do setor e o administrador os veem. O histórico permanece (o autor aparece como "usuário removido").
+- **Funcionário:** ninguém apaga a si mesmo; o gestor só apaga os do próprio setor e, ao passar os processos, só escolhe herdeiros desse setor (administrador só é herdeiro quando quem apaga é administrador). Se ele tem processos, aparece um aviso ("Apagar mesmo assim" / "Desistir de apagar"). Os processos em andamento e atrasados passam para os herdeiros escolhidos, com um novo prazo; os concluídos e cancelados ficam com o nome dele ("(removido)") e só o gestor do setor e o administrador os veem. O histórico permanece (o autor aparece como "usuário removido").
 
 ### Papéis
-Todos enxergam tudo (processos, cadastros, fluxos e equipe); o que muda é quem altera.
+Todos enxergam os cadastros e fluxos da empresa. **Processos e pessoas são por setor:** o administrador vê todos; gestor e usuário veem só os do próprio setor (na aba Usuários, nunca administradores). O que muda entre os papéis é quem altera.
 
 | | Administrador | Gestor | Usuário |
 |---|---|---|---|
@@ -101,10 +113,10 @@ Todos enxergam tudo (processos, cadastros, fluxos e equipe); o que muda é quem 
 | Setores e entregas | cadastra, altera e apaga | cadastra, altera e apaga | só consulta |
 | Fluxos | cria, desativa e apaga | cria, desativa e apaga | só consulta |
 | Funcionários | adiciona (qualquer papel), altera papel, setor e situação, apaga (menos a si mesmo) | adiciona (só papel Usuário), ativa/desativa e apaga os de papel Usuário; não altera papel nem setor | só consulta |
-| Processos | mexe em qualquer um | mexe em qualquer um | abre processos; só mexe nos que é o responsável |
+| Processos | mexe em qualquer um | mexe em qualquer um do próprio setor | abre processos; só mexe nos que é o responsável |
 
 ### Prazos
-Cada etapa pode ter `prazo_dias`. Um job diário (`PRAZOS_CRON`, padrão 08:00 America/Sao_Paulo) avisa o responsável sobre prazos vencendo/vencidos, **uma vez por etapa**.
+Cada etapa pode ter `prazo_dias`. Um job diário (`PRAZOS_CRON`, padrão 08:00 America/Sao_Paulo) avisa o gestor do setor sobre prazos vencendo/vencidos, **uma vez por etapa**.
 
 ## Configuração (variáveis de ambiente)
 
@@ -128,5 +140,4 @@ ECS Fargate (backend + frontend) · RDS MySQL · S3 com bloqueio de acesso públ
 - [ ] Campos personalizados por fluxo (hoje: JSON livre via API)
 - [ ] Cobrança/planos e limites por empresa
 - [ ] Feriados e prazos em dias úteis
-- [ ] Dashboard e relatórios
 - [ ] Rate limiting no login
