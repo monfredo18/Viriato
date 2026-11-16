@@ -66,7 +66,7 @@ function Layout() {
   return (
     <div className={`app ${menuAberto ? 'menu-aberto' : ''}`}>
       <aside className="lateral" aria-label="Menu principal">
-        <div className="lateral-marca"><Logo altura={48} /></div>
+        <div className="lateral-marca"><Logo altura={104} className="logo-branca" /></div>
         <nav>
           {ITENS.filter((i) => !i.soAdmin || ehAdmin).map((i) => (
             <NavLink key={i.para} to={i.para} end={i.fim} className={({ isActive }) => (isActive && !(i.para === '/processos' && aMinhas) ? 'ativo' : undefined)}>

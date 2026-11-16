@@ -1,13 +1,11 @@
-import logo from './assets/logo-viriato.png'
+import logo from './assets/logo-login.png'
 
 /**
- * Marca do Grupo Viriato. A imagem tem fundo transparente e letras escuras, então fica sobre um
- * fundo branco para ser legível também na barra marinho e no tema escuro.
+ * Marca do Grupo Viriato (imagem sem fundo). Sem {@code altura}, o tamanho vem do CSS da classe recebida.
+ * As letras são escuras: sobre fundo escuro, a classe {@code logo-branca} a deixa toda branca.
  */
-export default function Logo({ altura = 40 }: { altura?: number }) {
+export default function Logo({ altura, className = '' }: { altura?: number; className?: string }) {
   return (
-    <span className="logo-selo">
-      <img src={logo} alt="Grupo Viriato" height={altura} style={{ height: altura, width: 'auto' }} />
-    </span>
+    <img className={`logo ${className}`} src={logo} alt="Grupo Viriato" style={altura ? { height: altura, width: 'auto' } : undefined} />
   )
 }
