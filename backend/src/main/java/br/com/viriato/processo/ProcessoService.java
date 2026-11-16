@@ -369,6 +369,7 @@ public class ProcessoService {
         List<Usuario> herdeiros = herdeiroIds.stream().distinct()
                 .map(id -> usuarios.findByIdAndTenantId(id, tid).filter(Usuario::isAtivo)
                         .filter(u -> !u.getId().equals(removido.getId()))
+                        .filter(u -> u.getPapel() != Papel.ADMIN || quem.papel() == Papel.ADMIN)   // gestor não passa processos para administrador
                         .orElseThrow(() -> new NegocioException("Um dos funcionários escolhidos não pode herdar os processos")))
                 .toList();
         Map<Long, Integer> giro = new HashMap<>();   // revezamento por setor

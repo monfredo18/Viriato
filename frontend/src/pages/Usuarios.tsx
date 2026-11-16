@@ -226,8 +226,9 @@ function ApagarFuncionario({ alvo, pend, colegas, fechar, apagado }: {
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const encerrados = pend.concluidos + pend.cancelados
-  // Herdeiros possíveis: ativos, do setor dele (o administrador pode herdar de qualquer setor).
-  const candidatos = colegas.filter((c) => c.id !== alvo.id && c.ativo && (c.papel === 'ADMIN' || (alvo.setorId !== null && c.setorId === alvo.setorId)))
+  // Herdeiros possíveis: ativos, do setor dele. Administradores só entram na lista quando quem apaga é administrador.
+  const { ehAdmin } = useAuth()
+  const candidatos = colegas.filter((c) => c.id !== alvo.id && c.ativo && ((ehAdmin && c.papel === 'ADMIN') || (c.papel !== 'ADMIN' && alvo.setorId !== null && c.setorId === alvo.setorId)))
 
   const apagarAgora = async (corpo?: object) => {
     setErro('')

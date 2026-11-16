@@ -131,6 +131,21 @@ class ApagarComProcessosTest {
     }
 
     @Test
+    void gestorNaoPassaProcessosParaAdministradorMasAdministradorPode() throws Exception {
+        C c = cenario();
+        long adminId = 0;
+        for (JsonNode u : consultar(c.admin(), "/api/usuarios")) if (u.get("nome").asText().equals("Adm Teste")) adminId = u.get("id").asLong();
+        long p = processo(c, c.idU1());
+        String amanha = Datas.hoje().plusDays(1).toString();
+        String url = "/api/usuarios/" + c.idU1() + "/apagar";
+        enviar(c.gestorEng(), url, herdeiros(amanha, adminId)).andExpect(status().isUnprocessableEntity());       // gestor: administrador não herda
+        enviar(c.gestorEng(), url, herdeiros(amanha, adminId, c.idU2())).andExpect(status().isUnprocessableEntity());
+        assertThat(consultar(c.admin(), "/api/usuarios").toString()).contains("Ursula Eng");                      // nada foi apagado
+        enviar(c.admin(), url, herdeiros(amanha, adminId)).andExpect(status().isNoContent());                     // administrador pode
+        assertThat(consultar(c.admin(), "/api/processos/" + p).get("processo").get("responsavelNome").asText()).isEqualTo("Adm Teste");
+    }
+
+    @Test
     void processosEmAndamentoSaoDivididosComNovoPrazo_eEncerradosFicamRestritosAoGestor() throws Exception {
         C c = cenario();
         long a1 = processo(c, c.idU1()), a2 = processo(c, c.idU1()), a3 = processo(c, c.idU1());
