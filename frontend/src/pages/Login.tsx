@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { api, ApiError, type Sessao } from '../api'
 import { useAuth } from '../auth'
 import BotaoTema from '../tema'
-import Logo from '../Logo'
+import logo from '../assets/logo-login.png'
 
 export default function Login() {
   const { entrar } = useAuth()
@@ -34,7 +34,7 @@ export default function Login() {
   return (
     <div className="login">
       <aside className="login-lado">
-        <div className="login-marca"><Logo altura={92} /></div>
+        <div className="login-marca"><img className="login-logo" src={logo} alt="Grupo Viriato" /></div>
         <div className="login-texto">
           <h1>Controle de processos</h1>
           <p>Etapas, prazos, responsáveis e documentos de cada processo, com histórico completo.</p>

@@ -339,7 +339,6 @@ tr.linha-atrasada td:nth-child(5) { color: var(--vermelho); font-weight: 600; }
 /* Marca (imagem de fundo transparente) sobre painel branco */
 .logo-selo { display: inline-flex; align-items: center; background: #fff; border-radius: 4px; padding: 2px 6px; line-height: 0; }
 .logo-selo img { display: block; image-rendering: auto; }
-.login-marca .logo-selo { padding: 8px 14px; border-radius: 6px; }
 
 /* ---------- requisitos de etapa ---------- */
 .requisitos { margin: 1rem 0 .25rem; padding: .85rem 1rem; background: var(--bg); border-left: 3px solid var(--ouro); }
@@ -572,7 +571,6 @@ tbody tr:hover { background: var(--destaque); }
 .login-texto h1::after { height: 3px; width: 56px; border-radius: 3px; background: linear-gradient(90deg, var(--ouro-vivo) 0 40px, transparent 40px 45px, var(--vermelho-solido) 45px); }
 .login-texto p { font-size: 1.05rem; line-height: 1.65; max-width: 36ch; color: #b3c0e0; }
 .login-rodape { letter-spacing: .06em; text-transform: uppercase; font-size: 11px; color: #6f7ea6; }
-.login-marca .logo-selo { padding: 10px 16px; border-radius: 10px; box-shadow: 0 0 0 1px rgba(212, 175, 55, .7), 0 18px 40px -12px rgba(0, 0, 0, .7); }
 .login-form { background: radial-gradient(900px 560px at 75% 15%, rgba(43, 89, 195, .08), transparent 65%); }
 .login-form .cartao { max-width: 440px; padding: 2.6rem 2.4rem 2.2rem; border-radius: 12px; box-shadow: 0 40px 80px -36px rgba(12, 21, 48, .5), 0 2px 6px rgba(12, 21, 48, .06); background: var(--card); }
 .login-form .cartao::before { border-radius: 12px 12px 0 0; }
@@ -596,7 +594,6 @@ tr:last-child td { border-bottom: none; }
   .login-lado { padding: 1.5rem; }
   .login-form .cartao { padding: 2rem 1.5rem 1.75rem; }
 }
-@media (max-width: 820px) { .login-marca .logo-selo img { height: 64px !important; } }
 
 /* ==========================================================================
    Estrutura com menu lateral
@@ -903,3 +900,19 @@ td .selo + .selo, td .selo + label { margin-left: .4rem; }
 .perfil-secao label { margin-bottom: .7rem; }
 .chave-2fa { display: block; margin: .3rem 0 .7rem; padding: .6rem .8rem; border-radius: var(--raio); background: var(--bg); border: 1px dashed var(--borda-forte); font-family: var(--mono); font-size: 14px; letter-spacing: .08em; word-break: break-all; user-select: all; }
 .perfil-modal { max-height: calc(100vh - 2rem); overflow-y: auto; }
+
+/* ---------- tela de acesso: painel da esquerda claro, com a logo (sem fundo) centralizada ---------- */
+.login-lado { align-items: center; justify-content: center; text-align: center; background: #fff; color: var(--texto); }
+:root[data-tema='escuro'] .login-lado { background: var(--marinho); color: #e7ecf6; }
+.login-lado::before { display: none; }
+.login-marca { justify-content: center; }
+.login-logo { display: block; height: 150px; width: auto; }
+:root[data-tema='escuro'] .login-logo { filter: brightness(0) invert(1); }   /* logo de letras escuras vira branca no tema escuro */
+.login-texto { margin-top: 2.25rem; display: flex; flex-direction: column; align-items: center; }
+.login-texto h1 { color: var(--texto); max-width: none; font-size: 1.7rem; }
+.login-texto h1::after { left: 50%; transform: translateX(-50%); }
+.login-texto p { color: var(--suave); }
+:root[data-tema='escuro'] .login-texto h1 { color: #fff; }
+.login-rodape { position: absolute; left: 0; right: 0; bottom: 1.5rem; text-align: center; color: var(--suave); }
+:root[data-tema='escuro'] .login-rodape { color: #6f7ea6; }
+@media (max-width: 820px) { .login-logo { height: 84px; } .login-lado { padding: 1.25rem 1.5rem; } }
