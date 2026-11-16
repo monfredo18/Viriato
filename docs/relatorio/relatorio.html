@@ -75,7 +75,7 @@
   <h2>O que o sistema faz hoje</h2>
   <ul>
     <li><strong>Cadastro self-service de empresa:</strong> quem se cadastra vira administrador e já recebe um fluxo padrão.</li>
-    <li><strong>Usuários, setores e papéis:</strong> Administrador, Gestor e Usuário, com permissões diferentes; cada funcionário pertence a um setor.</li>
+    <li><strong>Usuários, setores e papéis:</strong> Administrador, Gestor e Usuário, com permissões diferentes; cada funcionário pertence a um setor. Na aba Usuários, o administrador vê todas as pessoas; gestor e usuário veem só as do próprio setor, e nunca administradores.</li>
     <li><strong>Cadastros:</strong> empresas atendidas (com número e nome), setores e entregas. Cada setor define quais entregas faz, e cada entrega define o fluxo.</li>
     <li><strong>Fluxos configuráveis:</strong> etapas com prazo em dias, etapa inicial e etapas finais.</li>
     <li><strong>Processos:</strong> abertos com empresa e entrega (o departamento e o responsável dependem do papel de quem abre); cada setor só vê os próprios processos, e só o administrador vê todos; busca e filtros, movimentação entre etapas respeitando as regras do fluxo, atribuição, comentários e cancelamento.</li>
@@ -594,7 +594,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>97 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>99 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>

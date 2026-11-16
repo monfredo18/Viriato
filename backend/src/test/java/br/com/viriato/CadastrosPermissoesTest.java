@@ -131,7 +131,7 @@ class CadastrosPermissoesTest {
     void gestorAlteraSituacaoDeUsuarioMasNaoSetorNemPapel_usuarioSoVe() throws Exception {
         Cenario c = cenario();
         long idFunc = 0, idAdmin = 0, idGestor = 0;
-        for (JsonNode u : consultar(c.usuario(), "/api/usuarios")) { // o usuário comum enxerga a equipe
+        for (JsonNode u : consultar(c.admin(), "/api/usuarios")) {
             switch (u.get("nome").asText()) {
                 case "Func" -> idFunc = u.get("id").asLong();
                 case "Adm" -> idAdmin = u.get("id").asLong();

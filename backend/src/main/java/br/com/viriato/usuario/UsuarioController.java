@@ -75,12 +75,25 @@ public class UsuarioController {
     /** {@code removerSetor=true} limpa o setor; {@code setorId} define um novo. */
     public record AtualizaUsuario(Papel papel, Boolean ativo, Long setorId, Boolean removerSetor) {}
 
+    /**
+     * O administrador vê todas as pessoas da empresa; gestor e usuário veem só as do próprio setor (e nunca
+     * administradores). Sem setor definido, a pessoa só enxerga a si mesma.
+     */
     @GetMapping
     public List<UsuarioDto> listar() {
-        Long tid = Contexto.tenantId();
+        UsuarioLogado quem = Contexto.atual();
+        Long tid = quem.tenantId();
         Map<Long, String> nomesSetor = setores.findByTenantIdOrderByNome(tid).stream()
                 .collect(Collectors.toMap(Setor::getId, Setor::getNome));
-        return repo.findByTenantIdOrderByNome(tid).stream()
+        List<Usuario> todos = repo.findByTenantIdOrderByNome(tid);
+        if (quem.papel() != Papel.ADMIN) {
+            Long meuSetor = null;
+            for (Usuario u : todos) if (u.getId().equals(quem.id())) meuSetor = u.getSetorId();
+            final Long setorDele = meuSetor;
+            todos = todos.stream().filter(u -> u.getId().equals(quem.id())
+                    || (setorDele != null && u.getPapel() != Papel.ADMIN && setorDele.equals(u.getSetorId()))).toList();
+        }
+        return todos.stream()
                 .map(u -> UsuarioDto.de(u, u.getSetorId() == null ? null : nomesSetor.get(u.getSetorId())))
                 .toList();
     }
