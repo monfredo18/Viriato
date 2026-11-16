@@ -85,7 +85,7 @@ public class IndicadorService {
         return new Painel(escopo, setorEscopo == null, periodo, agora, resumo(linhas, hoje),
                 porSetor(linhas, hoje, setorEscopo, nomesSetor, tid),
                 porEtapa(linhas, desde, tid),
-                porFuncionario(linhas, hoje, setorEscopo, nomesSetor, tid));
+                porFuncionario(linhas, hoje, setorEscopo, nomesSetor, tid, admin));
     }
 
     static boolean atrasado(LinhaProcesso l, LocalDate hoje) {
@@ -180,7 +180,7 @@ public class IndicadorService {
                 .toList();
     }
 
-    private List<PorFuncionario> porFuncionario(List<LinhaProcesso> linhas, LocalDate hoje, Long setorEscopo, Map<Long, String> nomesSetor, Long tid) {
+    private List<PorFuncionario> porFuncionario(List<LinhaProcesso> linhas, LocalDate hoje, Long setorEscopo, Map<Long, String> nomesSetor, Long tid, boolean verTodos) {
         Map<Long, long[]> carga = new HashMap<>();   // [abertos, atrasados, concluidos]
         for (LinhaProcesso l : linhas) {
             if (l.responsavelId() == null) continue;
@@ -193,6 +193,8 @@ public class IndicadorService {
             long[] c = carga.getOrDefault(u.getId(), new long[3]);
             boolean temCarga = c[0] + c[2] > 0;
             boolean doEscopo = setorEscopo == null ? u.isAtivo() && u.getSetorId() != null : Objects.equals(u.getSetorId(), setorEscopo) && u.isAtivo();
+            // Gestor e usuário só enxergam pessoas do próprio setor, e nunca administradores (mesmo com processos no setor).
+            if (!verTodos && (u.getPapel() == Papel.ADMIN || !Objects.equals(u.getSetorId(), setorEscopo))) continue;
             if (!doEscopo && !temCarga) continue;
             saida.add(new PorFuncionario(u.getId(), u.getNome(), u.getSetorId() == null ? null : nomesSetor.get(u.getSetorId()), c[0], c[1], c[2]));
         }

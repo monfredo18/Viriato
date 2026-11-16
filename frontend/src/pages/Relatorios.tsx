@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, type Cliente, type Setor, type Usuario } from '../api'
 
-type Abrangencia = 'TODOS_SETORES' | 'SEU_SETOR' | 'PROPRIOS'
-interface Escopo { abrangencia: Abrangencia; setorId: number | null; setorNome: string | null; usuarioId: number | null }
+type Abrangencia = 'TODOS_SETORES' | 'SEU_SETOR'
+interface Escopo { abrangencia: Abrangencia; setorId: number | null; setorNome: string | null }
 interface Resumo { total: number; emAndamento: number; atrasados: number; concluidos: number; cancelados: number }
 type Situacao = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO'
 
@@ -14,7 +14,7 @@ const SITUACOES: { valor: Situacao; rotulo: string }[] = [
 
 /**
  * Relatório de processos em PDF. A abrangência vem do servidor conforme o papel:
- * administrador (todos os setores), gestor (só o próprio setor), usuário (só os próprios processos).
+ * administrador (todos os setores), gestor e usuário (só o próprio setor).
  */
 export default function Relatorios() {
   const [escopo, setEscopo] = useState<Escopo | null>(null)
@@ -45,17 +45,15 @@ export default function Relatorios() {
   const dataInvertida = de !== '' && ate !== '' && de > ate
   const semSituacao = situacoes.length === 0
 
-  // Responsável: o gestor só enxerga quem é do próprio setor; o usuário só a si mesmo.
+  // Responsável: gestor e usuário só enxergam quem é do próprio setor (e nunca administradores).
   const responsaveis = useMemo(() => {
-    if (escopo?.abrangencia === 'SEU_SETOR') return usuarios.filter((u) => u.setorId === escopo.setorId)
-    if (escopo?.abrangencia === 'PROPRIOS') return usuarios.filter((u) => u.id === escopo.usuarioId)
+    if (escopo?.abrangencia === 'SEU_SETOR') return usuarios.filter((u) => u.setorId === escopo.setorId && u.papel !== 'ADMIN')
     return usuarios
   }, [escopo, usuarios])
 
   const consulta = useMemo(() => {
     const q = new URLSearchParams()
-    if (escopo?.abrangencia === 'PROPRIOS') q.set('usuarioId', String(escopo.usuarioId))
-    else if (usuarioId) q.set('usuarioId', usuarioId)
+    if (usuarioId) q.set('usuarioId', usuarioId)
     if (escopo?.abrangencia === 'SEU_SETOR' && escopo.setorId != null) q.set('setorId', String(escopo.setorId))
     else if (setorId) q.set('setorId', setorId)
     if (clienteId) q.set('clienteId', clienteId)
@@ -98,7 +96,7 @@ export default function Relatorios() {
   const abrangencia =
     escopo?.abrangencia === 'TODOS_SETORES' ? 'Você pode gerar relatórios de todos os setores.'
     : escopo?.abrangencia === 'SEU_SETOR' ? (semSetor ? '' : `Você pode gerar relatórios do setor ${escopo.setorNome ?? ''}.`)
-    : escopo ? 'Você pode gerar relatórios dos seus próprios processos.' : ''
+    : ''
 
   const podeGerar = !!escopo && !semSetor && !dataInvertida && !semSituacao && (resumo?.total ?? 0) > 0 && !gerando
 
@@ -127,11 +125,10 @@ export default function Relatorios() {
 
             <label>Responsável
               <select
-                value={escopo?.abrangencia === 'PROPRIOS' ? String(escopo.usuarioId) : usuarioId}
-                disabled={escopo?.abrangencia === 'PROPRIOS'}
+                value={usuarioId}
                 onChange={(e) => setUsuarioId(e.target.value)}
               >
-                {escopo?.abrangencia !== 'PROPRIOS' && <option value="">Todos</option>}
+                <option value="">Todos</option>
                 {responsaveis.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
               </select>
             </label>

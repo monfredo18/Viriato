@@ -13,6 +13,7 @@ import br.com.viriato.processo.ProcessoRepository;
 import br.com.viriato.processo.StatusProcesso;
 import br.com.viriato.seguranca.UsuarioLogado;
 import br.com.viriato.tenant.TenantRepository;
+import br.com.viriato.usuario.Papel;
 import br.com.viriato.usuario.Usuario;
 import br.com.viriato.usuario.UsuarioRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -34,16 +35,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Relatórios de processos. A abrangência vem SEMPRE do papel de quem pede (nunca do que a tela envia):
- * administrador vê todos os setores; gestor, só o próprio setor; usuário, só os processos em que é responsável.
+ * administrador vê todos os setores; gestor e usuário, só o próprio setor (o usuário, sem os processos de funcionários
+ * apagados, que só gestor e administrador enxergam, como na lista de processos).
  */
 @Service
 public class RelatorioService {
     public static final int LIMITE = 10_000;
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    public enum Abrangencia { TODOS_SETORES, SEU_SETOR, PROPRIOS }
+    public enum Abrangencia { TODOS_SETORES, SEU_SETOR }
 
-    public record Escopo(Abrangencia abrangencia, Long setorId, String setorNome, Long usuarioId) {}
+    public record Escopo(Abrangencia abrangencia, Long setorId, String setorNome) {}
 
     public record Filtro(Long usuarioId, Long setorId, Long clienteId, LocalDate de, LocalDate ate,
                          Referencia referencia, Set<StatusProcesso> situacoes) {}
@@ -76,15 +78,11 @@ public class RelatorioService {
     /** O que o usuário logado pode abranger em um relatório. */
     @Transactional(readOnly = true)
     public Escopo escopo(UsuarioLogado quem) {
-        return switch (quem.papel()) {
-            case ADMIN -> new Escopo(Abrangencia.TODOS_SETORES, null, null, null);
-            case GESTOR -> {
-                Usuario u = usuarios.findByIdAndTenantId(quem.id(), quem.tenantId()).orElseThrow();
-                Setor s = u.getSetorId() == null ? null : setores.findByIdAndTenantId(u.getSetorId(), quem.tenantId()).orElse(null);
-                yield new Escopo(Abrangencia.SEU_SETOR, s == null ? null : s.getId(), s == null ? null : s.getNome(), null);
-            }
-            case USUARIO -> new Escopo(Abrangencia.PROPRIOS, null, null, quem.id());
-        };
+        if (quem.papel() == Papel.ADMIN) return new Escopo(Abrangencia.TODOS_SETORES, null, null);
+        // gestor e usuário: o setor do próprio cadastro
+        Usuario u = usuarios.findByIdAndTenantId(quem.id(), quem.tenantId()).orElseThrow();
+        Setor s = u.getSetorId() == null ? null : setores.findByIdAndTenantId(u.getSetorId(), quem.tenantId()).orElse(null);
+        return new Escopo(Abrangencia.SEU_SETOR, s == null ? null : s.getId(), s == null ? null : s.getNome());
     }
 
     @Transactional(readOnly = true)
@@ -93,7 +91,7 @@ public class RelatorioService {
         Escopo escopo = escopo(quem);
         validar(escopo, f);
 
-        List<Processo> ps = processos.findAll(especificacao(tid, escopo, f), PageRequest.of(0, LIMITE + 1, Sort.by(Sort.Direction.DESC, "id"))).getContent();
+        List<Processo> ps = processos.findAll(especificacao(tid, escopo, f, quem.papel() == Papel.USUARIO), PageRequest.of(0, LIMITE + 1, Sort.by(Sort.Direction.DESC, "id"))).getContent();
         if (ps.size() > LIMITE) {
             throw new NegocioException("O relatório teria mais de " + LIMITE + " processos. Refine os filtros (período, setor, empresa) e tente de novo.");
         }
@@ -143,21 +141,19 @@ public class RelatorioService {
                 throw new NegocioException("Seu usuário não tem setor definido. Peça ao administrador para definir o seu setor antes de gerar relatórios.");
             }
             if (f.setorId() != null && !f.setorId().equals(e.setorId())) {
-                throw new AccessDeniedException("Gestor só pode gerar relatórios do próprio setor");
+                throw new AccessDeniedException("Você só pode gerar relatórios do próprio setor");
             }
-        }
-        if (e.abrangencia() == Abrangencia.PROPRIOS && f.usuarioId() != null && !f.usuarioId().equals(e.usuarioId())) {
-            throw new AccessDeniedException("Você só pode gerar relatórios dos seus próprios processos");
         }
     }
 
-    private Specification<Processo> especificacao(Long tid, Escopo e, Filtro f) {
+    private Specification<Processo> especificacao(Long tid, Escopo e, Filtro f, boolean semRestritos) {
         return (root, q, cb) -> {
             List<Predicate> ps = new ArrayList<>();
             ps.add(cb.equal(root.get("tenantId"), tid));
             // restrição do papel (não depende do que a tela enviou)
             if (e.abrangencia() == Abrangencia.SEU_SETOR) ps.add(cb.equal(root.get("setorId"), e.setorId()));
-            if (e.abrangencia() == Abrangencia.PROPRIOS) ps.add(cb.equal(root.get("responsavelId"), e.usuarioId()));
+            // processos de funcionário apagado: só gestor e administrador (como na lista de processos)
+            if (semRestritos) ps.add(cb.isNull(root.get("responsavelRemovidoNome")));
             // filtros pedidos
             if (f.usuarioId() != null) ps.add(cb.equal(root.get("responsavelId"), f.usuarioId()));
             if (f.setorId() != null) ps.add(cb.equal(root.get("setorId"), f.setorId()));
@@ -180,7 +176,6 @@ public class RelatorioService {
         return switch (e.abrangencia()) {
             case TODOS_SETORES -> "Todos os setores";
             case SEU_SETOR -> "Setor " + e.setorNome();
-            case PROPRIOS -> "Processos de " + quem.getNome();
         };
     }
 

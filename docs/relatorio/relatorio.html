@@ -265,7 +265,7 @@
     <tr><th style="width:36mm">Papel</th><th>Abrangência do relatório</th></tr>
     <tr><td>Administrador</td><td>Todos os setores, com a opção de filtrar por um setor.</td></tr>
     <tr><td>Gestor</td><td>Somente o <strong>próprio setor</strong>. O filtro de setor fica travado, e a lista de responsáveis traz só quem é do setor. Pedir outro setor direto pela API é recusado (403). Gestor sem setor definido não consegue gerar relatório e recebe um aviso.</td></tr>
-    <tr><td>Usuário</td><td>Somente os <strong>próprios processos</strong> (aqueles em que é o responsável). O filtro de responsável fica travado nele mesmo.</td></tr>
+    <tr><td>Usuário</td><td>Somente o <strong>próprio setor</strong>, como o gestor: filtro de setor travado, lista de responsáveis só com gente do setor (sem administradores), e pedir outro setor direto pela API é recusado (403). Ficam de fora os processos de funcionários apagados, que só gestor e administrador enxergam.</td></tr>
   </table>
   <p>Os filtros se combinam: <strong>setor</strong>, <strong>responsável</strong>, <strong>empresa</strong>, <strong>período</strong> (por data de abertura ou por data de encerramento) e <strong>situação</strong> (em andamento, concluídos, cancelados). Antes de gerar, a tela mostra uma <strong>prévia</strong> com os totais (total, em andamento, atrasados, concluídos e cancelados); o botão fica bloqueado se não houver processo, se a data inicial for depois da final ou se nenhuma situação estiver marcada. No período por encerramento, só entram processos concluídos ou cancelados, e a data considerada é a da última movimentação.</p>
   <figure><img src="img/relatorios.png" alt="Tela de relatórios"><figcaption>Figura 11 — Aba Relatórios: filtros à esquerda, prévia e botão de gerar à direita.</figcaption></figure>
@@ -303,6 +303,7 @@
     <li><strong>Atrasado</strong> é processo em andamento com o prazo da etapa vencido.</li>
     <li><strong>Tempo por etapa</strong> sai do histórico: cada entrada em etapa dura até a entrada seguinte. A etapa atual e a final não entram. A marca dourada é o prazo previsto; a barra fica vermelha quando a média passa dele, e o texto informa quantas passagens excederam o prazo.</li>
     <li>Processos de funcionários apagados só entram nos números de gestor e administrador, como na lista.</li>
+    <li><strong>Quem aparece na carga por funcionário:</strong> o administrador vê todos; gestor e usuário veem <strong>somente pessoas do próprio setor</strong>, e nunca administradores (mesmo que um administrador seja responsável por processos do setor).</li>
   </ul>
   <figure><img src="img/painel.png" alt="Painel de indicadores"><figcaption>Figura 15 — Painel do administrador: atrasados por setor, tempo médio por etapa e carga por funcionário.</figcaption></figure>
 
@@ -357,7 +358,7 @@
     <tr><td>Ver cadastros, fluxos e equipe</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
     <tr><td>Abrir processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c ok">sim</td></tr>
     <tr><td>Movimentar, comentar, anexar e remover anexo, reatribuir</td><td class="c ok">em qualquer processo</td><td class="c ok">em qualquer processo do seu setor</td><td class="c">só nos processos em que é o responsável</td></tr>
-    <tr><td>Gerar relatório em PDF</td><td class="c ok">de todos os setores</td><td class="c">só do próprio setor</td><td class="c">só dos próprios processos</td></tr>
+    <tr><td>Gerar relatório em PDF</td><td class="c ok">de todos os setores</td><td class="c">só do próprio setor</td><td class="c">só do próprio setor</td></tr>
     <tr><td>Cancelar processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar empresas atendidas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar setores e entregas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
@@ -466,7 +467,7 @@
     <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel, ativo ou setor</td><td>Admin (tudo); Gestor (só <code>ativo</code>, e só de quem é Usuário)</td></tr>
     <tr><td>GET</td><td><code>/clientes</code>, <code>/setores</code>, <code>/entregas</code></td><td>Listas de empresas atendidas, setores (com suas entregas) e entregas (com o fluxo)</td><td>todos</td></tr>
     <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (<code>numero</code> obrigatório, só dígitos, único; <code>nome</code>; ativo). Mudar o número atualiza o dos processos da empresa</td><td>Admin, Gestor</td></tr>
-    <tr><td>GET</td><td><code>/relatorios/escopo</code></td><td>O que o usuário pode abranger (todos os setores, o próprio setor ou os próprios processos)</td><td>todos</td></tr>
+    <tr><td>GET</td><td><code>/relatorios/escopo</code></td><td>O que o usuário pode abranger (todos os setores ou o próprio setor)</td><td>todos</td></tr>
     <tr><td>GET</td><td><code>/relatorios/processos/resumo</code></td><td>Totais dos processos que entrariam no relatório. Filtros: <code>usuarioId</code>, <code>setorId</code>, <code>clienteId</code>, <code>de</code>, <code>ate</code>, <code>referencia</code> (ABERTURA ou ENCERRAMENTO), <code>situacoes</code></td><td>todos, dentro do papel</td></tr>
     <tr><td>GET</td><td><code>/relatorios/processos/pdf</code></td><td>Gera o PDF do relatório, com os mesmos filtros</td><td>todos, dentro do papel</td></tr>
     <tr><td>DELETE</td><td><code>/clientes/{id}</code>, <code>/setores/{id}</code>, <code>/entregas/{id}</code></td><td>Apaga o cadastro (recusa se houver processo em andamento ligado)</td><td>Admin, Gestor</td></tr>
@@ -593,7 +594,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>95 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>97 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>

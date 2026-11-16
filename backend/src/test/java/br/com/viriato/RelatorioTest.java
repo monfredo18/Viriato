@@ -207,14 +207,28 @@ class RelatorioTest {
     // ------------------------------------------------------------------ usuário
 
     @Test
-    void usuarioSoGeraRelatorioDosProprioProcessos() throws Exception {
+    void usuarioGeraRelatorioDoProprioSetorEDeNenhumOutro() throws Exception {
         Cenario c = cenario();
-        assertThat(total(c.u1(), "")).isEqualTo(2);
-        assertThat(total(c.u2(), "")).isEqualTo(2);
-        assertThat(total(c.u1(), "?usuarioId=" + c.u1Id())).isEqualTo(2);                          // a si mesmo é permitido
-        resumo(c.u1(), "?usuarioId=" + c.u2Id()).andExpect(status().isForbidden());                // de outro, não
+        assertThat(total(c.u1(), "")).isEqualTo(3);                                                // Engenharia inteira: P1, P2 e P5 (do gestor)
+        assertThat(total(c.u2(), "")).isEqualTo(2);                                                // Financeiro: P3 e P4
+        assertThat(total(c.u1(), "?setorId=" + c.setorEng())).isEqualTo(3);                        // o próprio setor é permitido
+        resumo(c.u1(), "?setorId=" + c.setorFin()).andExpect(status().isForbidden());              // outro setor, não
+        assertThat(total(c.u1(), "?usuarioId=" + c.u1Id())).isEqualTo(2);                          // filtro por colega do setor
+        assertThat(total(c.u1(), "?usuarioId=" + c.u2Id())).isEqualTo(0);                          // quem é de outro setor não traz nada
         assertThat(total(c.u1(), "?situacoes=CONCLUIDO")).isEqualTo(1);
-        assertThat(total(c.u1(), "?setorId=" + c.setorFin())).isEqualTo(0);                        // os dele são de Engenharia
+        mvc.perform(get("/api/relatorios/processos/pdf?setorId=" + c.setorFin()).header("Authorization", "Bearer " + c.u1())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void usuarioNaoVeNoRelatorioProcessosDeFuncionarioApagado() throws Exception {
+        Cenario c = cenario();
+        var p = processos.findAll().stream().filter(x -> x.getResponsavelId() != null && x.getResponsavelId().equals(c.u1Id())).findFirst().orElseThrow();
+        p.setResponsavelId(null);
+        p.setResponsavelRemovidoNome("Fulano Removido");
+        processos.save(p);
+        assertThat(total(c.u1(), "")).isEqualTo(2);                                                // fica fora para o usuário
+        assertThat(total(c.gestorEng(), "")).isEqualTo(3);                                         // gestor e administrador continuam vendo
+        assertThat(total(c.admin(), "?setorId=" + c.setorEng())).isEqualTo(3);
     }
 
     @Test
@@ -227,8 +241,9 @@ class RelatorioTest {
         assertThat(ges.get("setorId").asLong()).isEqualTo(c.setorEng());
         assertThat(ges.get("setorNome").asText()).isEqualTo("Engenharia");
         JsonNode usu = consultar(c.u1(), "/api/relatorios/escopo");
-        assertThat(usu.get("abrangencia").asText()).isEqualTo("PROPRIOS");
-        assertThat(usu.get("usuarioId").asLong()).isEqualTo(c.u1Id());
+        assertThat(usu.get("abrangencia").asText()).isEqualTo("SEU_SETOR");                        // usuário também gera do próprio setor
+        assertThat(usu.get("setorId").asLong()).isEqualTo(c.setorEng());
+        assertThat(usu.get("setorNome").asText()).isEqualTo("Engenharia");
         mvc.perform(get("/api/relatorios/escopo").header("Authorization", "Bearer " + c.gestorSemSetor())).andExpect(status().isOk());   // consulta liberada; o erro vem ao gerar
     }
 
@@ -248,9 +263,9 @@ class RelatorioTest {
         String doGestor = textoDoPdf(pdf(c.gestorEng(), ""));
         assertThat(doGestor).contains("Engenharia").doesNotContain("Financeiro").doesNotContain("Ubiratan");
 
-        // usuário: só os processos dele
+        // usuário: o setor dele (Engenharia), nada do Financeiro
         String doUsuario = textoDoPdf(pdf(c.u1(), ""));
-        assertThat(doUsuario).contains("Ursula Um").doesNotContain("Financeiro").doesNotContain("Ubiratan").doesNotContain("Gestor Eng");
+        assertThat(doUsuario).contains("Ursula Um").contains("Gestor Eng").contains("Engenharia").doesNotContain("Financeiro").doesNotContain("Ubiratan");
 
         // filtros aparecem descritos no documento
         String filtrado = textoDoPdf(pdf(c.admin(), "?setorId=" + c.setorFin() + "&situacoes=CANCELADO"));

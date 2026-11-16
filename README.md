@@ -81,7 +81,7 @@ A aba **Relatórios** gera um PDF dos processos, com filtros por setor, respons�
 
 | Administrador | Gestor | Usuário |
 |---|---|---|
-| todos os setores | só o próprio setor (sem setor definido, não gera) | só os próprios processos |
+| todos os setores | só o próprio setor (sem setor definido, não gera) | só o próprio setor (sem os processos de funcionários apagados) |
 
 A tela mostra uma prévia com os totais antes de gerar. Limite de 10.000 processos por relatório.
 

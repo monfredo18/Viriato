@@ -222,6 +222,30 @@ class IndicadoresTest {
     }
 
     @Test
+    void gestorEUsuarioNaoVeemAdministradoresNemGenteDeOutroSetorNoPainel() throws Exception {
+        C c = cenario();
+        long admId = 0;
+        for (JsonNode u : consultar(c.admin(), "/api/usuarios")) if (u.get("nome").asText().startsWith("Adm-")) admId = u.get("id").asLong();
+        processo(c, c.geral(), c.u1());
+        processo(c, c.geral(), admId);                 // o administrador é responsável por um processo do setor Geral
+        processo(c, c.eng(), c.u2());
+
+        // o administrador enxerga a si mesmo na carga (tem processo)
+        boolean admVeAdm = false;
+        for (JsonNode f : consultar(c.admin(), "/api/indicadores").get("funcionarios")) admVeAdm |= f.get("nome").asText().startsWith("Adm-");
+        assertThat(admVeAdm).isTrue();
+
+        for (String quem : new String[]{c.gestorGeral(), c.usuarioGeral()}) {
+            JsonNode lista = consultar(quem, "/api/indicadores").get("funcionarios");
+            assertThat(lista).isNotEmpty();
+            for (JsonNode f : lista) {
+                assertThat(f.get("nome").asText()).doesNotStartWith("Adm-").doesNotStartWith("Edu-");   // nem admin, nem outro setor
+                assertThat(f.get("setor").asText()).isEqualTo("Geral");
+            }
+        }
+    }
+
+    @Test
     void usuarioSemSetorRecebePainelVazioComAviso() throws Exception {
         C c = cenario();
         String nome = "Sem-" + UUID.randomUUID().toString().substring(0, 6);
