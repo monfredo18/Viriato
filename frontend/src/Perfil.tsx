@@ -1,5 +1,5 @@
-import { useRef, useState, type ChangeEvent } from 'react'
-import { api, ROTULO_PAPEL } from './api'
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { api, ROTULO_PAPEL, type ConfigDoisFatores, type Sessao, type Usuario } from './api'
 import { useAuth } from './auth'
 import Avatar from './Avatar'
 
@@ -19,7 +19,90 @@ async function prepararFoto(arquivo: File): Promise<Blob> {
   return new Promise((ok, falha) => tela.toBlob((b) => (b ? ok(b) : falha(new Error('Falha ao preparar a imagem'))), 'image/jpeg', 0.88))
 }
 
-/** Janela "Meu perfil": ver os dados e trocar ou tirar a foto. */
+/** Troca da própria senha: pede a atual; o servidor devolve uma sessão nova e encerra as outras. */
+function TrocarSenha() {
+  const { entrar } = useAuth()
+  const [f, setF] = useState({ senhaAtual: '', novaSenha: '', confirmar: '' })
+  const [msg, setMsg] = useState<{ erro: boolean; texto: string } | null>(null)
+  const [ocupado, setOcupado] = useState(false)
+  const enviar = async (e: FormEvent) => {
+    e.preventDefault()
+    if (f.novaSenha !== f.confirmar) return setMsg({ erro: true, texto: 'A confirmação não é igual à nova senha' })
+    setOcupado(true)
+    try {
+      entrar(await api.post<Sessao>('/me/alterar-senha', { senhaAtual: f.senhaAtual, novaSenha: f.novaSenha }))
+      setF({ senhaAtual: '', novaSenha: '', confirmar: '' })
+      setMsg({ erro: false, texto: 'Senha alterada. Os outros acessos abertos foram encerrados.' })
+    } catch (err) {
+      setMsg({ erro: true, texto: (err as Error).message })
+    } finally {
+      setOcupado(false)
+    }
+  }
+  return (
+    <form className="perfil-secao" onSubmit={enviar}>
+      <h4>Alterar senha</h4>
+      <label>Senha atual<input type="password" required autoComplete="current-password" value={f.senhaAtual} onChange={(e) => setF({ ...f, senhaAtual: e.target.value })} /></label>
+      <label>Nova senha (mínimo 8 caracteres)<input type="password" required minLength={8} maxLength={72} autoComplete="new-password" value={f.novaSenha} onChange={(e) => setF({ ...f, novaSenha: e.target.value })} /></label>
+      <label>Repita a nova senha<input type="password" required minLength={8} maxLength={72} autoComplete="new-password" value={f.confirmar} onChange={(e) => setF({ ...f, confirmar: e.target.value })} /></label>
+      {msg && <p className={msg.erro ? 'erro' : 'dica-campo'}>{msg.texto}</p>}
+      <button disabled={ocupado}>Alterar senha</button>
+    </form>
+  )
+}
+
+/** Verificação em duas etapas: o segredo vai para um aplicativo autenticador e, depois, o login pede o código de 6 dígitos. */
+function DoisFatores({ usuario, atualizar }: { usuario: Usuario; atualizar: (u: Usuario) => void }) {
+  const [config, setConfig] = useState<ConfigDoisFatores | null>(null)
+  const [codigo, setCodigo] = useState('')
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+  const rodar = async (fn: () => Promise<void>) => {
+    setErro('')
+    setOcupado(true)
+    try { await fn() } catch (err) { setErro((err as Error).message) } finally { setOcupado(false) }
+  }
+
+  if (usuario.doisFatores) {
+    return (
+      <div className="perfil-secao">
+        <h4>Verificação em duas etapas: ativa</h4>
+        <p className="dica-campo">Ao entrar, o sistema pede também o código do aplicativo autenticador. Perdeu o celular? Peça a um administrador para desligar.</p>
+        <label>Para desligar, confirme sua senha<input type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} /></label>
+        {erro && <p className="erro">{erro}</p>}
+        <button className="perigo" disabled={ocupado || !senha} onClick={() => rodar(async () => { atualizar(await api.post<Usuario>('/me/2fa/desativar', { senha })); setSenha('') })}>Desligar verificação</button>
+      </div>
+    )
+  }
+  if (!config) {
+    return (
+      <div className="perfil-secao">
+        <h4>Verificação em duas etapas</h4>
+        <p className="dica-campo">Proteja a conta com um código que muda a cada 30 segundos, gerado por um aplicativo autenticador no celular.</p>
+        {erro && <p className="erro">{erro}</p>}
+        <button disabled={ocupado} onClick={() => rodar(async () => setConfig(await api.post<ConfigDoisFatores>('/me/2fa/iniciar')))}>Configurar</button>
+      </div>
+    )
+  }
+  return (
+    <div className="perfil-secao">
+      <h4>Configurar a verificação</h4>
+      <p className="dica-campo">No aplicativo autenticador (Google Authenticator, Microsoft Authenticator, Authy…), escolha adicionar conta por chave e digite esta chave:</p>
+      <code className="chave-2fa">{config.segredo}</code>
+      <label>Depois, digite aqui o código de 6 dígitos que o aplicativo mostrar
+        <input inputMode="numeric" maxLength={7} placeholder="000000" value={codigo} onChange={(e) => setCodigo(e.target.value)} />
+      </label>
+      {erro && <p className="erro">{erro}</p>}
+      <div className="perfil-acoes">
+        <button className="primario" disabled={ocupado || codigo.trim().length < 6} onClick={() => rodar(async () => { atualizar(await api.post<Usuario>('/me/2fa/ativar', { codigo })); setConfig(null); setCodigo('') })}>Confirmar e ativar</button>
+        <button disabled={ocupado} onClick={() => { setConfig(null); setCodigo(''); setErro('') }}>Cancelar</button>
+      </div>
+    </div>
+  )
+}
+
+/** Janela "Meu perfil": ver os dados, trocar ou tirar a foto, alterar a senha e configurar a verificação em duas etapas. */
 export default function Perfil({ fechar }: { fechar: () => void }) {
   const { usuario, atualizarUsuario } = useAuth()
   const entrada = useRef<HTMLInputElement>(null)
@@ -76,6 +159,8 @@ export default function Perfil({ fechar }: { fechar: () => void }) {
         </div>
         <small className="dica-campo">JPEG, PNG ou WebP. A imagem é recortada em quadrado e reduzida automaticamente.</small>
         {erro && <p className="erro">{erro}</p>}
+        <TrocarSenha />
+        <DoisFatores usuario={usuario} atualizar={atualizarUsuario} />
         <div className="acoes"><button onClick={fechar}>Fechar</button></div>
       </div>
     </div>

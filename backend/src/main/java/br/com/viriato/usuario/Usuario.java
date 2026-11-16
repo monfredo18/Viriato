@@ -22,6 +22,13 @@ public class Usuario {
     @Enumerated(EnumType.STRING) private Papel papel;
     private boolean ativo = true;
     @Column(name = "setor_id") private Long setorId;
+    /** Senhas erradas seguidas; passando do limite a conta fica bloqueada até um administrador (ou o gestor) desbloquear. */
+    @Column(name = "tentativas_falhas") private int tentativasFalhas;
+    private boolean bloqueado;
+    /** Verificação em duas etapas: segredo cifrado, se já foi confirmada e o último período usado (sem reuso do código). */
+    @Column(name = "totp_segredo") private String totpSegredo;
+    @Column(name = "totp_ativo") private boolean totpAtivo;
+    @Column(name = "totp_ultimo_passo") private Long totpUltimoPasso;
     /** Foto de perfil (opcional): chave no armazenamento, tipo e versão (instante do envio, em milissegundos). */
     @Column(name = "foto_chave") private String fotoChave;
     @Column(name = "foto_tipo") private String fotoTipo;

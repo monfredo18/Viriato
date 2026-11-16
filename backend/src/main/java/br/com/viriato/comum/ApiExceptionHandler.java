@@ -42,6 +42,17 @@ public class ApiExceptionHandler {
         return erro(HttpStatus.UNAUTHORIZED, "Nome ou senha inválidos");
     }
 
+    /** 423: conta bloqueada. O campo {@code codigo} deixa a tela mostrar o aviso certo. */
+    @ExceptionHandler(ContaBloqueadaException.class)
+    ResponseEntity<Map<String, Object>> bloqueada(ContaBloqueadaException e) {
+        return ResponseEntity.status(HttpStatus.LOCKED).body(Map.of("status", 423, "erro", e.getMessage(), "codigo", "CONTA_BLOQUEADA"));
+    }
+
+    @ExceptionHandler(CodigoNecessarioException.class)
+    ResponseEntity<Map<String, Object>> codigoNecessario(CodigoNecessarioException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status", 403, "erro", e.getMessage(), "codigo", "CODIGO_2FA"));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<Map<String, Object>> negado(AccessDeniedException e) {
         return erro(HttpStatus.FORBIDDEN, "Sem permissão para esta ação");

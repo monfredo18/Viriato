@@ -3,6 +3,8 @@ package br.com.viriato.usuario;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByEmailIgnoreCase(String email);
@@ -14,4 +16,13 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     List<Usuario> findByTenantIdAndSetorId(Long tenantId, Long setorId);
     List<Usuario> findByTenantIdAndPapelAndSetorIdAndAtivoTrue(Long tenantId, Papel papel, Long setorId);
     List<Usuario> findByTenantIdAndPapelInAndAtivoTrue(Long tenantId, List<Papel> papeis);
+
+    /** Soma uma falha de senha em uma só instrução (sem perder tentativas simultâneas). */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Usuario u set u.tentativasFalhas = u.tentativasFalhas + 1 where u.id = :id")
+    int somarFalha(Long id);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Usuario u set u.bloqueado = true where u.id = :id and u.bloqueado = false and u.tentativasFalhas > :limite")
+    int bloquearSePassouDe(Long id, int limite);
 }

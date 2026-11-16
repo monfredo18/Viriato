@@ -889,3 +889,17 @@ button.perfil:hover .perfil-txt b { color: var(--link); }
 .abas button { font-size: 13.5px; letter-spacing: 0; text-transform: none; font-weight: 600; }
 .selo { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
 .fundo { z-index: 50; }
+
+/* segurança: aviso de conta bloqueada, tabela de auditoria e janela de perfil com seções */
+.aviso-bloqueio { display: flex; flex-direction: column; gap: .2rem; margin: .4rem 0 .6rem; padding: .8rem 1rem; border-radius: var(--raio); background: var(--vermelho-fundo); border: 1px solid var(--vermelho); color: var(--vermelho); line-height: 1.45; }
+.aviso-bloqueio b { font-size: 15px; }
+.aviso-bloqueio span { color: var(--texto); font-size: 13.5px; }
+.detalhe-auditoria { white-space: normal; max-width: 34rem; color: var(--suave); }
+.acoes-linha { white-space: nowrap; }
+.acoes-linha button { height: 32px; margin-right: .35rem; }
+td .selo + .selo, td .selo + label { margin-left: .4rem; }
+.perfil-secao { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--borda); }
+.perfil-secao h4 { margin: 0 0 .6rem; font-size: 14px; font-weight: 600; }
+.perfil-secao label { margin-bottom: .7rem; }
+.chave-2fa { display: block; margin: .3rem 0 .7rem; padding: .6rem .8rem; border-radius: var(--raio); background: var(--bg); border: 1px dashed var(--borda-forte); font-family: var(--mono); font-size: 14px; letter-spacing: .08em; word-break: break-all; user-select: all; }
+.perfil-modal { max-height: calc(100vh - 2rem); overflow-y: auto; }

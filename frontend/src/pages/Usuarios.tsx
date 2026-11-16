@@ -38,6 +38,11 @@ export default function Usuarios() {
   }
 
   const patch = (id: number, data: object) => api.patch(`/usuarios/${id}`, data).then(carregar).catch((e) => setErro(e.message))
+  const desbloquear = (u: Usuario) => api.post(`/usuarios/${u.id}/desbloquear`).then(carregar).catch((e) => setErro(e.message))
+  const removerDoisFatores = (u: Usuario) => {
+    if (!confirm(`Desligar a verificação em duas etapas de "${u.nome}"? Use quando a pessoa perdeu o celular.`)) return
+    api.del(`/usuarios/${u.id}/2fa`).then(carregar).catch((e) => setErro(e.message))
+  }
   const setoresAtivos = setores.filter((s) => s.ativo)
 
   const meuSetorId = lista.find((u) => u.id === eu?.id)?.setorId ?? null
@@ -97,6 +102,8 @@ export default function Usuarios() {
                     ) : (u.setorNome ?? '—')}
                   </td>
                   <td>
+                    {u.bloqueado && <span className="selo atrasado" title="Excesso de senhas incorretas">Bloqueado</span>}
+                    {u.doisFatores && <span className="selo aberto" title="Usa verificação em duas etapas">2 etapas</span>}
                     {ehAdmin || (podeGerenciar && u.papel === 'USUARIO') ? (
                       <label className="chk">
                         <input type="checkbox" checked={u.ativo} disabled={u.id === eu?.id} onChange={(e) => patch(u.id, { ativo: e.target.checked })} />
@@ -106,6 +113,12 @@ export default function Usuarios() {
                   </td>
                   {podeGerenciar && (
                     <td className="acoes-linha">
+                      {u.bloqueado && u.id !== eu?.id && (ehAdmin || (u.papel === 'USUARIO' && meuSetorId !== null && u.setorId === meuSetorId)) && (
+                        <button type="button" className="primario" onClick={() => desbloquear(u)}>Desbloquear</button>
+                      )}
+                      {ehAdmin && u.doisFatores && u.id !== eu?.id && (
+                        <button type="button" onClick={() => removerDoisFatores(u)}>Remover 2 etapas</button>
+                      )}
                       {ehAdmin && u.id !== eu?.id && (
                         <button type="button" className="perigo-txt" onClick={() => setZerando(u)}>Zerar senha</button>
                       )}

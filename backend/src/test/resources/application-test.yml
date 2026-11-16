@@ -6,6 +6,8 @@ spring:
   flyway:
     locations: classpath:db/migration
 viriato:
+  jwt:
+    permitir-padrao: true     # os testes usam o segredo de exemplo
   cadastro-empresa-aberto: true   # os testes criam empresas pela API
   automacao:
     assincrona: false          # as regras rodam na hora, para os testes conferirem o resultado

@@ -5,16 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0c1530" />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <script>
-      // Aplica o tema salvo (ou a preferência do sistema) antes da primeira pintura.
-      (function () {
-        try {
-          var t = localStorage.getItem('viriato.tema');
-          if (t !== 'claro' && t !== 'escuro') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro';
-          document.documentElement.dataset.tema = t;
-        } catch (e) {}
-      })();
-    </script>
+    <script src="/tema-inicial.js"></script>
     <title>Viriato — Controle de Processos</title>
   </head>
   <body>

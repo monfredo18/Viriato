@@ -38,6 +38,9 @@ services:
       DB_USER: ${DB_USER:-viriato}
       DB_PASSWORD: ${DB_PASSWORD:-viriato}
       JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao-com-32-bytes-ou-mais}
+      # Só para rodar localmente: aceita o segredo de exemplo acima. Em produção defina JWT_SECRET e remova estas duas linhas.
+      VIRIATO_JWT_PERMITIR_PADRAO: ${VIRIATO_JWT_PERMITIR_PADRAO:-true}
+      SWAGGER_ATIVO: ${SWAGGER_ATIVO:-true}
       S3_ENDPOINT: http://s3:9090
       S3_ACCESS_KEY: dev
       S3_SECRET_KEY: dev

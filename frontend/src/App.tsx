@@ -19,8 +19,9 @@ import Relatorios from './pages/Relatorios'
 import DefinirSenha from './pages/DefinirSenha'
 import Painel from './pages/Painel'
 import Inicio from './pages/Inicio'
+import Auditoria from './pages/Auditoria'
 
-const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean }[] = [
+const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean; soAdmin?: boolean }[] = [
   { para: '/inicio', rotulo: 'Início', icone: 'inicio' },
   { para: '/processos', rotulo: 'Processos', icone: 'processos', fim: true },
   { para: '/painel', rotulo: 'Painel', icone: 'painel' },
@@ -28,10 +29,11 @@ const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean }[]
   { para: '/fluxos', rotulo: 'Fluxos', icone: 'fluxos' },
   { para: '/usuarios', rotulo: 'Usuários', icone: 'usuarios' },
   { para: '/relatorios', rotulo: 'Relatórios', icone: 'relatorios' },
+  { para: '/auditoria', rotulo: 'Auditoria', icone: 'escudo', soAdmin: true },
 ]
 
 function Layout() {
-  const { usuario, empresa, sair } = useAuth()
+  const { usuario, empresa, sair, ehAdmin } = useAuth()
   const nav = useNavigate()
   const local = useLocation()
   const [menuAberto, setMenuAberto] = useState(false)
@@ -47,6 +49,12 @@ function Layout() {
     api.get<Pagina<Processo>>('/processos?meus=true&status=ABERTO&tamanho=1').then((r) => setMinhas(r.totalElements)).catch(() => {})
   }, [local.pathname])
 
+  // O servidor invalida o token ao sair: quem copiou o token não consegue mais usá-lo.
+  const sairDoSistema = async () => {
+    try { await api.post('/me/sair') } catch { /* sem conexão: sai assim mesmo */ }
+    sair()
+  }
+
   const buscar = (e: FormEvent) => {
     e.preventDefault()
     const termo = busca.trim()
@@ -60,7 +68,7 @@ function Layout() {
       <aside className="lateral" aria-label="Menu principal">
         <div className="lateral-marca"><Logo altura={48} /></div>
         <nav>
-          {ITENS.map((i) => (
+          {ITENS.filter((i) => !i.soAdmin || ehAdmin).map((i) => (
             <NavLink key={i.para} to={i.para} end={i.fim} className={({ isActive }) => (isActive && !(i.para === '/processos' && aMinhas) ? 'ativo' : undefined)}>
               <Icone nome={i.icone} /><span>{i.rotulo}</span>
             </NavLink>
@@ -95,7 +103,7 @@ function Layout() {
               <small>{usuario ? ROTULO_PAPEL[usuario.papel] : ''}{usuario?.setorNome ? ` · ${usuario.setorNome}` : ''}</small>
             </span>
           </button>
-          <button className="sair" onClick={sair} title="Sair do sistema"><Icone nome="sair" tamanho={16} /><span>Sair</span></button>
+          <button className="sair" onClick={sairDoSistema} title="Sair do sistema"><Icone nome="sair" tamanho={16} /><span>Sair</span></button>
         </header>
         <main>
           <Routes>
@@ -107,6 +115,7 @@ function Layout() {
             <Route path="/fluxos" element={<Fluxos />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/relatorios" element={<Relatorios />} />
+            {ehAdmin && <Route path="/auditoria" element={<Auditoria />} />}
             <Route path="*" element={<Navigate to="/inicio" />} />
           </Routes>
         </main>

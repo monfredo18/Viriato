@@ -346,6 +346,20 @@
     <li>O navegador guarda a foto por pessoa e versão, então trocar a foto atualiza na hora e o resto vem da memória, sem novas requisições.</li>
   </ul>
   <figure><img src="img/perfil-foto.png" alt="Meu perfil com foto"><figcaption>Figura 18 — Meu perfil: escolher, trocar ou remover a foto.</figcaption></figure>
+
+  <h2>3.16 Proteções de conta e segurança</h2>
+  <table>
+    <tr><th style="width:44mm">Proteção</th><th>Como funciona</th></tr>
+    <tr><td>Bloqueio por tentativas</td><td>Cada senha (ou código) errado soma um erro na conta. Com <strong>5 erros</strong> a pessoa ainda vê “nome ou senha inválidos”; no erro seguinte a conta é <strong>bloqueada</strong> e a tela avisa para <strong>entrar em contato com o suporte</strong>. Nem a senha certa entra enquanto estiver bloqueada. Entrar com sucesso zera a contagem. Sessões que já estavam abertas não são derrubadas (assim, quem erra senhas de outra pessoa não a tira do sistema).</td></tr>
+    <tr><td>Desbloquear</td><td>Na aba Usuários, o botão <em>Desbloquear</em> só aparece em quem está bloqueado. O administrador desbloqueia qualquer pessoa; o gestor, funcionários (papel Usuário) do próprio setor. Zerar a senha também desbloqueia.</td></tr>
+    <tr><td>Verificação em duas etapas</td><td>Opcional, em <em>Meu perfil</em>: a pessoa cadastra uma chave num aplicativo autenticador (códigos de 6 dígitos, TOTP) e, depois, o login pede o código. O segredo fica <strong>cifrado</strong> (AES-256-GCM) no banco; o mesmo código não vale duas vezes; código errado conta como erro de senha. Se a pessoa perder o celular, o administrador desliga a verificação dela.</td></tr>
+    <tr><td>Alterar a própria senha</td><td>Em <em>Meu perfil</em>, informando a senha atual. As outras sessões são encerradas.</td></tr>
+    <tr><td>Sair de verdade</td><td>Ao sair, o token usado é invalidado no servidor (e a lista de tokens revogados é limpa todo dia, quando eles já venceriam).</td></tr>
+    <tr><td>Auditoria</td><td>Aba <em>Auditoria</em>, só para o administrador: entradas, bloqueios e desbloqueios, senhas zeradas ou trocadas, usuários criados, alterados e apagados, ligar e desligar duas etapas, remoção de foto pelo administrador. Guarda o nome de quem fez, mesmo se a pessoa for apagada depois.</td></tr>
+    <tr><td>Cabeçalhos de segurança</td><td>nginx: política de conteúdo (CSP) só do próprio site, sem scripts embutidos, <code>X-Frame-Options</code>, <code>nosniff</code>, <code>Referrer-Policy</code> e <code>Permissions-Policy</code>. API: CSP restritiva, sem exibição em quadros e HSTS.</td></tr>
+    <tr><td>Segredo e documentação da API</td><td>O sistema não sobe com o <code>JWT_SECRET</code> de exemplo (exceto com permissão explícita para uso local). O Swagger fica desligado por padrão.</td></tr>
+    <tr><td>Chat de ajuda</td><td>No máximo 20 mensagens por pessoa a cada 10 minutos.</td></tr>
+  </table>
 </section>
 
 <!-- ============================ 4 ============================ -->
@@ -398,7 +412,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em quinze migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações) <code>V12</code> (servidor de e-mail da empresa) <code>V13</code> (retira o envio de e-mail: apaga as automações de e-mail e o servidor de e-mail guardado) <code>V14</code> (chat de ajuda com os administradores) e <code>V15</code> (foto de perfil).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em dezesseis migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações) <code>V12</code> (servidor de e-mail da empresa) <code>V13</code> (retira o envio de e-mail: apaga as automações de e-mail e o servidor de e-mail guardado) <code>V14</code> (chat de ajuda com os administradores) <code>V15</code> (foto de perfil) e <code>V16</code> (bloqueio de conta, duas etapas, sessões encerradas e auditoria).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -525,8 +539,10 @@
     <p>Esta lista existe para que nada seja descoberto tarde demais. Itens marcados com <strong>(prioridade)</strong> devem ser resolvidos antes de qualquer uso real.</p>
   </div>
   <ol>
-        <li><strong>(prioridade) Sem limite de tentativas de login</strong>, sem recuperação de senha por conta própria (só o administrador zera), sem troca voluntária de senha depois do primeiro acesso e sem autenticação em dois fatores.</li>
-    <li><strong>(prioridade) Segredo padrão de desenvolvimento.</strong> Existe um <code>JWT_SECRET</code> padrão para facilitar o uso local; em produção ele <em>precisa</em> ser trocado.</li>
+    <li><strong>Sem recuperação de senha por e-mail</strong> (o envio de e-mail foi retirado do sistema): quem esquece a senha pede ao suporte, que zera. A verificação em duas etapas é opcional, não obrigatória.</li>
+    <li><strong>O token de acesso fica no armazenamento do navegador</strong> (<code>localStorage</code>). A política de segurança do nginx (CSP) reduz o risco de roubo por script, e o token é encerrado no servidor ao sair, mas um cookie <code>HttpOnly</code> seria mais forte.</li>
+    <li>O bloqueio por tentativas é por conta, não por endereço de origem. Quem tenta muitos nomes diferentes não é barrado.</li>
+    <li><strong>Segredo de exemplo:</strong> o sistema <em>se recusa a subir</em> com o <code>JWT_SECRET</code> de exemplo, a não ser que <code>VIRIATO_JWT_PERMITIR_PADRAO=true</code> (o <code>docker-compose.yml</code> liga isso só para uso local). Em produção, defina o seu e remova a permissão.</li>
     <li>Upload sem lista de tipos permitidos e sem antivírus (limite de 25 MB por arquivo).</li>
     <li>As automações rodam em memória, depois do commit: se o servidor for reiniciado exatamente nesse intervalo, as regras daquele movimento não rodam, e não há nova tentativa automática (a falha de uma regra fica registrada, mas não é repetida). O webhook confere o endereço ao enviar, mas um nome de domínio que mude de endereço entre a conferência e a conexão ainda é um risco teórico.</li>
     <li>As regras de automação só podem ser ligadas, desligadas ou removidas pela tela; para editar o texto de uma, remova e crie de novo (a API aceita edição).</li>
@@ -560,7 +576,7 @@
   <table>
     <tr><th style="width:28mm">Serviço</th><th>Função</th><th style="width:42mm">Endereço local</th></tr>
     <tr><td>frontend</td><td>Nginx servindo o site e repassando <code>/api</code></td><td>localhost:3000</td></tr>
-    <tr><td>backend</td><td>API Spring Boot</td><td>localhost:8080 (Swagger em <code>/swagger-ui.html</code>)</td></tr>
+    <tr><td>backend</td><td>API Spring Boot</td><td>localhost:8080 (Swagger em <code>/swagger-ui.html</code>, se <code>SWAGGER_ATIVO=true</code>)</td></tr>
     <tr><td>mysql</td><td>Banco MySQL 8.4, com volume persistente</td><td>interno</td></tr>
     <tr><td>s3</td><td>S3 simulado (<code>adobe/s3mock</code>) só para desenvolvimento</td><td>localhost:9090</td></tr>
   </table>
@@ -575,6 +591,8 @@
     <tr><td><code>ARMAZENAMENTO</code>, <code>ARMAZENAMENTO_PASTA</code></td><td><code>s3</code> (padrão) ou <code>local</code> (disco, só para desenvolvimento sem S3).</td></tr>
     <tr><td><code>AUTOMACAO_ASSINCRONA</code>, <code>AUTOMACAO_PERMITIR_REDE_INTERNA</code></td><td>Executar as automações em segundo plano (padrão) e permitir webhook em <code>http://</code> e na rede interna (<strong>só desenvolvimento</strong>; em produção deixe desligado).</td></tr>
     <tr><td><code>CORS_ORIGINS</code></td><td>Origens permitidas.</td></tr>
+    <tr><td><code>VIRIATO_JWT_PERMITIR_PADRAO</code></td><td>Só em desenvolvimento local: aceita o <code>JWT_SECRET</code> de exemplo (padrão: não).</td></tr>
+    <tr><td><code>SWAGGER_ATIVO</code></td><td>Liga a documentação interativa da API (padrão: desligada).</td></tr>
     <tr><td><code>PRAZOS_CRON</code>, <code>PRAZOS_ANTECEDENCIA_DIAS</code></td><td>Horário do alerta de prazo e antecedência em dias.</td></tr>
   </table>
 
@@ -594,7 +612,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>99 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>107 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>
@@ -672,8 +690,8 @@
   <h2>Antes de qualquer uso real (segurança)</h2>
   <ol>
     <li>Validar o usuário a cada requisição (ou usar tokens curtos com renovação) para que desativar e mudar papel tenham efeito imediato.</li>
-    <li>Limite de tentativas de login e recuperação de senha.</li>
-    <li>Trocar o segredo JWT e tirar valores padrão do ambiente de produção.</li>
+    <li>Definir o <code>JWT_SECRET</code> próprio (o sistema já recusa o de exemplo) e remover <code>VIRIATO_JWT_PERMITIR_PADRAO</code> e <code>SWAGGER_ATIVO</code> do ambiente de produção.</li>
+    <li>Servir sempre por HTTPS (o cabeçalho HSTS só vale assim) e exigir a verificação em duas etapas da administração.</li>
     <li>Lista de tipos de arquivo permitidos e verificação de vírus nos uploads.</li>
   </ol>
   <h2>Produto</h2>

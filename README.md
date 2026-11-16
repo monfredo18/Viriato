@@ -23,23 +23,24 @@ docker compose up --build
 ```
 
 - App: http://localhost:3000 — entre com o administrador inicial (nome `Administrador`, senha `trocar-12345`, definidos por `ADMIN_NOME`/`ADMIN_SENHA` em `docker-compose.yml` ou `.env`). No primeiro acesso o sistema pede que ele crie a própria senha.
-- Swagger/OpenAPI: http://localhost:8080/swagger-ui.html
+- Swagger/OpenAPI: http://localhost:8080/swagger-ui.html (no `docker-compose.yml` vem ligado; por padrão o sistema o deixa desligado, ver `SWAGGER_ATIVO`)
 
 Desenvolvimento sem Docker para o código:
 
 ```bash
 docker compose up -d mysql s3   # dependências
-cd backend && mvn spring-boot:run       # API em :8080
+cd backend && VIRIATO_JWT_PERMITIR_PADRAO=true mvn spring-boot:run   # API em :8080 (segredo de exemplo só em dev)
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
 
-Testes: `cd backend && mvn test` (99 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
+Testes: `cd backend && mvn test` (107 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
 
 ## Arquitetura
 
 ```
 backend/src/main/java/br/com/viriato/
-  seguranca/   JWT, filtro, config de segurança, CORS
+  seguranca/   JWT, sessões revogadas, filtro, cabeçalhos, cifra e 2FA (TOTP), CORS
+  auditoria/   registro de eventos de segurança e administração
   usuario/     login por nome, senha provisória, primeiro administrador, usuários e papéis
   cadastro/    empresas atendidas, setores e entregas
   fluxo/       fluxos, etapas, requisitos e transições configuráveis por empresa
@@ -87,6 +88,12 @@ Menu lateral (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatór
 - A senha inicial é **provisória**: no primeiro acesso a pessoa cria a própria senha, e o servidor bloqueia o resto do sistema até isso acontecer.
 - O administrador pode **zerar a senha** de qualquer outra conta (funcionário, gestor ou administrador): ele informa na hora a nova senha, que também é provisória. A sessão aberta da pessoa é encerrada.
 - O usuário é conferido a cada requisição: quem é desativado ou apagado perde o acesso imediatamente.
+- **Bloqueio de conta:** depois de 5 erros de senha, o erro seguinte bloqueia a conta e a tela manda **entrar em contato com o suporte**. Na aba Usuários, o botão **Desbloquear** só aparece para quem está bloqueado (administrador desbloqueia qualquer pessoa; gestor, funcionários do próprio setor). Zerar a senha também desbloqueia.
+- **Verificação em duas etapas (opcional):** em *Meu perfil*, com aplicativo autenticador (TOTP). O segredo é guardado cifrado. O administrador desliga a de quem perdeu o celular.
+- **Meu perfil** também permite alterar a própria senha (informando a atual). **Sair** invalida o token no servidor.
+- **Auditoria** (aba só do administrador): entradas, bloqueios, senhas, criação e alteração de usuários.
+- **Cabeçalhos de segurança** no nginx (CSP, X-Frame-Options, nosniff…) e na API; chat de ajuda com limite de 20 mensagens a cada 10 minutos por pessoa.
+- Limitações: sem recuperação de senha por e-mail (o suporte zera); o bloqueio é por conta, não por endereço de origem; o token fica no `localStorage` do navegador.
 
 ### Relatórios (PDF)
 A aba **Relatórios** gera um PDF dos processos, com filtros por setor, responsável, empresa, período (abertura ou encerramento) e situação (em andamento, concluídos, cancelados). A abrangência depende do papel e é imposta pelo servidor:
@@ -128,6 +135,8 @@ Ver `.env.example` e `backend/src/main/resources/application.yml`. Obrigatórias
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | MySQL |
 | `S3_BUCKET`, `S3_REGIAO` | Bucket real. Sem `S3_ENDPOINT`, usa a AWS (credenciais via IAM Role) |
 | `CORS_ORIGINS` | Origens permitidas (não necessário se front e API ficam no mesmo domínio via nginx) |
+| `VIRIATO_JWT_PERMITIR_PADRAO` | **Só em desenvolvimento local:** aceita o `JWT_SECRET` de exemplo. Sem isso, o sistema se recusa a subir com o segredo de exemplo. Rodando `mvn spring-boot:run` sem `JWT_SECRET`, defina `VIRIATO_JWT_PERMITIR_PADRAO=true` |
+| `SWAGGER_ATIVO` | `true` liga a documentação interativa da API (padrão: desligada) |
 
 ## Produção (sugestão AWS)
 
@@ -136,8 +145,8 @@ ECS Fargate (backend + frontend) · RDS MySQL · S3 com bloqueio de acesso públ
 ## Roadmap
 
 - [ ] Edição de fluxos existentes e transições não sequenciais na UI (a API já aceita transições arbitrárias)
-- [ ] Recuperação de senha e 2FA
+- [ ] Recuperação de senha por e-mail e 2FA obrigatório para administradores
 - [ ] Campos personalizados por fluxo (hoje: JSON livre via API)
 - [ ] Cobrança/planos e limites por empresa
 - [ ] Feriados e prazos em dias úteis
-- [ ] Rate limiting no login
+- [ ] Limite de tentativas por endereço de origem (hoje o bloqueio é por conta)

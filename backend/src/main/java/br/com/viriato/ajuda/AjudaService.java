@@ -29,6 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class AjudaService {
     static final int MAX_TEXTO = 2000;
     static final int MAX_MENSAGENS = 200;
+    /** Contra enchente: no máximo tantas mensagens por pessoa dentro da janela. */
+    static final int LIMITE_POR_JANELA = 20;
+    static final java.time.Duration JANELA = java.time.Duration.ofMinutes(10);
 
     public record MensagemDto(Long id, String autorNome, boolean deAdmin, String texto, Instant criadoEm) {}
     public record ConversaResumo(Long id, Long usuarioId, String pessoa, Long fotoVersao, String setor, String ultimaTexto, boolean ultimaDeAdmin, Instant atualizadoEm, int naoLidas) {}
@@ -79,6 +82,9 @@ public class AjudaService {
     }
 
     private AjudaMensagem gravar(AjudaConversa c, UsuarioLogado quem, String autorNome, boolean deAdmin, String texto) {
+        if (mensagens.countByAutorIdAndTenantIdAndCriadoEmAfter(quem.id(), quem.tenantId(), Instant.now().minus(JANELA)) >= LIMITE_POR_JANELA) {
+            throw new NegocioException("Muitas mensagens em pouco tempo. Aguarde alguns minutos e tente de novo.");
+        }
         AjudaMensagem m = new AjudaMensagem();
         m.setTenantId(quem.tenantId());
         m.setConversaId(c.getId());

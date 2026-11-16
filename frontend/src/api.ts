@@ -7,7 +7,7 @@ export const tokenStore = {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public codigo?: string) {
     super(message)
   }
 }
@@ -25,12 +25,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 401 && token) onUnauthorized()
   if (!res.ok) {
     let msg = `Erro ${res.status}`
+    let codigo: string | undefined
     try {
-      msg = (await res.json()).erro ?? msg
+      const corpo = await res.json()
+      msg = corpo.erro ?? msg
+      codigo = corpo.codigo
     } catch {
       /* corpo vazio */
     }
-    throw new ApiError(res.status, msg)
+    throw new ApiError(res.status, msg, codigo)
   }
   if (res.status === 204) return undefined as T
   const text = await res.text()
@@ -74,7 +77,7 @@ export type Papel = 'ADMIN' | 'GESTOR' | 'USUARIO'
 export type Status = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO'
 
 export interface PendenciasUsuario { nome: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
-export interface Usuario { id: number; nome: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null; deveTrocarSenha: boolean; fotoVersao: number | null }
+export interface Usuario { id: number; nome: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null; deveTrocarSenha: boolean; fotoVersao: number | null; bloqueado: boolean; doisFatores: boolean }
 export const ROTULO_PAPEL: Record<Papel, string> = { ADMIN: 'Administrador', GESTOR: 'Gestor', USUARIO: 'Usuário' }
 export interface Cliente { id: number; numero: string; nome: string; ativo: boolean }
 export interface EntregaResumo { id: number; nome: string; ativo: boolean }
@@ -130,3 +133,5 @@ export interface Notificacao { id: number; titulo: string; mensagem: string | nu
 export interface MensagemAjuda { id: number; autorNome: string; deAdmin: boolean; texto: string; criadoEm: string }
 export interface ConversaAjuda { id: number; usuarioId: number; fotoVersao: number | null; pessoa: string; setor: string | null; ultimaTexto: string | null; ultimaDeAdmin: boolean; atualizadoEm: string; naoLidas: number }
 export interface ConversaAjudaAberta { id: number; usuarioId: number; fotoVersao: number | null; pessoa: string; setor: string | null; mensagens: MensagemAjuda[] }
+export interface RegistroAuditoria { id: number; usuario: string | null; acao: string; detalhe: string | null; criadoEm: string }
+export interface ConfigDoisFatores { segredo: string; uri: string }

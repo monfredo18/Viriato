@@ -8,4 +8,5 @@ public interface AjudaMensagemRepository extends JpaRepository<AjudaMensagem, Lo
     /** As mais recentes primeiro (o serviço inverte para mostrar em ordem de conversa). */
     List<AjudaMensagem> findByConversaIdAndTenantIdOrderByIdDesc(Long conversaId, Long tenantId, Pageable page);
     void deleteByConversaId(Long conversaId);
+    long countByAutorIdAndTenantIdAndCriadoEmAfter(Long autorId, Long tenantId, java.time.Instant desde);
 }

@@ -27,6 +27,11 @@ public class SegurancaConfig {
     SecurityFilterChain chain(HttpSecurity http, JwtFilter jwtFilter) throws Exception {
         http.csrf(c -> c.disable())
             .cors(c -> {})
+            .headers(h -> h
+                .contentSecurityPolicy(c -> c.policyDirectives("default-src 'none'; frame-ancestors 'none'"))   // a API só devolve dados
+                .frameOptions(f -> f.deny())
+                .referrerPolicy(r -> r.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                .httpStrictTransportSecurity(t -> t.includeSubDomains(true).maxAgeInSeconds(31536000)))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .authorizeHttpRequests(a -> a

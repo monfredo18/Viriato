@@ -22,6 +22,13 @@ spring:
       max-file-size: 25MB
       max-request-size: 30MB
 
+springdoc:
+  # A documentação interativa da API fica desligada por padrão (ative com SWAGGER_ATIVO=true em desenvolvimento).
+  api-docs:
+    enabled: ${SWAGGER_ATIVO:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ATIVO:false}
+
 viriato:
   # Cadastro aberto de empresas (POST /api/auth/registrar-empresa). Desligado: o primeiro administrador
   # vem de ADMIN_NOME/ADMIN_SENHA, e os demais usuários são criados por administradores e gestores.
@@ -34,6 +41,8 @@ viriato:
     # Em produção defina JWT_SECRET com no mínimo 32 caracteres.
     secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
     expiracao-horas: ${JWT_EXPIRACAO_HORAS:12}
+    # O sistema se recusa a subir com o segredo de exemplo, a não ser em desenvolvimento local (VIRIATO_JWT_PERMITIR_PADRAO=true).
+    permitir-padrao: ${VIRIATO_JWT_PERMITIR_PADRAO:false}
   cors:
     origens: ${CORS_ORIGENS:http://localhost:5173,http://localhost:3000}
   # Onde ficam os documentos: "s3" (padrão) ou "local" (disco, só para desenvolvimento).

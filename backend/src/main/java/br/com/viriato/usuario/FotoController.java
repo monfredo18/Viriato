@@ -19,8 +19,12 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api")
 public class FotoController {
     private final FotoService fotos;
+    private final br.com.viriato.auditoria.AuditoriaService auditoria;
 
-    public FotoController(FotoService fotos) { this.fotos = fotos; }
+    public FotoController(FotoService fotos, br.com.viriato.auditoria.AuditoriaService auditoria) {
+        this.fotos = fotos;
+        this.auditoria = auditoria;
+    }
 
     @PostMapping(value = "/me/foto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public UsuarioDto trocar(@RequestPart("arquivo") MultipartFile arquivo) throws IOException {
@@ -37,7 +41,11 @@ public class FotoController {
     @DeleteMapping("/usuarios/{id}/foto")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public void tirarDeOutra(@PathVariable Long id) { fotos.remover(id, Contexto.tenantId()); }
+    public void tirarDeOutra(@PathVariable Long id) {
+        UsuarioLogado quem = Contexto.atual();
+        fotos.remover(id, quem.tenantId());
+        auditoria.registrar(quem.tenantId(), quem.id(), "FOTO_REMOVIDA_PELO_ADMIN", "Usuário " + id);
+    }
 
     @GetMapping("/usuarios/{id}/foto")
     public ResponseEntity<InputStreamResource> ver(@PathVariable Long id) {

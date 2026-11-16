@@ -3,6 +3,7 @@ package br.com.viriato.usuario;
 import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.seguranca.Contexto;
 import com.fasterxml.jackson.annotation.JsonAlias;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -26,7 +27,11 @@ public class AuthController {
     }
 
     /** Entra-se com nome e senha. Os apelidos "nome" e "email" existem para clientes e contas antigas. */
-    public record LoginReq(@JsonAlias({"nome", "email"}) @NotBlank String usuario, @NotBlank String senha) {}
+    public record LoginReq(@JsonAlias({"nome", "email"}) @NotBlank String usuario, @NotBlank String senha, String codigo) {}
+
+    public record AlterarSenhaReq(@NotBlank String senhaAtual, @NotBlank @Size(min = 8, max = 72) String novaSenha) {}
+    public record CodigoReq(@NotBlank String codigo) {}
+    public record SenhaReq(@NotBlank String senha) {}
 
     public record RegistroReq(@NotBlank @Size(max = 150) String empresa,
                               @NotBlank @Size(max = 150) String nome,
@@ -37,7 +42,7 @@ public class AuthController {
 
     @PostMapping("/auth/login")
     public AuthService.Sessao login(@Valid @RequestBody LoginReq r) {
-        return auth.login(r.usuario(), r.senha());
+        return auth.login(r.usuario(), r.senha(), r.codigo());
     }
 
     /** Desligado por padrão: a primeira conta de administrador nasce da configuração (ver README). */
@@ -59,4 +64,27 @@ public class AuthController {
     public UsuarioDto definirSenha(@Valid @RequestBody NovaSenhaReq r) {
         return auth.definirSenhaPropria(Contexto.atual(), r.novaSenha());
     }
+
+    /** Sair: o token usado deixa de valer na hora. */
+    @PostMapping("/me/sair")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void sair(HttpServletRequest req) {
+        String h = req.getHeader("Authorization");
+        if (h != null && h.startsWith("Bearer ")) auth.sair(h.substring(7));
+    }
+
+    /** Troca da própria senha, informando a atual; devolve uma sessão nova (as outras são encerradas). */
+    @PostMapping("/me/alterar-senha")
+    public AuthService.Sessao alterarSenha(@Valid @RequestBody AlterarSenhaReq r) {
+        return auth.alterarSenha(Contexto.atual(), r.senhaAtual(), r.novaSenha());
+    }
+
+    @PostMapping("/me/2fa/iniciar")
+    public AuthService.ConfiguracaoDoisFatores iniciarDoisFatores() { return auth.iniciarDoisFatores(Contexto.atual()); }
+
+    @PostMapping("/me/2fa/ativar")
+    public UsuarioDto ativarDoisFatores(@Valid @RequestBody CodigoReq r) { return auth.ativarDoisFatores(Contexto.atual(), r.codigo()); }
+
+    @PostMapping("/me/2fa/desativar")
+    public UsuarioDto desativarDoisFatores(@Valid @RequestBody SenhaReq r) { return auth.desativarDoisFatores(Contexto.atual(), r.senha()); }
 }

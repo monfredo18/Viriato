@@ -24,6 +24,7 @@ const desenhos = {
   enviar: <><path d="M21 3 10.5 13.5M21 3l-6.8 18-3.7-7.5L3 9.8z" /></>,
   fechar: <><path d="M6 6l12 12M18 6 6 18" /></>,
   voltar: <><path d="M15 5l-7 7 7 7" /></>,
+  escudo: <><path d="M12 3 4.5 6v5.5c0 4.5 3.1 8 7.5 9.5 4.4-1.5 7.5-5 7.5-9.5V6z" /><path d="m9 12 2.2 2.2L15.2 10" /></>,
   sair: <><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" /></>,
 } satisfies Record<string, ReactNode>
 

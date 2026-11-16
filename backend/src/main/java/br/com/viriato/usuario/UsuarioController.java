@@ -6,6 +6,7 @@ import br.com.viriato.cadastro.SetorRepository;
 import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.comum.NegocioException;
 import br.com.viriato.ajuda.AjudaService;
+import br.com.viriato.auditoria.AuditoriaService;
 import br.com.viriato.notificacao.NotificacaoRepository;
 import br.com.viriato.comum.Datas;
 import br.com.viriato.processo.ProcessoRepository;
@@ -50,10 +51,11 @@ public class UsuarioController {
     private final ProcessoService processoService;
     private final AjudaService ajuda;
     private final FotoService fotos;
+    private final AuditoriaService auditoria;
 
     public UsuarioController(UsuarioRepository repo, SetorRepository setores, CadastroService cadastros,
                              PasswordEncoder encoder, ProcessoRepository processos, NotificacaoRepository notificacoes,
-                             ProcessoService processoService, AjudaService ajuda, FotoService fotos) {
+                             ProcessoService processoService, AjudaService ajuda, FotoService fotos, AuditoriaService auditoria) {
         this.repo = repo;
         this.setores = setores;
         this.cadastros = cadastros;
@@ -63,6 +65,7 @@ public class UsuarioController {
         this.processoService = processoService;
         this.ajuda = ajuda;
         this.fotos = fotos;
+        this.auditoria = auditoria;
     }
 
     /** O acesso é por nome e senha; o e-mail é opcional (e a tela não o pede). */
@@ -132,7 +135,9 @@ public class UsuarioController {
         u.setSenhaProvisoria(true);
         u.setPapel(req.papel());
         u.setSetorId(setor == null ? null : setor.getId());
-        return UsuarioDto.de(repo.save(u), setor == null ? null : setor.getNome());
+        Usuario novo = repo.save(u);
+        auditoria.registrar(quem.tenantId(), quem.id(), "USUARIO_CRIADO", novo.getNome() + " (" + novo.getPapel() + (setor == null ? "" : ", setor " + setor.getNome()) + ")");
+        return UsuarioDto.de(novo, setor == null ? null : setor.getNome());
     }
 
     public record ZerarSenha(@NotBlank @Size(min = 8, max = 72) String senha) {}
@@ -151,7 +156,48 @@ public class UsuarioController {
         u.setSenhaHash(encoder.encode(req.senha()));
         u.setSenhaProvisoria(true);
         u.setVersaoSessao(u.getVersaoSessao() + 1);   // encerra as sessões abertas da pessoa
+        u.setBloqueado(false);                        // senha nova também libera uma conta bloqueada
+        u.setTentativasFalhas(0);
         repo.save(u);
+        auditoria.registrar(quem.tenantId(), quem.id(), "SENHA_ZERADA", "Conta de " + u.getNome());
+    }
+
+    /**
+     * Desbloqueia a conta travada por excesso de senhas erradas. O administrador desbloqueia qualquer pessoa; o gestor,
+     * só funcionários (papel Usuário) do próprio setor. Conta que não está bloqueada não tem o que desbloquear.
+     */
+    @PostMapping("/{id}/desbloquear")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @Transactional
+    public UsuarioDto desbloquear(@PathVariable Long id) {
+        UsuarioLogado quem = Contexto.atual();
+        Usuario u = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Usuário"));
+        if (quem.papel() == Papel.GESTOR) {
+            Long meuSetor = repo.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
+            if (u.getPapel() != Papel.USUARIO || meuSetor == null || !meuSetor.equals(u.getSetorId())) {
+                throw new AccessDeniedException("Gestor só desbloqueia funcionários do próprio setor");
+            }
+        }
+        if (!u.isBloqueado()) throw new NegocioException("Esta conta não está bloqueada");
+        u.setBloqueado(false);
+        u.setTentativasFalhas(0);
+        Usuario salvo = repo.save(u);
+        auditoria.registrar(quem.tenantId(), quem.id(), "CONTA_DESBLOQUEADA", "Conta de " + salvo.getNome());
+        return UsuarioDto.de(salvo);
+    }
+
+    /** Perdeu o celular: o administrador desliga a verificação em duas etapas de outra pessoa (que pode configurar de novo). */
+    @DeleteMapping("/{id}/2fa")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public void removerDoisFatores(@PathVariable Long id) {
+        UsuarioLogado quem = Contexto.atual();
+        Usuario u = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Usuário"));
+        if (!u.isTotpAtivo()) throw new NegocioException("Esta conta não usa verificação em duas etapas");
+        AuthService.limparDoisFatores(u);
+        repo.save(u);
+        auditoria.registrar(quem.tenantId(), quem.id(), "2FA_REMOVIDA_PELO_ADMIN", "Conta de " + u.getNome());
     }
 
     @PatchMapping("/{id}")
@@ -179,6 +225,9 @@ public class UsuarioController {
             u.setSetorId(cadastros.setorAtivo(quem.tenantId(), req.setorId()).getId());
         }
         Usuario salvo = repo.save(u);
+        auditoria.registrar(quem.tenantId(), quem.id(), "USUARIO_ALTERADO", salvo.getNome() + ": " + (req.papel() != null ? "papel " + req.papel() + "; " : "")
+                + (req.ativo() != null ? (req.ativo() ? "ativado; " : "desativado; ") : "")
+                + (Boolean.TRUE.equals(req.removerSetor()) ? "setor removido; " : req.setorId() != null ? "setor alterado; " : ""));
         String nomeSetor = salvo.getSetorId() == null ? null
                 : setores.findByIdAndTenantId(salvo.getSetorId(), quem.tenantId()).map(Setor::getNome).orElse(null);
         return UsuarioDto.de(salvo, nomeSetor);
@@ -254,5 +303,6 @@ public class UsuarioController {
         ajuda.apagarDe(u.getId(), quem.tenantId());                                 // a conversa de ajuda dele some junto
         fotos.apagarArquivoDe(u);                                                   // e a foto de perfil
         repo.delete(u);
+        auditoria.registrar(quem.tenantId(), quem.id(), "USUARIO_APAGADO", u.getNome() + " (" + u.getPapel() + ")");
     }
 }
