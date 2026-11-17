@@ -33,7 +33,7 @@ cd backend && VIRIATO_JWT_PERMITIR_PADRAO=true mvn spring-boot:run   # API em :8
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
 
-Testes: `cd backend && mvn test` (115 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
+Testes: `cd backend && mvn test` (118 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
 
 ## Arquitetura
 
@@ -70,10 +70,11 @@ Menu lateral (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relat�
 ### Cadastros e processos
 - **Empresas atendidas** (para quem o processo é feito), **setores** e **entregas** são cadastros da empresa.
 - Cada empresa atendida tem **número** (código interno de 1 a 10 dígitos, sem repetir) e **nome**. O **número do processo é o número da empresa**: processos da mesma empresa compartilham o número.
-- Cada **setor** define quais entregas faz; cada **entrega** define o fluxo (etapas) do processo.
-- **Entregas e fluxos num lugar só:** a tela **Entregas** mostra cada entrega com o fluxo dela (etapas, prazos, requisitos, aprovação e automações). Criar uma entrega já cria o fluxo dela, com as etapas informadas (ou as padrão); apagar a entrega apaga o fluxo junto. O fluxo segue a regra da entrega: o gestor só vê e altera o das entregas do próprio setor.
-- **Só o administrador cria, altera e apaga setores.** A entrega criada pelo **gestor** vai direto para o setor dele e é **exclusiva**: outros setores não a veem nem a usam (nem o administrador consegue colocá-la na lista de outro setor). O gestor só altera e apaga as entregas exclusivas do próprio setor; as entregas gerais (do administrador) ele só consulta. Apagar o setor apaga as entregas exclusivas dele. O nome da entrega é único na empresa.
-- Novo processo: administrador informa empresa, departamento, entrega e responsável; gestor, empresa, entrega e responsável (departamento é o dele); usuário, só empresa e entrega (departamento e responsável são os dele). Só aparecem as entregas que o setor faz.
+- **Cada setor tem as suas entregas** e não vê nem usa as dos outros; cada **entrega** tem o seu fluxo (etapas) do processo.
+- **Entregas e fluxos num lugar só:** a tela **Entregas** mostra cada entrega com o fluxo dela (etapas, requisitos, aprovação e automações). Para o **administrador**, ela tem uma **sub-aba por setor**, cada uma com as entregas daquele setor (e o formulário para criar mais ali); gestor e usuário veem só as do próprio setor. Criar uma entrega já cria o fluxo dela, com as etapas informadas (ou as padrão: Abertura, Análise, Revisão e Concluído); apagar a entrega apaga o fluxo junto. Depois de criada, dá para **criar novas etapas** (entram antes da conclusão), renomear e remover (as intermediárias, sem processo em andamento); o fluxo segue em sequência.
+- **Só o administrador cria, altera e apaga setores.** Toda entrega pertence a um setor: o administrador escolhe o setor; a que o **gestor** cria vai direto para o dele. O gestor altera e apaga as entregas do próprio setor e as dos outros ele nem vê. Apagar o setor apaga as entregas dele. O nome da entrega é único na empresa.
+- **Migração das entregas antigas (V18):** entregas que eram compartilhadas por vários setores ficam com o primeiro setor que as fazia; os outros setores precisam criar a sua própria entrega (os processos antigos deles continuam existindo).
+- Novo processo: administrador informa empresa, departamento, entrega e responsável; gestor, empresa, entrega e responsável (departamento é o dele); usuário, só empresa e entrega (departamento e responsável são os dele). Só aparecem as entregas do setor.
 - Cada setor vê apenas os próprios processos; só o administrador vê os de todos os setores.
 
 ### Controle do processo e automações
@@ -110,7 +111,7 @@ A tela mostra uma prévia com os totais antes de gerar. Limite de 10.000 process
 O botão **X** apaga empresas, setores, entregas, fluxos e funcionários (sempre com confirmação). Os processos nunca são apagados:
 - **Só processo em andamento impede apagar.** Processo concluído ou cancelado não bloqueia; ele continua existindo, apenas sem o vínculo com o que foi apagado (aparece "—"; o título e o histórico permanecem).
 - Apagar uma **entrega** tira ela da lista dos setores e apaga o fluxo dela; apagar um **setor** deixa seus funcionários sem setor.
-- **Entrega com processos em andamento:** o X pede a **entrega substituta**. Os processos passam para ela (mantêm número, responsável e histórico), cada um para a etapa de mesmo nome no fluxo da substituta ou, se não houver, para a etapa inicial, com o prazo daquela etapa; pedidos de aprovação pendentes são cancelados e o histórico registra a troca. A substituta precisa ser uma entrega que o setor de cada processo faz (uma exclusiva de outro setor não serve).
+- **Entrega com processos em andamento:** o X pede a **entrega substituta**. Os processos passam para ela (mantêm número, responsável e histórico), cada um para a etapa de mesmo nome no fluxo da substituta ou, se não houver, para a etapa inicial, com o prazo daquela etapa; pedidos de aprovação pendentes são cancelados e o histórico registra a troca. A substituta precisa ser do mesmo setor.
 - **Fluxo:** não apaga se alguma entrega usa o fluxo nem se há processo em andamento nele. As etapas e transições são apagadas junto.
 - **Funcionário:** ninguém apaga a si mesmo; o gestor só apaga os do próprio setor e, ao passar os processos, só escolhe herdeiros desse setor (administrador só é herdeiro quando quem apaga é administrador). Se ele tem processos, aparece um aviso ("Apagar mesmo assim" / "Desistir de apagar"). Os processos em andamento e atrasados passam para os herdeiros escolhidos, com um novo prazo; os concluídos e cancelados ficam com o nome dele ("(removido)") e só o gestor do setor e o administrador os veem. O histórico permanece (o autor aparece como "usuário removido").
 
@@ -121,13 +122,13 @@ Todos enxergam os cadastros e fluxos da empresa. **Processos e pessoas são por 
 |---|---|---|---|
 | Empresas atendidas | cadastra, altera e apaga | cadastra, altera e apaga | só consulta |
 | Setores | cadastra, altera e apaga | só consulta | só consulta |
-| Entregas | cadastra (gerais), altera e apaga todas | cadastra e mexe só nas exclusivas do próprio setor | só consulta |
-| Fluxo (etapas, requisitos e automações de cada entrega) | altera todos | altera o das entregas exclusivas do próprio setor | só consulta |
+| Entregas | cadastra em qualquer setor, altera e apaga todas | cadastra e mexe só nas do próprio setor | só consulta |
+| Fluxo (etapas, requisitos e automações de cada entrega) | altera todos | altera o das entregas do próprio setor | só consulta |
 | Funcionários | adiciona (qualquer papel), altera papel, setor e situação, apaga (menos a si mesmo) | adiciona (só papel Usuário), ativa/desativa e apaga os de papel Usuário; não altera papel nem setor | só consulta |
 | Processos | mexe em qualquer um | mexe em qualquer um do próprio setor | abre processos; só mexe nos que é o responsável |
 
 ### Prazos
-Cada etapa pode ter `prazo_dias`. Um job diário (`PRAZOS_CRON`, padrão 08:00 America/Sao_Paulo) avisa o gestor do setor sobre prazos vencendo/vencidos, **uma vez por etapa**.
+**Só a etapa de conclusão tem prazo** (`prazo_dias`, opcional): o prazo **para concluir** o processo, em dias a partir da abertura. Ele é definido na abertura e **não reinicia** a cada mudança de etapa; sem prazo, o processo não atrasa. Um job diário (`PRAZOS_CRON`, padrão 08:00 America/Sao_Paulo) avisa o gestor do setor sobre prazos vencendo/vencidos, **uma vez por processo**.
 
 ## Configuração (variáveis de ambiente)
 

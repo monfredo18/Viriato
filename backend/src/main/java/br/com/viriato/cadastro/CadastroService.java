@@ -88,7 +88,7 @@ public class CadastroService {
     }
 
     // ---------- entregas ----------
-    /** Administrador vê todas; os demais veem as gerais e as exclusivas do próprio setor (nunca as de outros setores). */
+    /** Administrador vê todas; os demais, só as do próprio setor (cada setor tem as suas entregas e não enxerga as dos outros). */
     @Transactional(readOnly = true)
     public List<EntregaDto> listarEntregas(UsuarioLogado quem) {
         Long tid = quem.tenantId();
@@ -101,19 +101,20 @@ public class CadastroService {
     }
 
     /**
-     * Administrador: entrega geral (qualquer setor pode fazer, conforme a lista de cada setor). Gestor: a entrega nasce
-     * exclusiva do setor dele e já entra na lista de entregas desse setor.
+     * Toda entrega pertence a um setor. O administrador escolhe o setor; o gestor cria no setor dele. O fluxo nasce junto
+     * com a entrega (etapas informadas ou as padrão) e a entrega já entra na lista do setor.
      */
     @Transactional
-    public EntregaDto criarEntrega(UsuarioLogado quem, String nome, Long fluxoId, List<FluxoService.EtapaReq> etapas) {
+    public EntregaDto criarEntrega(UsuarioLogado quem, String nome, Long fluxoId, List<FluxoService.EtapaReq> etapas, Long setorId) {
         Long tid = quem.tenantId();
         String n = nome.trim();
-        Long dono = null;
-        if (quem.papel() != Papel.ADMIN) {
-            dono = setorDe(quem);
-            if (dono == null) throw new NegocioException("Seu usuário não tem setor definido. Peça ao administrador para definir o seu setor.");
+        Long donoId = quem.papel() == Papel.ADMIN ? setorId : setorDe(quem);
+        if (donoId == null) {
+            throw new NegocioException(quem.papel() == Papel.ADMIN ? "Escolha o setor da entrega"
+                    : "Seu usuário não tem setor definido. Peça ao administrador para definir o seu setor.");
         }
-        exigirNomeLivre(tid, n, dono, null);
+        Setor dono = setorAtivo(tid, donoId);
+        exigirNomeLivre(tid, n, dono.getId(), null);
         Fluxo f;
         if (fluxoId != null) {
             f = fluxoDaEmpresa(tid, fluxoId);
@@ -128,13 +129,10 @@ public class CadastroService {
         e.setTenantId(tid);
         e.setNome(n);
         e.setFluxoId(f.getId());
-        e.setSetorDonoId(dono);
+        e.setSetorDonoId(dono.getId());
         e = entregas.save(e);
-        if (dono != null) {
-            Setor s = setores.findByIdAndTenantId(dono, tid).orElseThrow();
-            s.getEntregas().add(e);
-            setores.save(s);
-        }
+        dono.getEntregas().add(e);
+        setores.save(dono);
         return dto(e, Map.of(f.getId(), f.getNome()), nomesDosSetores(tid));
     }
 
@@ -161,30 +159,23 @@ public class CadastroService {
     }
 
     @Transactional
-    public SetorDto criarSetor(Long tid, String nome, List<Long> entregaIds) {
+    public SetorDto criarSetor(Long tid, String nome) {
         String n = nome.trim();
         if (setores.existsByTenantIdAndNomeIgnoreCase(tid, n)) throw new NegocioException("Já existe um setor com esse nome");
         Setor s = new Setor();
         s.setTenantId(tid);
         s.setNome(n);
-        s = setores.save(s);
-        s.setEntregas(entregasParaOSetor(tid, s.getId(), entregaIds, Set.of()));
         return dto(setores.save(s));
     }
 
     @Transactional
-    public SetorDto atualizarSetor(Long tid, Long id, String nome, Boolean ativo, List<Long> entregaIds) {
+    public SetorDto atualizarSetor(Long tid, Long id, String nome, Boolean ativo) {
         Setor s = setores.findByIdAndTenantId(id, tid).orElseThrow(() -> new NaoEncontradoException("Setor"));
         if (nome != null && !nome.isBlank() && !nome.trim().equalsIgnoreCase(s.getNome())) {
             if (setores.existsByTenantIdAndNomeIgnoreCase(tid, nome.trim())) throw new NegocioException("Já existe um setor com esse nome");
             s.setNome(nome.trim());
         }
         if (ativo != null) s.setAtivo(ativo);
-        if (entregaIds != null) {
-            // as entregas exclusivas deste setor continuam nele, mesmo que a lista enviada não as traga
-            Set<Entrega> exclusivas = s.getEntregas().stream().filter(e -> id.equals(e.getSetorDonoId())).collect(Collectors.toSet());
-            s.setEntregas(entregasParaOSetor(tid, id, entregaIds, exclusivas));
-        }
         return dto(setores.save(s));
     }
 
@@ -278,8 +269,8 @@ public class CadastroService {
         Entrega e = entregas.findByIdAndTenantId(entregaId, tid).filter(Entrega::isAtivo)
                 .orElseThrow(() -> new NegocioException("Entrega inválida ou inativa"));
         Setor s = setores.findByIdAndTenantId(setor.getId(), tid).orElseThrow();
-        if (e.getSetorDonoId() != null && !e.getSetorDonoId().equals(s.getId())) {
-            throw new NegocioException("Entrega inválida ou inativa");   // exclusiva de outro setor: nem confirma que existe
+        if (!s.getId().equals(e.getSetorDonoId())) {
+            throw new NegocioException("Entrega inválida ou inativa");   // é de outro setor: nem confirma que existe
         }
         if (s.getEntregas().stream().noneMatch(x -> x.getId().equals(e.getId()))) {
             throw new NegocioException("O setor " + s.getNome() + " não faz a entrega \"" + e.getNome() + "\"");
@@ -289,14 +280,16 @@ public class CadastroService {
 
     @Transactional
     public void criarPadroes(Long tid, Long fluxoPadraoId) {
+        Setor s = new Setor();
+        s.setTenantId(tid);
+        s.setNome("Geral");
+        s = setores.save(s);
         Entrega e = new Entrega();
         e.setTenantId(tid);
         e.setNome("Atendimento geral");
         e.setFluxoId(fluxoPadraoId);
+        e.setSetorDonoId(s.getId());
         e = entregas.save(e);
-        Setor s = new Setor();
-        s.setTenantId(tid);
-        s.setNome("Geral");
         s.setEntregas(new HashSet<>(Set.of(e)));
         setores.save(s);
     }
@@ -306,45 +299,27 @@ public class CadastroService {
         return fluxos.findByIdAndTenantId(fluxoId, tid).orElseThrow(() -> new NaoEncontradoException("Fluxo"));
     }
 
-    /** Lista do setor: entregas gerais e as exclusivas dele; entrega exclusiva de outro setor não entra. */
-    private Set<Entrega> entregasParaOSetor(Long tid, Long setorId, List<Long> ids, Set<Entrega> manter) {
-        Set<Entrega> resultado = new HashSet<>(manter);
-        if (ids == null || ids.isEmpty()) return resultado;
-        Set<Long> unicos = new HashSet<>(ids);
-        List<Entrega> achadas = entregas.findByIdInAndTenantId(unicos, tid);
-        if (achadas.size() != unicos.size()) throw new NegocioException("Entrega inválida na lista do setor");
-        for (Entrega e : achadas) {
-            if (e.getSetorDonoId() != null && !e.getSetorDonoId().equals(setorId)) {
-                throw new NegocioException("A entrega \"" + e.getNome() + "\" é exclusiva de outro setor e não pode ser usada aqui");
-            }
-            resultado.add(e);
-        }
-        return resultado;
-    }
-
     private Long setorDe(UsuarioLogado quem) {
         return usuarios.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
     }
 
     private static boolean visivelParaSetor(Entrega e, Long setorId) {
-        return e.getSetorDonoId() == null || e.getSetorDonoId().equals(setorId);
+        return e.getSetorDonoId() != null && e.getSetorDonoId().equals(setorId);
     }
 
-    /** Administrador mexe em qualquer entrega; gestor só nas exclusivas do próprio setor (as gerais e as de outros setores ele nem vê). */
+    /** Administrador mexe em qualquer entrega; o gestor só nas do próprio setor (as de outros setores ele nem vê). */
     private Entrega entregaQueEleMexe(UsuarioLogado quem, Long id) {
         Entrega e = entregas.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Entrega"));
         if (quem.papel() == Papel.ADMIN) return e;
-        Long meuSetor = setorDe(quem);
-        if (e.getSetorDonoId() != null && !e.getSetorDonoId().equals(meuSetor)) throw new NaoEncontradoException("Entrega");
-        if (e.getSetorDonoId() == null) throw new org.springframework.security.access.AccessDeniedException("Só o administrador altera entregas gerais");
+        if (e.getSetorDonoId() == null || !e.getSetorDonoId().equals(setorDe(quem))) throw new NaoEncontradoException("Entrega");
         return e;
     }
 
-    /** O nome da entrega é único na empresa (também vale contra as exclusivas de outros setores, pois o banco garante isso). */
-    private void exigirNomeLivre(Long tid, String nome, Long dono, Long ignorarId) {
+    /** O nome da entrega é único na empresa (o banco garante); a mensagem não diz de que setor é a entrega que já usa o nome. */
+    private void exigirNomeLivre(Long tid, String nome, Long donoId, Long ignorarId) {
         boolean repetido = entregas.findByTenantIdOrderByNome(tid).stream()
                 .anyMatch(e -> !e.getId().equals(ignorarId) && e.getNome().equalsIgnoreCase(nome));
-        if (repetido) throw new NegocioException("Já existe uma entrega com esse nome. Os nomes de entrega são únicos na empresa.");
+        if (repetido) throw new NegocioException("Já existe uma entrega com esse nome. Os nomes de entrega são únicos na empresa; escolha outro.");
     }
 
     private Map<Long, String> nomesDosSetores(Long tid) {

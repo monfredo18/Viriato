@@ -94,18 +94,18 @@ class CadastrosPermissoesTest {
     void soAdminCadastraSetoresEEntregasGerais_usuarioSoVe() throws Exception {
         Cenario c = cenario();
         enviar(c.gestor(), "/api/setores", "{\"nome\":\"Tentativa\"}").andExpect(status().isForbidden());      // gestor não cria setor
-        long entrega = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo técnico\",\"fluxoId\":" + c.fluxoId() + "}")
-                .andExpect(status().isCreated())).get("id").asLong();
-        var setor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Engenharia\",\"entregaIds\":[" + entrega + "]}")
-                .andExpect(status().isCreated()));
-        assertThat(setor.get("entregas").get(0).get("nome").asText()).isEqualTo("Laudo técnico");
-
-        // só o administrador altera setores e as entregas de cada um
+        var setor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Engenharia\"}").andExpect(status().isCreated()));
         long setorId = setor.get("id").asLong();
-        alterar(c.gestor(), "/api/setores/" + setorId, "{\"entregaIds\":[" + entrega + "]}").andExpect(status().isForbidden());
-        var atualizado = corpo(alterar(c.admin(), "/api/setores/" + setorId,
-                "{\"entregaIds\":[" + entrega + "," + c.entregaPadraoId() + "]}").andExpect(status().isOk()));
-        assertThat(atualizado.get("entregas")).hasSize(2);
+        long entrega = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo técnico\",\"fluxoId\":" + c.fluxoId() + ",\"setorId\":" + setorId + "}")
+                .andExpect(status().isCreated())).get("id").asLong();
+        assertThat(entrega).isPositive();
+        for (JsonNode s : consultar(c.admin(), "/api/setores")) {       // a entrega entrou na lista do setor dela, e só nela
+            boolean tem = s.get("entregas").toString().contains("Laudo técnico");
+            assertThat(tem).isEqualTo(s.get("id").asLong() == setorId);
+        }
+        // só o administrador altera setores
+        alterar(c.gestor(), "/api/setores/" + setorId, "{\"nome\":\"Outro nome\"}").andExpect(status().isForbidden());
+        assertThat(alterar(c.admin(), "/api/setores/" + setorId, "{\"nome\":\"Engenharia civil\"}").andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).contains("Engenharia civil");
 
         // usuário comum não altera nada
         enviar(c.usuario(), "/api/setores", "{\"nome\":\"X\"}").andExpect(status().isForbidden());
@@ -182,9 +182,9 @@ class CadastrosPermissoesTest {
         assertThat(consultar(b.admin(), "/api/clientes")).isEmpty();
         alterar(b.admin(), "/api/clientes/" + clienteA, "{\"ativo\":false}").andExpect(status().isNotFound());
         // entrega usando fluxo de outra empresa
-        enviar(b.admin(), "/api/entregas", "{\"nome\":\"E\",\"fluxoId\":" + a.fluxoId() + "}").andExpect(status().isNotFound());
-        // setor com entrega de outra empresa
-        enviar(b.admin(), "/api/setores", "{\"nome\":\"S\",\"entregaIds\":[" + a.entregaPadraoId() + "]}")
+        enviar(b.admin(), "/api/entregas", "{\"nome\":\"E\",\"fluxoId\":" + a.fluxoId() + ",\"setorId\":" + b.setorGeralId() + "}").andExpect(status().isNotFound());
+        // entrega em setor de outra empresa
+        enviar(b.admin(), "/api/entregas", "{\"nome\":\"S\",\"setorId\":" + a.setorGeralId() + "}")
                 .andExpect(status().isUnprocessableEntity());
         // usuário com setor de outra empresa
         enviar(b.admin(), "/api/usuarios", "{\"nome\":\"U\",\"email\":\"u-" + UUID.randomUUID()
