@@ -80,6 +80,11 @@ class EtapasEPrazoTest {
         assertThat(corpo(ler(adm, "/api/processos/" + p)).get("processo").get("prazoEtapa").asText()).isEqualTo(esperado);
         enviar(adm, "/api/processos/" + p + "/avancar", "{\"etapaId\":" + analise + "}").andExpect(status().isOk());
         assertThat(corpo(ler(adm, "/api/processos/" + p)).get("processo").get("prazoEtapa").asText()).isEqualTo(esperado);   // continua o mesmo
+        // quem abre o processo pode escolher a data (dd/mm/aaaa na tela); no passado é recusada
+        String data = Datas.hoje().plusDays(30).toString();
+        long pData = corpo(enviar(adm, "/api/processos", "{\"clienteId\":" + cliente + ",\"entregaId\":" + entrega + ",\"setorId\":" + setor + ",\"responsavelId\":" + adminId + ",\"prazo\":\"" + data + "\"}").andExpect(status().isCreated())).get("id").asLong();
+        assertThat(corpo(ler(adm, "/api/processos/" + pData)).get("processo").get("prazoEtapa").asText()).isEqualTo(data);
+        enviar(adm, "/api/processos", "{\"clienteId\":" + cliente + ",\"entregaId\":" + entrega + ",\"setorId\":" + setor + ",\"responsavelId\":" + adminId + ",\"prazo\":\"" + Datas.hoje().minusDays(1) + "\"}").andExpect(status().isUnprocessableEntity());
         // sem prazo de conclusão, o processo não tem prazo (e não atrasa)
         alterar(adm, "/api/fluxos/" + f.get("id").asLong() + "/etapas/" + fim + "/dados", "{\"mudarPrazo\":true}").andExpect(status().isOk());
         long p2 = corpo(enviar(adm, "/api/processos", "{\"clienteId\":" + cliente + ",\"entregaId\":" + entrega + ",\"setorId\":" + setor + ",\"responsavelId\":" + adminId + "}").andExpect(status().isCreated())).get("id").asLong();

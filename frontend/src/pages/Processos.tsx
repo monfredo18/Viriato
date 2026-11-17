@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { api, type Cliente, type Entrega, type Pagina, type Processo, type Setor, type Status, type Usuario } from '../api'
+import { api, type Cliente, type Entrega, type Fluxo, type Pagina, type Processo, type Setor, type Status, type Usuario } from '../api'
 import { useAuth } from '../auth'
 
 const fmtData = (d: string | null) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—')
@@ -127,6 +127,9 @@ export default function Processos() {
  * entrega e responsável (o departamento é o dele); usuário informa só empresa e entrega (departamento e
  * responsável são os dele). O servidor aplica as mesmas regras, o formulário apenas não pede o que não vale.
  */
+/** Hoje em aaaa-mm-dd (fuso do navegador), para o mínimo do campo de data. */
+const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+
 export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => void }) {
   const { usuario } = useAuth()
   const papel = usuario?.papel
@@ -134,13 +137,15 @@ export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: (
   const [setores, setSetores] = useState<Setor[]>([])
   const [entregas, setEntregas] = useState<Entrega[]>([])
   const [usuarios, setUsuarios] = useState<Usuario[] | null>(null)
-  const [f, setF] = useState({ clienteId: '', setorId: '', entregaId: '', responsavelId: '', descricao: '' })
+  const [f, setF] = useState({ clienteId: '', setorId: '', entregaId: '', responsavelId: '', descricao: '', prazo: '' })
+  const [fluxos, setFluxos] = useState<Fluxo[]>([])
   const [erro, setErro] = useState('')
 
   useEffect(() => {
     api.get<Cliente[]>('/clientes').then((l) => setClientes(l.filter((c) => c.ativo)))
     api.get<Setor[]>('/setores').then((l) => setSetores(l.filter((x) => x.ativo)))
     api.get<Entrega[]>('/entregas').then(setEntregas)
+    api.get<Fluxo[]>('/fluxos').then(setFluxos)
     api.get<Usuario[]>('/usuarios').then((l) => setUsuarios(l.filter((u) => u.ativo)))
   }, [])
 
@@ -153,6 +158,8 @@ export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: (
   const entrega = entregas.find((e) => String(e.id) === f.entregaId)
   // O responsável é do setor do processo (o administrador pode ser responsável em qualquer um).
   const candidatos = (usuarios ?? []).filter((u) => u.papel === 'ADMIN' || (setorDoProcesso !== null && u.setorId === setorDoProcesso))
+  // prazo padrão da entrega: dias da etapa de conclusão do fluxo dela
+  const padrao = fluxos.find((x) => x.id === entrega?.fluxoId)?.etapas.find((et) => et.finalEtapa)?.prazoDias ?? null
   const semSetor = !escolheSetor && usuarios !== null && meuSetorId === null
 
   const enviar = async (e: FormEvent) => {
@@ -165,6 +172,7 @@ export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: (
         ...(escolheSetor ? { setorId: Number(f.setorId) } : {}),
         ...(escolheResponsavel ? { responsavelId: Number(f.responsavelId) } : {}),
         descricao: f.descricao || null,
+        prazo: f.prazo || null,
       })
       criado()
     } catch (err) {
@@ -212,6 +220,11 @@ export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: (
             </select>
           </label>
         )}
+
+        <label>Prazo para concluir (opcional)
+          <input type="date" min={hojeIso()} value={f.prazo} onChange={(e) => setF({ ...f, prazo: e.target.value })} />
+        </label>
+        {entrega && padrao !== null && !f.prazo && <small className="dica-campo">Sem data, vale o prazo padrão da entrega: {padrao} dia(s) a partir de hoje.</small>}
 
         <label>Observações (opcional)
           <textarea rows={3} maxLength={10000} value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} />

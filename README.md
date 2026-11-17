@@ -128,7 +128,7 @@ Todos enxergam os cadastros e fluxos da empresa. **Processos e pessoas são por 
 | Processos | mexe em qualquer um | mexe em qualquer um do próprio setor | abre processos; só mexe nos que é o responsável |
 
 ### Prazos
-**Só a etapa de conclusão tem prazo** (`prazo_dias`, opcional): o prazo **para concluir** o processo, em dias a partir da abertura. Ele é definido na abertura e **não reinicia** a cada mudança de etapa; sem prazo, o processo não atrasa. Um job diário (`PRAZOS_CRON`, padrão 08:00 America/Sao_Paulo) avisa o gestor do setor sobre prazos vencendo/vencidos, **uma vez por processo**.
+**Só a etapa de conclusão tem prazo** (`prazo_dias`, opcional): o prazo **padrão** da entrega, em dias. Ao abrir o processo, o campo **Prazo para concluir** aparece como data (**dd/mm/aaaa**), opcional: vazio vale o padrão da entrega; ou se escolhe outra data (não anterior a hoje). Esse prazo **não reinicia** a cada mudança de etapa; sem prazo, o processo não atrasa. Um job diário (`PRAZOS_CRON`, padrão 08:00 America/Sao_Paulo) avisa o gestor do setor sobre prazos vencendo/vencidos, **uma vez por processo**.
 
 ## Configuração (variáveis de ambiente)
 

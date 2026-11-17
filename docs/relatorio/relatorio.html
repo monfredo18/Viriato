@@ -232,7 +232,7 @@
   <p>Há ainda um campo opcional de observações. Não existe campo de título, de número nem de fluxo: o <strong>título é gerado</strong> (por exemplo <em>Laudo técnico — Construtora Alfa</em>) e o <strong>fluxo vem da entrega</strong>. Ao criar, o sistema:</p>
   <ol>
     <li>confere que a empresa, o setor e a entrega são da sua empresa e estão ativos, que o setor realmente faz aquela entrega e que o fluxo da entrega está ativo;</li>
-    <li>coloca o processo na etapa inicial do fluxo e define o <strong>prazo para concluir</strong> (hoje + dias da etapa de conclusão, fuso America/Sao_Paulo; sem prazo na conclusão, o processo não atrasa). O prazo não reinicia quando o processo muda de etapa;</li>
+    <li>coloca o processo na etapa inicial do fluxo e define o <strong>prazo para concluir</strong>: a data (dd/mm/aaaa) escolhida por quem abre o processo (não anterior a hoje) ou, se não escolher, o prazo padrão da entrega (hoje + dias da etapa de conclusão, fuso America/Sao_Paulo); sem nenhum dos dois, o processo não atrasa. O prazo não reinicia quando o processo muda de etapa;</li>
     <li>usa como número do processo o <strong>número da empresa atendida</strong> (por exemplo <code>1042</code>);</li>
     <li>registra no histórico a ação <em>Criado</em> e avisa o gestor do setor (se não foi ele quem criou).</li>
   </ol>

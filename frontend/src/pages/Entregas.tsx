@@ -140,7 +140,7 @@ export default function Entregas() {
                         return (
                           <li key={et.id}>
                             <span className="etapa-nome"><b>{et.nome}</b>
-                              {et.finalEtapa && <small> · {et.prazoDias !== null ? `prazo para concluir: ${et.prazoDias} d` : 'sem prazo para concluir'}</small>}
+                              {et.finalEtapa && <small> · {et.prazoDias !== null ? `prazo padrão para concluir: ${et.prazoDias} dia(s)` : 'sem prazo padrão para concluir'}</small>}
                               {et.inicial && <small> · inicial</small>}{et.finalEtapa && <small> · final</small>}
                               {auto > 0 && <small className="so-gestor"> · {auto} automação(ões)</small>}
                               {et.papelMinimo !== 'USUARIO' && <small className="so-gestor"> · {et.papelMinimo === 'ADMIN' ? 'só administrador' : 'só gestor'} move para cá</small>}
@@ -192,7 +192,7 @@ export default function Entregas() {
               </div>
             ))}
             <button type="button" onClick={() => setF({ ...f, etapas: [...f.etapas, ''] })}>+ Etapa</button>
-            <label>Prazo para concluir (dias, opcional)
+            <label>Prazo padrão para concluir (dias, opcional)
               <input type="number" min={0} placeholder="sem prazo" value={f.prazo} onChange={(e) => setF({ ...f, prazo: e.target.value })} />
             </label>
             {erroForm && <p className="erro">{erroForm}</p>}

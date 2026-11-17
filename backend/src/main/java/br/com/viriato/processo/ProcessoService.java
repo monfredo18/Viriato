@@ -92,7 +92,7 @@ public class ProcessoService {
      * só empresa e entrega (o setor é o dele e o responsável é ele mesmo).
      */
     public record NovoProcesso(Long clienteId, Long entregaId, Long setorId, Long responsavelId,
-                               String descricao, Map<String, Object> camposExtras) {}
+                               String descricao, Map<String, Object> camposExtras, LocalDate prazo) {}
 
     // ---------- criação ----------
 
@@ -132,7 +132,8 @@ public class ProcessoService {
         p.setFluxoId(fluxoId);
         p.setEtapaAtualId(inicial.getId());
         p.setResponsavelId(responsavelId);
-        p.setPrazoEtapa(prazoParaConcluir(fluxoId, tid));
+        if (n.prazo() != null && n.prazo().isBefore(Datas.hoje())) throw new NegocioException("O prazo para concluir não pode ser anterior a hoje");
+        p.setPrazoEtapa(n.prazo() != null ? n.prazo() : prazoParaConcluir(fluxoId, tid));
         p.setEtapaDesde(Instant.now());
         p.setCamposExtras(serializar(extras));
         p.setCriadoPor(quem.id());

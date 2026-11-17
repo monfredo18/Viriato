@@ -34,6 +34,8 @@ public class ProcessoController {
                                Long setorId,
                                Long responsavelId,
                                @Size(max = 10000) String descricao,
+                               /** Prazo para concluir (data). Vazio = o prazo padrão da entrega, se ela tiver. */
+                               java.time.LocalDate prazo,
                                Map<String, Object> camposExtras) {}
 
     public record AvancarReq(@NotNull Long etapaId, @Size(max = 2000) String comentario) {}
@@ -68,7 +70,7 @@ public class ProcessoController {
     @ResponseStatus(HttpStatus.CREATED)
     public ProcessoDto criar(@Valid @RequestBody NovoProcesso r) {
         return service.criar(Contexto.atual(), new ProcessoService.NovoProcesso(
-                r.clienteId(), r.entregaId(), r.setorId(), r.responsavelId(), r.descricao(), r.camposExtras()));
+                r.clienteId(), r.entregaId(), r.setorId(), r.responsavelId(), r.descricao(), r.camposExtras(), r.prazo()));
     }
 
     @GetMapping("/{id}")

@@ -43,7 +43,7 @@ export default function ConfigurarEtapa({ fluxo, etapa, regras, recarregar, fech
         {erro && <p className="erro">{erro}</p>}
 
         <section className="config-secao">
-          <h4>Nome{etapa.finalEtapa ? ' e prazo para concluir' : ''}</h4>
+          <h4>Nome{etapa.finalEtapa ? ' e prazo padrão para concluir' : ''}</h4>
           <form className="linha-form" onSubmit={(e) => {
             e.preventDefault()
             tentar(() => api.patch(`${base}/dados`, { nome, ...(etapa.finalEtapa ? { prazoDias: prazo === '' ? null : Number(prazo), mudarPrazo: true } : {}) }))
@@ -52,7 +52,7 @@ export default function ConfigurarEtapa({ fluxo, etapa, regras, recarregar, fech
             {etapa.finalEtapa && <input type="number" min={0} placeholder="prazo (dias)" value={prazo} onChange={(e) => setPrazo(e.target.value)} aria-label="Prazo para concluir, em dias" />}
             <button>Salvar</button>
           </form>
-          {etapa.finalEtapa && <p className="sub">O processo tem um único prazo, contado em dias a partir da abertura, para chegar a esta etapa. Vazio = sem prazo.</p>}
+          {etapa.finalEtapa && <p className="sub">Prazo padrão, em dias a partir da abertura: quem abre o processo vê a data (dd/mm/aaaa) já preenchida e pode escolher outra. Vazio = sem prazo padrão.</p>}
           {!etapa.inicial && !etapa.finalEtapa && (
             <button type="button" className="perigo" onClick={() => confirm(`Remover a etapa “${etapa.nome}”? Os requisitos e as automações dela também são apagados.`) && api.del(base).then(async () => { await recarregar(); fechar() }).catch((e) => setErro(e.message))}>Remover esta etapa</button>
           )}
