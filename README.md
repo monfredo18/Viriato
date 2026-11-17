@@ -33,7 +33,7 @@ cd backend && VIRIATO_JWT_PERMITIR_PADRAO=true mvn spring-boot:run   # API em :8
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
 
-Testes: `cd backend && mvn test` (112 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
+Testes: `cd backend && mvn test` (115 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
 
 ## Arquitetura
 
@@ -109,7 +109,8 @@ A tela mostra uma prévia com os totais antes de gerar. Limite de 10.000 process
 ### Apagar cadastros
 O botão **X** apaga empresas, setores, entregas, fluxos e funcionários (sempre com confirmação). Os processos nunca são apagados:
 - **Só processo em andamento impede apagar.** Processo concluído ou cancelado não bloqueia; ele continua existindo, apenas sem o vínculo com o que foi apagado (aparece "—"; o título e o histórico permanecem).
-- Apagar uma **entrega** tira ela da lista dos setores; apagar um **setor** deixa seus funcionários sem setor.
+- Apagar uma **entrega** tira ela da lista dos setores e apaga o fluxo dela; apagar um **setor** deixa seus funcionários sem setor.
+- **Entrega com processos em andamento:** o X pede a **entrega substituta**. Os processos passam para ela (mantêm número, responsável e histórico), cada um para a etapa de mesmo nome no fluxo da substituta ou, se não houver, para a etapa inicial, com o prazo daquela etapa; pedidos de aprovação pendentes são cancelados e o histórico registra a troca. A substituta precisa ser uma entrega que o setor de cada processo faz (uma exclusiva de outro setor não serve).
 - **Fluxo:** não apaga se alguma entrega usa o fluxo nem se há processo em andamento nele. As etapas e transições são apagadas junto.
 - **Funcionário:** ninguém apaga a si mesmo; o gestor só apaga os do próprio setor e, ao passar os processos, só escolhe herdeiros desse setor (administrador só é herdeiro quando quem apaga é administrador). Se ele tem processos, aparece um aviso ("Apagar mesmo assim" / "Desistir de apagar"). Os processos em andamento e atrasados passam para os herdeiros escolhidos, com um novo prazo; os concluídos e cancelados ficam com o nome dele ("(removido)") e só o gestor do setor e o administrador os veem. O histórico permanece (o autor aparece como "usuário removido").
 

@@ -21,8 +21,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 public class CadastroController {
     private final CadastroService service;
+    private final br.com.viriato.processo.ProcessoService processos;
 
-    public CadastroController(CadastroService service) { this.service = service; }
+    public CadastroController(CadastroService service, br.com.viriato.processo.ProcessoService processos) {
+        this.service = service;
+        this.processos = processos;
+    }
 
     /** Número da empresa: código interno, só dígitos (até 10), único entre as empresas atendidas. */
     public record NovoCliente(@NotBlank @Pattern(regexp = "\\d{1,10}", message = "deve ter de 1 a 10 dígitos") String numero,
@@ -73,6 +77,27 @@ public class CadastroController {
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public EntregaDto atualizarEntrega(@PathVariable Long id, @Valid @RequestBody AtualizaEntrega r) {
         return service.atualizarEntrega(Contexto.atual(), id, r.nome(), r.fluxoId(), r.ativo());
+    }
+
+    public record ApagarEntrega(Long entregaSubstitutaId) {}
+
+    /** Quantos processos em andamento a entrega tem (se houver, o apagar pede a entrega substituta). */
+    @GetMapping("/entregas/{id}/pendencias")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    public java.util.Map<String, Long> pendenciasEntrega(@PathVariable Long id) {
+        return java.util.Map.of("emAndamento", service.emAndamentoDaEntrega(Contexto.atual(), id));
+    }
+
+    /** Apaga a entrega; os processos em andamento dela passam para a entrega substituta escolhida. */
+    @PostMapping("/entregas/{id}/apagar")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @org.springframework.transaction.annotation.Transactional
+    public void apagarComSubstituta(@PathVariable Long id, @RequestBody(required = false) ApagarEntrega r) {
+        var quem = Contexto.atual();
+        var entrega = service.entregaParaApagar(quem, id);
+        processos.substituirEntregaEmAndamento(quem, entrega, r == null ? null : r.entregaSubstitutaId());
+        service.apagarEntrega(quem, id);
     }
 
     @DeleteMapping("/entregas/{id}")

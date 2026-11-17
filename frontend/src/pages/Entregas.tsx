@@ -26,6 +26,7 @@ export default function Entregas() {
   const [erro, setErro] = useState('')
   const [erroForm, setErroForm] = useState('')
   const [config, setConfig] = useState<{ fluxoId: number; etapaId: number | null } | null>(null)
+  const [apagando, setApagando] = useState<{ e: Entrega; qtd: number } | null>(null)
 
   // Só administrador e gestor consultam as automações (podem ter endereços e segredos de integração).
   const carregar = useCallback(async () => {
@@ -41,6 +42,22 @@ export default function Entregas() {
 
   const agir = (fn: () => Promise<unknown>) => fn().then(carregar).catch((e) => setErro(e.message))
   const podeMexer = (e: Entrega) => ehAdmin || (podeGerenciar && e.setorDonoId !== null)
+  // Sem processo em andamento: confirmação simples. Com processos: pede a entrega que vai substituí-la.
+  const apagar = async (e: Entrega) => {
+    setErro('')
+    try {
+      const { emAndamento } = await api.get<{ emAndamento: number }>(`/entregas/${e.id}/pendencias`)
+      if (emAndamento === 0) {
+        if (!confirm(`Apagar "${e.nome}"? Esta ação não pode ser desfeita.\n\nO fluxo dela (etapas, requisitos e automações) também é apagado e ela sai da lista dos setores. Processos já concluídos ou cancelados continuam existindo, sem o vínculo.`)) return
+        await api.post(`/entregas/${e.id}/apagar`, {})
+        carregar()
+      } else {
+        setApagando({ e, qtd: emAndamento })
+      }
+    } catch (err) {
+      setErro((err as Error).message)
+    }
+  }
   const compartilhado = (e: Entrega) => entregas.filter((o) => o.id !== e.id && o.fluxoId === e.fluxoId)
 
   const upd = (i: number, patch: Partial<EtapaForm>) => setF({ ...f, etapas: f.etapas.map((e, j) => (j === i ? { ...e, ...patch } : e)) })
@@ -90,11 +107,7 @@ export default function Entregas() {
                   {mexer && (
                     <span className="acoes-linha">
                       <button type="button" className="link" onClick={() => agir(() => api.patch(`/entregas/${e.id}`, { ativo: !e.ativo }))}>{e.ativo ? 'Desativar' : 'Reativar'}</button>
-                      <BotaoApagar
-                        nome={e.nome}
-                        aviso="O fluxo dela (etapas, requisitos e automações) também é apagado e ela sai da lista dos setores. Processos já concluídos ou cancelados continuam existindo, sem o vínculo. Não apaga se houver processo em andamento."
-                        apagar={() => { setErro(''); agir(() => api.del(`/entregas/${e.id}`)) }}
-                      />
+                      <BotaoApagar nome={e.nome} semConfirmar apagar={() => apagar(e)} />
                     </span>
                   )}
                 </div>
@@ -156,6 +169,12 @@ export default function Entregas() {
           </form>
         )}
       </div>
+      {apagando && (
+        <SubstituirEntrega
+          alvo={apagando.e} qtd={apagando.qtd} candidatas={entregas.filter((o) => o.id !== apagando.e.id && o.ativo)}
+          fechar={() => setApagando(null)} apagado={() => { setApagando(null); carregar() }}
+        />
+      )}
       {config && (() => {
         const fl = fluxos.find((x) => x.id === config.fluxoId)
         if (!fl) return null
@@ -164,5 +183,47 @@ export default function Entregas() {
         return et ? <ConfigurarEtapa fluxo={fl} etapa={et} regras={regras[fl.id] ?? []} recarregar={carregar} fechar={() => setConfig(null)} /> : null
       })()}
     </>
+  )
+}
+
+/** Apagar entrega com processos em andamento: escolhe a entrega que os recebe (cada processo vai para a etapa de mesmo nome, ou a inicial). */
+function SubstituirEntrega({ alvo, qtd, candidatas, fechar, apagado }: { alvo: Entrega; qtd: number; candidatas: Entrega[]; fechar: () => void; apagado: () => void }) {
+  const [substituta, setSubstituta] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  const enviar = async (ev: FormEvent) => {
+    ev.preventDefault()
+    setErro('')
+    setEnviando(true)
+    try {
+      await api.post(`/entregas/${alvo.id}/apagar`, { entregaSubstitutaId: Number(substituta) })
+      apagado()
+    } catch (err) {
+      setErro((err as Error).message)
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div className="fundo" onClick={fechar}>
+      <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={enviar}>
+        <h3>Apagar "{alvo.nome}"</h3>
+        <p>Há <b>{qtd}</b> processo(s) em andamento nesta entrega. Escolha a entrega que vai <b>substituí-la</b>: eles passam para ela, mantendo número, responsável e histórico.</p>
+        <p className="dica-campo">Cada processo vai para a etapa de mesmo nome no fluxo da substituta (ou para a etapa inicial, se não houver), com o prazo daquela etapa. Pedidos de aprovação pendentes são cancelados. A substituta precisa ser uma entrega que o setor do processo faz.</p>
+        <label>Entrega substituta
+          <select required value={substituta} onChange={(e) => setSubstituta(e.target.value)}>
+            <option value="" disabled>Selecione…</option>
+            {candidatas.map((c) => <option key={c.id} value={c.id}>{c.nome}{c.setorDonoNome ? ` (só o setor ${c.setorDonoNome})` : ''}</option>)}
+          </select>
+        </label>
+        {candidatas.length === 0 && <small className="aviso-campo">Não há outra entrega ativa. Crie ou reative uma antes de apagar esta.</small>}
+        {erro && <p className="erro">{erro}</p>}
+        <div className="acoes">
+          <button type="button" onClick={fechar}>Desistir de apagar</button>
+          <button className="perigo" disabled={enviando || !substituta}>Apagar e transferir os processos</button>
+        </div>
+      </form>
+    </div>
   )
 }

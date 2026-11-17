@@ -6,7 +6,7 @@ import { Selo } from './Processos'
 
 const ROTULO: Record<string, string> = {
   CRIADO: 'Criado', MOVIDO: 'Movimentado', COMENTARIO: 'Comentário', ATRIBUIDO: 'Atribuído', CANCELADO: 'Cancelado', REQUISITO: 'Requisito',
-  APROVACAO_SOLICITADA: 'Aprovação solicitada', APROVACAO_RECUSADA: 'Aprovação recusada', APROVACAO_CANCELADA: 'Pedido retirado',
+  ENTREGA_SUBSTITUIDA: 'Entrega substituída', APROVACAO_SOLICITADA: 'Aprovação solicitada', APROVACAO_RECUSADA: 'Aprovação recusada', APROVACAO_CANCELADA: 'Pedido retirado',
 }
 const fmtTam = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`)
 

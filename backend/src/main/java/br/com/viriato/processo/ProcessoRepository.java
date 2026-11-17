@@ -41,6 +41,7 @@ public interface ProcessoRepository extends JpaRepository<Processo, Long>, JpaSp
     int desvincularFluxo(Long t, Long id);
 
     long countByTenantIdAndResponsavelIdAndStatusAndPrazoEtapaBefore(Long tenantId, Long responsavelId, StatusProcesso status, LocalDate antes);
+    List<Processo> findByTenantIdAndEntregaIdAndStatusOrderById(Long tenantId, Long entregaId, StatusProcesso status);
     List<Processo> findByTenantIdAndResponsavelIdAndStatusOrderById(Long tenantId, Long responsavelId, StatusProcesso status);
 
     // Ao apagar um funcionário, os processos encerrados dele guardam o nome (e ficam restritos ao gestor do setor).

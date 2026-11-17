@@ -206,6 +206,17 @@ public class CadastroService {
         apagarEntregaDe(quem.tenantId(), entregaQueEleMexe(quem, id));
     }
 
+    /** Quantos processos em andamento usam a entrega (a tela pede a substituta quando há algum). */
+    @Transactional(readOnly = true)
+    public long emAndamentoDaEntrega(UsuarioLogado quem, Long id) {
+        entregaQueEleMexe(quem, id);
+        return processos.countByTenantIdAndEntregaIdAndStatus(quem.tenantId(), id, StatusProcesso.ABERTO);
+    }
+
+    /** Entrega que quem pede pode apagar (mesma regra de alterar). */
+    @Transactional(readOnly = true)
+    public Entrega entregaParaApagar(UsuarioLogado quem, Long id) { return entregaQueEleMexe(quem, id); }
+
     private void apagarEntregaDe(Long tid, Entrega e) {
         Long id = e.getId();
         exigirSemProcessosEmAndamento(processos.countByTenantIdAndEntregaIdAndStatus(tid, id, StatusProcesso.ABERTO),

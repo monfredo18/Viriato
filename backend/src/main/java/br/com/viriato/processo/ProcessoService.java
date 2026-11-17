@@ -393,6 +393,48 @@ public class ProcessoService {
         return abertos.size();
     }
 
+    /**
+     * Apagar uma entrega com processos em andamento: eles passam para a entrega escolhida (que o setor de cada processo
+     * precisa poder fazer). Cada processo vai para a etapa de mesmo nome no fluxo novo (se não for final) ou, na falta
+     * dela, para a etapa inicial, com o prazo da etapa; pedidos de aprovação pendentes são cancelados e o histórico registra a troca.
+     */
+    @Transactional
+    public int substituirEntregaEmAndamento(UsuarioLogado quem, Entrega origem, Long substitutaId) {
+        Long tid = quem.tenantId();
+        List<Processo> abertos = processos.findByTenantIdAndEntregaIdAndStatusOrderById(tid, origem.getId(), StatusProcesso.ABERTO);
+        if (abertos.isEmpty()) return 0;
+        if (substitutaId == null) throw new NegocioException("Escolha a entrega que vai substituir \"" + origem.getNome() + "\" nos processos em andamento");
+        if (substitutaId.equals(origem.getId())) throw new NegocioException("A entrega substituta precisa ser outra");
+        for (Processo p : abertos) {
+            Setor setor = p.getSetorId() == null ? null : setoresRepo.findByIdAndTenantId(p.getSetorId(), tid).orElse(null);
+            if (setor == null) throw new NegocioException("O processo " + p.getNumero() + " está sem setor; não dá para escolher a entrega que o substitui");
+            Entrega nova = cadastros.entregaDoSetor(tid, setor, substitutaId);
+            Fluxo fluxo = fluxos.findByIdAndTenantId(nova.getFluxoId(), tid).orElseThrow(() -> new NegocioException("A entrega substituta não tem um fluxo válido"));
+            if (!fluxo.isAtivo()) throw new NegocioException("O fluxo da entrega substituta está inativo");
+            List<Etapa> doFluxo = etapas.findByFluxoIdAndTenantIdOrderByOrdem(fluxo.getId(), tid);
+            Etapa antiga = p.getEtapaAtualId() == null ? null : etapas.findByIdAndTenantId(p.getEtapaAtualId(), tid).orElse(null);
+            Etapa destino = doFluxo.stream().filter(Etapa::isInicial).findFirst().orElseThrow(() -> new NegocioException("O fluxo da entrega substituta não tem etapa inicial"));
+            if (antiga != null) {
+                destino = doFluxo.stream().filter(e -> !e.isFinalEtapa() && e.getNome().equalsIgnoreCase(antiga.getNome())).findFirst().orElse(destino);
+            }
+            String sufixo = clientes.findByIdAndTenantId(p.getClienteId() == null ? -1L : p.getClienteId(), tid).map(Cliente::getNome)
+                    .orElse(p.getTitulo() != null && p.getTitulo().contains(" — ") ? p.getTitulo().substring(p.getTitulo().indexOf(" — ") + 3) : "");
+            String titulo = sufixo.isEmpty() ? nova.getNome() : nova.getNome() + " — " + sufixo;
+            p.setTitulo(titulo.length() > 200 ? titulo.substring(0, 200) : titulo);
+            p.setEntregaId(nova.getId());
+            p.setFluxoId(fluxo.getId());
+            p.setEtapaAtualId(destino.getId());
+            p.setPrazoEtapa(calcularPrazo(destino));
+            p.setPrazoAlertado(false);
+            p.setEtapaDesde(Instant.now());
+            processos.save(p);
+            aprovacoes.cancelarPendentes(p.getId(), Instant.now());
+            registrar(p, quem.id(), "ENTREGA_SUBSTITUIDA", antiga == null ? null : antiga.getNome(), destino.getNome(),
+                    "Entrega \"" + origem.getNome() + "\" apagada; o processo passou para \"" + nova.getNome() + "\"");
+        }
+        return abertos.size();
+    }
+
     // ---------- auxiliares ----------
 
     public void exigirTransicaoPermitida(Processo p, Etapa destino) {
