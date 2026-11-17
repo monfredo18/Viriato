@@ -91,17 +91,19 @@ class CadastrosPermissoesTest {
     }
 
     @Test
-    void adminEGestorCadastramSetoresEEntregas_usuarioSoVe() throws Exception {
+    void soAdminCadastraSetoresEEntregasGerais_usuarioSoVe() throws Exception {
         Cenario c = cenario();
-        long entrega = corpo(enviar(c.gestor(), "/api/entregas", "{\"nome\":\"Laudo técnico\",\"fluxoId\":" + c.fluxoId() + "}")
+        enviar(c.gestor(), "/api/setores", "{\"nome\":\"Tentativa\"}").andExpect(status().isForbidden());      // gestor não cria setor
+        long entrega = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo técnico\",\"fluxoId\":" + c.fluxoId() + "}")
                 .andExpect(status().isCreated())).get("id").asLong();
         var setor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Engenharia\",\"entregaIds\":[" + entrega + "]}")
                 .andExpect(status().isCreated()));
         assertThat(setor.get("entregas").get(0).get("nome").asText()).isEqualTo("Laudo técnico");
 
-        // gestor altera as entregas do setor
+        // só o administrador altera setores e as entregas de cada um
         long setorId = setor.get("id").asLong();
-        var atualizado = corpo(alterar(c.gestor(), "/api/setores/" + setorId,
+        alterar(c.gestor(), "/api/setores/" + setorId, "{\"entregaIds\":[" + entrega + "]}").andExpect(status().isForbidden());
+        var atualizado = corpo(alterar(c.admin(), "/api/setores/" + setorId,
                 "{\"entregaIds\":[" + entrega + "," + c.entregaPadraoId() + "]}").andExpect(status().isOk()));
         assertThat(atualizado.get("entregas")).hasSize(2);
 

@@ -33,7 +33,7 @@ cd backend && VIRIATO_JWT_PERMITIR_PADRAO=true mvn spring-boot:run   # API em :8
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
 
-Testes: `cd backend && mvn test` (107 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
+Testes: `cd backend && mvn test` (111 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
 
 ## Arquitetura
 
@@ -71,6 +71,7 @@ Menu lateral (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatór
 - **Empresas atendidas** (para quem o processo é feito), **setores** e **entregas** são cadastros da empresa.
 - Cada empresa atendida tem **número** (código interno de 1 a 10 dígitos, sem repetir) e **nome**. O **número do processo é o número da empresa**: processos da mesma empresa compartilham o número.
 - Cada **setor** define quais entregas faz; cada **entrega** define o fluxo (etapas) do processo.
+- **Só o administrador cria, altera e apaga setores.** A entrega criada pelo **gestor** vai direto para o setor dele e é **exclusiva**: outros setores não a veem nem a usam (nem o administrador consegue colocá-la na lista de outro setor). O gestor só altera e apaga as entregas exclusivas do próprio setor; as entregas gerais (do administrador) ele só consulta. Apagar o setor apaga as entregas exclusivas dele. O nome da entrega é único na empresa.
 - Novo processo: administrador informa empresa, departamento, entrega e responsável; gestor, empresa, entrega e responsável (departamento é o dele); usuário, só empresa e entrega (departamento e responsável são os dele). Só aparecem as entregas que o setor faz.
 - Cada setor vê apenas os próprios processos; só o administrador vê os de todos os setores.
 
@@ -117,7 +118,8 @@ Todos enxergam os cadastros e fluxos da empresa. **Processos e pessoas são por 
 | | Administrador | Gestor | Usuário |
 |---|---|---|---|
 | Empresas atendidas | cadastra, altera e apaga | cadastra, altera e apaga | só consulta |
-| Setores e entregas | cadastra, altera e apaga | cadastra, altera e apaga | só consulta |
+| Setores | cadastra, altera e apaga | só consulta | só consulta |
+| Entregas | cadastra (gerais), altera e apaga todas | cadastra e mexe só nas exclusivas do próprio setor | só consulta |
 | Fluxos | cria, desativa e apaga | cria, desativa e apaga | só consulta |
 | Funcionários | adiciona (qualquer papel), altera papel, setor e situação, apaga (menos a si mesmo) | adiciona (só papel Usuário), ativa/desativa e apaga os de papel Usuário; não altera papel nem setor | só consulta |
 | Processos | mexe em qualquer um | mexe em qualquer um do próprio setor | abre processos; só mexe nos que é o responsável |

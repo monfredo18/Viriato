@@ -6,7 +6,7 @@ import { useAuth } from '../auth'
 type Aba = 'empresas' | 'setores' | 'entregas'
 
 export default function Cadastros() {
-  const { podeGerenciar } = useAuth()
+  const { podeGerenciar, ehAdmin } = useAuth()
   const [aba, setAba] = useState<Aba>('empresas')
 
   return (
@@ -20,7 +20,7 @@ export default function Cadastros() {
         <button role="tab" aria-selected={aba === 'entregas'} className={aba === 'entregas' ? 'ativa' : ''} onClick={() => setAba('entregas')}>Entregas</button>
       </div>
       {aba === 'empresas' && <Empresas pode={podeGerenciar} />}
-      {aba === 'setores' && <Setores pode={podeGerenciar} />}
+      {aba === 'setores' && <Setores pode={ehAdmin} />}
       {aba === 'entregas' && <Entregas pode={podeGerenciar} />}
     </>
   )
@@ -139,6 +139,9 @@ function Empresas({ pode }: { pode: boolean }) {
 
 // ---------------------------------------------------------------- Entregas
 function Entregas({ pode }: { pode: boolean }) {
+  const { ehAdmin } = useAuth()
+  // O administrador mexe em todas; o gestor só nas exclusivas do próprio setor (as gerais ele só consulta).
+  const podeMexer = (e: Entrega) => ehAdmin || (pode && e.setorDonoId !== null)
   const [lista, setLista] = useState<Entrega[]>([])
   const [fluxos, setFluxos] = useState<Fluxo[]>([])
   const [f, setF] = useState({ nome: '', fluxoId: '' })
@@ -166,33 +169,35 @@ function Entregas({ pode }: { pode: boolean }) {
     <div className="grade">
       <section className="cartao">
         <h3>O que pode ser entregue</h3>
-        <p className="sub">Cada entrega define o fluxo (as etapas) do processo.</p>
+        <p className="sub">Cada entrega define o fluxo (as etapas) do processo.{pode && !ehAdmin ? ' As entregas que você criar vão direto para o seu setor e só ele as vê e usa; as gerais, do administrador, você só consulta.' : ''}</p>
         <Aviso pode={pode} quem="administrador e gestor" />
         {erro && <p className="erro">{erro}</p>}
         <table>
-          <thead><tr><th>Entrega</th><th>Fluxo</th><th>Situação</th>{pode && <th></th>}</tr></thead>
+          <thead><tr><th>Entrega</th><th>Fluxo</th><th>Vale para</th><th>Situação</th>{pode && <th></th>}</tr></thead>
           <tbody>
             {lista.map((e) => (
               <tr key={e.id}>
-                <td><NomeEditavel nome={e.nome} pode={pode} salvar={(n) => agir(() => api.patch(`/entregas/${e.id}`, { nome: n }))} /></td>
+                <td><NomeEditavel nome={e.nome} pode={podeMexer(e)} salvar={(n) => agir(() => api.patch(`/entregas/${e.id}`, { nome: n }))} /></td>
                 <td>
-                  {pode ? (
+                  {podeMexer(e) ? (
                     <select value={e.fluxoId} onChange={(ev) => agir(() => api.patch(`/entregas/${e.id}`, { fluxoId: Number(ev.target.value) }))}>
                       {fluxos.map((x) => <option key={x.id} value={x.id}>{x.nome}{x.ativo ? '' : ' (inativo)'}</option>)}
                     </select>
                   ) : e.fluxoNome}
                 </td>
-                <td><Situacao ativo={e.ativo} pode={pode} alternar={() => agir(() => api.patch(`/entregas/${e.id}`, { ativo: !e.ativo }))} /></td>
-                {pode && <td><BotaoApagar nome={e.nome} aviso="Ela sai da lista dos setores que a faziam. Processos já concluídos ou cancelados continuam existindo, sem o vínculo com a entrega." apagar={() => { setErro(''); agir(() => api.del(`/entregas/${e.id}`)) }} /></td>}
+                <td>{e.setorDonoId === null ? 'Todos os setores que a fazem' : <span className="selo aberto">Só o setor {e.setorDonoNome}</span>}</td>
+                <td><Situacao ativo={e.ativo} pode={podeMexer(e)} alternar={() => agir(() => api.patch(`/entregas/${e.id}`, { ativo: !e.ativo }))} /></td>
+                {pode && <td>{podeMexer(e) && <BotaoApagar nome={e.nome} aviso="Ela sai da lista dos setores que a faziam. Processos já concluídos ou cancelados continuam existindo, sem o vínculo com a entrega." apagar={() => { setErro(''); agir(() => api.del(`/entregas/${e.id}`)) }} />}</td>}
               </tr>
             ))}
-            {lista.length === 0 && <tr><td colSpan={pode ? 4 : 3} className="vazio">Nenhuma entrega cadastrada.</td></tr>}
+            {lista.length === 0 && <tr><td colSpan={pode ? 5 : 4} className="vazio">Nenhuma entrega cadastrada.</td></tr>}
           </tbody>
         </table>
       </section>
       {pode && (
         <form className="cartao" onSubmit={criar}>
           <h3>Nova entrega</h3>
+          {!ehAdmin && <p className="dica-campo">Ela vai direto para o seu setor e só ele poderá vê-la e usá-la.</p>}
           <label>Nome<input required maxLength={150} value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></label>
           <label>Fluxo
             <select required value={f.fluxoId} onChange={(e) => setF({ ...f, fluxoId: e.target.value })}>
@@ -233,7 +238,7 @@ function Setores({ pode }: { pode: boolean }) {
     <div className="grade">
       <section className="cartao">
         <h3>Setores e o que cada um entrega</h3>
-        <Aviso pode={pode} quem="administrador e gestor" />
+        <Aviso pode={pode} quem="administrador" />
         {erro && <p className="erro">{erro}</p>}
         <table>
           <thead><tr><th>Setor</th><th>Entregas</th><th>Situação</th>{pode && <th></th>}</tr></thead>
@@ -262,7 +267,7 @@ function Setores({ pode }: { pode: boolean }) {
         <form className="cartao" onSubmit={criar}>
           <h3>Novo setor</h3>
           <label>Nome<input required maxLength={100} value={nome} onChange={(e) => setNome(e.target.value)} /></label>
-          <SeletorEntregas entregas={entregas} marcadas={marcadas} mudar={setMarcadas} />
+          <SeletorEntregas entregas={entregas.filter((e) => e.setorDonoId === null)} marcadas={marcadas} mudar={setMarcadas} />
           <button className="primario">Adicionar setor</button>
         </form>
       )}
@@ -300,7 +305,7 @@ function EditarEntregasDoSetor({ setor, entregas, fechar, salvar }: { setor: Set
     <div className="fundo" onClick={fechar}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h3>Entregas do setor {setor.nome}</h3>
-        <SeletorEntregas entregas={entregas} marcadas={marcadas} mudar={setMarcadas} />
+        <SeletorEntregas entregas={entregas.filter((e) => e.setorDonoId === null || e.setorDonoId === setor.id)} marcadas={marcadas} mudar={setMarcadas} />
         <div className="acoes">
           <button onClick={fechar}>Cancelar</button>
           <button className="primario" onClick={() => salvar(marcadas)}>Salvar</button>

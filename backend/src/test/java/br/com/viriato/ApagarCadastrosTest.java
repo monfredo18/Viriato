@@ -143,13 +143,14 @@ class ApagarCadastrosTest {
     @Test
     void entregaApagadaSaiDosSetores_soProcessoEmAndamentoBloqueia() throws Exception {
         Cenario c = cenario();
-        long extra = corpo(enviar(c.gestor(), "/api/entregas", "{\"nome\":\"Laudo\",\"fluxoId\":" + c.fluxoId() + "}")
+        long extra = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo\",\"fluxoId\":" + c.fluxoId() + "}")
                 .andExpect(status().isCreated())).get("id").asLong();
         long setor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Engenharia\",\"entregaIds\":[" + extra + "," + c.entregaPadraoId() + "]}")
                 .andExpect(status().isCreated())).get("id").asLong();
 
         apagar(c.usuario(), "/api/entregas/" + extra).andExpect(status().isForbidden());
-        apagar(c.gestor(), "/api/entregas/" + extra).andExpect(status().isNoContent());
+        apagar(c.gestor(), "/api/entregas/" + extra).andExpect(status().isForbidden());      // entrega geral: só o administrador apaga
+        apagar(c.admin(), "/api/entregas/" + extra).andExpect(status().isNoContent());
         for (JsonNode s : consultar(c.admin(), "/api/setores")) {
             if (s.get("id").asLong() == setor) {
                 assertThat(s.get("entregas")).hasSize(1);                         // só sobrou a entrega padrão
@@ -164,7 +165,7 @@ class ApagarCadastrosTest {
         assertThat(consultar(c.admin(), "/api/entregas")).hasSize(1);
 
         concluir(c, p);                                                             // concluído libera
-        apagar(c.gestor(), "/api/entregas/" + c.entregaPadraoId()).andExpect(status().isNoContent());
+        apagar(c.admin(), "/api/entregas/" + c.entregaPadraoId()).andExpect(status().isNoContent());
         assertThat(consultar(c.admin(), "/api/entregas")).isEmpty();
         JsonNode depois = processo(c, p);
         assertThat(depois.get("entregaNome").isNull()).isTrue();
@@ -176,11 +177,12 @@ class ApagarCadastrosTest {
     @Test
     void setorApagadoDeixaFuncionariosSemSetor_soProcessoEmAndamentoBloqueia() throws Exception {
         Cenario c = cenario();
-        long setor = corpo(enviar(c.gestor(), "/api/setores", "{\"nome\":\"Financeiro\"}").andExpect(status().isCreated())).get("id").asLong();
+        long setor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Financeiro\"}").andExpect(status().isCreated())).get("id").asLong();
         alterar(c.admin(), "/api/usuarios/" + c.usuarioId(), "{\"setorId\":" + setor + "}").andExpect(status().isOk());
 
         apagar(c.usuario(), "/api/setores/" + setor).andExpect(status().isForbidden());
-        apagar(c.gestor(), "/api/setores/" + setor).andExpect(status().isNoContent());
+        apagar(c.gestor(), "/api/setores/" + setor).andExpect(status().isForbidden());       // setores: só o administrador
+        apagar(c.admin(), "/api/setores/" + setor).andExpect(status().isNoContent());
         assertThat(consultar(c.admin(), "/api/setores")).hasSize(1);
         for (JsonNode u : consultar(c.admin(), "/api/usuarios")) {
             if (u.get("id").asLong() == c.usuarioId()) assertThat(u.get("setorNome").isNull()).isTrue();   // ficou sem setor

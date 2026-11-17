@@ -139,7 +139,7 @@ class ProcessoFormularioTest {
         assertThat(resp.get("erro").asText()).contains("não faz");
 
         // depois de liberar a entrega para o setor, passa
-        mvc.perform(patch("/api/setores/" + c.setorId()).header("Authorization", "Bearer " + c.gestor())
+        mvc.perform(patch("/api/setores/" + c.setorId()).header("Authorization", "Bearer " + c.admin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"entregaIds\":[" + c.entregaId() + "," + outraEntrega + "]}")).andExpect(status().isOk());
         enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + outraEntrega

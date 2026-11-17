@@ -15,6 +15,8 @@ public class Entrega {
     private String nome;
     @Column(name = "fluxo_id") private Long fluxoId;
     private boolean ativo = true;
+    /** Setor dono: só ele enxerga e usa esta entrega. Vazio = entrega geral (criada pelo administrador). */
+    @Column(name = "setor_dono_id") private Long setorDonoId;
 
     @Override public boolean equals(Object o) { return o instanceof Entrega e && id != null && id.equals(e.id); }
     @Override public int hashCode() { return 31; }

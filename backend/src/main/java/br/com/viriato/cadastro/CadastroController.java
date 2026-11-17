@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Consulta liberada a qualquer usuário da empresa (o formulário de processo precisa das listas).
- * Alteração (cadastrar, editar, apagar): empresas, setores e entregas, ADMIN e GESTOR.
+ * Alteração: empresas, ADMIN e GESTOR; setores, só ADMIN; entregas, ADMIN (gerais) e GESTOR (as exclusivas do próprio setor).
  */
 @RestController
 @RequestMapping("/api")
@@ -59,45 +59,46 @@ public class CadastroController {
 
     // ----- entregas -----
     @GetMapping("/entregas")
-    public List<EntregaDto> entregas() { return service.listarEntregas(Contexto.tenantId()); }
+    public List<EntregaDto> entregas() { return service.listarEntregas(Contexto.atual()); }
 
+    /** Administrador cria entrega geral; gestor cria entrega que já nasce no setor dele e só ele usa. */
     @PostMapping("/entregas")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public EntregaDto criarEntrega(@Valid @RequestBody NovaEntrega r) {
-        return service.criarEntrega(Contexto.tenantId(), r.nome(), r.fluxoId());
+        return service.criarEntrega(Contexto.atual(), r.nome(), r.fluxoId());
     }
 
     @PatchMapping("/entregas/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public EntregaDto atualizarEntrega(@PathVariable Long id, @Valid @RequestBody AtualizaEntrega r) {
-        return service.atualizarEntrega(Contexto.tenantId(), id, r.nome(), r.fluxoId(), r.ativo());
+        return service.atualizarEntrega(Contexto.atual(), id, r.nome(), r.fluxoId(), r.ativo());
     }
 
     @DeleteMapping("/entregas/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
-    public void apagarEntrega(@PathVariable Long id) { service.apagarEntrega(Contexto.tenantId(), id); }
+    public void apagarEntrega(@PathVariable Long id) { service.apagarEntrega(Contexto.atual(), id); }
 
     // ----- setores -----
     @GetMapping("/setores")
-    public List<SetorDto> setores() { return service.listarSetores(Contexto.tenantId()); }
+    public List<SetorDto> setores() { return service.listarSetores(Contexto.atual()); }
 
     @PostMapping("/setores")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public SetorDto criarSetor(@Valid @RequestBody NovoSetor r) {
         return service.criarSetor(Contexto.tenantId(), r.nome(), r.entregaIds());
     }
 
     @PatchMapping("/setores/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public SetorDto atualizarSetor(@PathVariable Long id, @Valid @RequestBody AtualizaSetor r) {
         return service.atualizarSetor(Contexto.tenantId(), id, r.nome(), r.ativo(), r.entregaIds());
     }
 
     @DeleteMapping("/setores/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void apagarSetor(@PathVariable Long id) { service.apagarSetor(Contexto.tenantId(), id); }
 }

@@ -216,7 +216,7 @@
     <li><strong>Entregas:</strong> o que pode ser entregue. Cada entrega escolhe o fluxo que seus processos vão seguir.</li>
     <li><strong>Setores:</strong> departamentos. Cada setor marca quais entregas ele faz.</li>
   </ul>
-  <p>Setores e entregas também são mantidos pelo administrador e pelo gestor. Qualquer item pode ser <strong>desativado</strong> (deixa de aparecer para novos processos, sem afetar os que já existem) ou <strong>apagado</strong>, conforme as regras da seção 4. Os nomes não se repetem dentro da empresa.</p>
+  <p><strong>Setores são mantidos só pelo administrador.</strong> As entregas gerais também são do administrador; o gestor cadastra entregas que <strong>nascem exclusivas do setor dele</strong>: só esse setor as vê e usa (para os outros setores elas nem aparecem), e o gestor só as altera e apaga dentro do próprio setor. Apagar um setor apaga as entregas exclusivas dele. Qualquer item pode ser <strong>desativado</strong> (deixa de aparecer para novos processos, sem afetar os que já existem) ou <strong>apagado</strong>, conforme as regras da seção 4. Os nomes não se repetem dentro da empresa.</p>
   <figure><img src="img/cadastros-empresas.png" alt="Cadastro de empresas"><figcaption>Figura 4 — Empresas atendidas, com número e nome; o número só aceita dígitos e o sistema recusa números repetidos.</figcaption></figure>
   <figure><img src="img/cadastros-setores.png" alt="Cadastro de setores"><figcaption>Figura 5 — Setores e as entregas que cada um faz; o botão <em>escolher</em> altera a lista.</figcaption></figure>
 
@@ -375,8 +375,9 @@
     <tr><td>Gerar relatório em PDF</td><td class="c ok">de todos os setores</td><td class="c">só do próprio setor</td><td class="c">só do próprio setor</td></tr>
     <tr><td>Cancelar processo</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar empresas atendidas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
-    <tr><td>Cadastrar e alterar setores e entregas</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
-    <tr><td>Apagar empresas, setores e entregas</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c no">não</td></tr>
+    <tr><td>Cadastrar e alterar setores</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
+    <tr><td>Cadastrar e alterar entregas</td><td class="c ok">sim, todas</td><td class="c ok">só as exclusivas do próprio setor</td><td class="c no">não</td></tr>
+    <tr><td>Apagar empresas, setores e entregas</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c ok">empresas e as entregas exclusivas do próprio setor (nunca setores), se não houver processo em andamento ligado</td><td class="c no">não</td></tr>
     <tr><td>Apagar fluxos</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c no">não</td></tr>
     <tr><td>Configurar requisitos, quem move para cada etapa e automações</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Mover para etapa que exige gestor (ou administrador)</td><td class="c ok">sempre</td><td class="c">se a etapa aceita gestor; senão pede aprovação</td><td class="c">pede aprovação</td></tr>
@@ -412,7 +413,7 @@
 <!-- ============================ 5 ============================ -->
 <section>
   <h1>5. Modelo de dados</h1>
-  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em dezesseis migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações) <code>V12</code> (servidor de e-mail da empresa) <code>V13</code> (retira o envio de e-mail: apaga as automações de e-mail e o servidor de e-mail guardado) <code>V14</code> (chat de ajuda com os administradores) <code>V15</code> (foto de perfil) e <code>V16</code> (bloqueio de conta, duas etapas, sessões encerradas e auditoria).</p>
+  <p>Todas as tabelas de negócio têm a coluna <code>tenant_id</code>, e toda consulta filtra por ela. O esquema é criado e versionado pelo Flyway, em dezessete migrações: <code>V1</code> (base), <code>V2</code> (empresas atendidas, setores, entregas e setor do funcionário), <code>V3</code> (empresa, entrega e setor no processo) <code>V4</code> (processo encerrado pode ficar sem fluxo) <code>V5</code> (número da empresa; o número do processo deixa de ser único) <code>V6</code> (detalhes da notificação) <code>V7</code> (nome do responsável apagado no processo) <code>V8</code> (login por nome: e-mail opcional, senha provisória e versão da sessão), <code>V9</code> (requisitos por etapa), <code>V10</code> (aprovação em etapas) <code>V11</code> (automações) <code>V12</code> (servidor de e-mail da empresa) <code>V13</code> (retira o envio de e-mail: apaga as automações de e-mail e o servidor de e-mail guardado) <code>V14</code> (chat de ajuda com os administradores) <code>V15</code> (foto de perfil) e <code>V16</code> (bloqueio de conta, duas etapas, sessões encerradas e auditoria) e <code>V17</code> (entrega exclusiva do setor).</p>
   <figure>
     <svg viewBox="0 0 700 290" width="100%" role="img" aria-label="Relações entre as tabelas">
       <defs><marker id="e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#667085"/></marker>
@@ -612,7 +613,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>107 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>111 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>
