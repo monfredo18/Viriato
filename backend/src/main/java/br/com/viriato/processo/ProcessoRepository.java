@@ -40,7 +40,13 @@ public interface ProcessoRepository extends JpaRepository<Processo, Long>, JpaSp
     @Query("update Processo p set p.fluxoId = null, p.etapaAtualId = null where p.tenantId = :t and p.fluxoId = :id")
     int desvincularFluxo(Long t, Long id);
 
+    /** Processo encerrado que parou numa etapa removida (ex.: cancelado no meio do fluxo) fica sem etapa atual. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Processo p set p.etapaAtualId = null where p.tenantId = :t and p.etapaAtualId = :id")
+    int desvincularEtapa(Long t, Long id);
+
     long countByTenantIdAndResponsavelIdAndStatusAndPrazoEtapaBefore(Long tenantId, Long responsavelId, StatusProcesso status, LocalDate antes);
+    long countByTenantIdAndEtapaAtualIdAndStatus(Long tenantId, Long etapaAtualId, StatusProcesso status);
     List<Processo> findByTenantIdAndEntregaIdAndStatusOrderById(Long tenantId, Long entregaId, StatusProcesso status);
     List<Processo> findByTenantIdAndResponsavelIdAndStatusOrderById(Long tenantId, Long responsavelId, StatusProcesso status);
 

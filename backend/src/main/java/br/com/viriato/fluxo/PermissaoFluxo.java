@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Quem enxerga e quem altera cada fluxo. O fluxo pertence à entrega (ou às entregas) que o usam, então herda a regra
- * delas: o administrador vê e altera todos; gestor e usuário veem o fluxo das entregas gerais e das exclusivas do próprio
- * setor; o gestor só altera fluxos cujas entregas são TODAS exclusivas do próprio setor. Fluxo sem entrega é só do administrador.
+ * Quem enxerga e quem altera cada fluxo. O fluxo pertence à entrega que o usa, então herda a regra dela: o administrador
+ * vê e altera todos; gestor e usuário veem os fluxos das entregas do próprio setor; o gestor só altera fluxos cujas
+ * entregas são TODAS do próprio setor. Fluxo sem entrega é só do administrador.
  * Usado nas anotações {@code @PreAuthorize("@permissaoFluxo.pode(#fluxoId)")} dos controllers.
  */
 @Component("permissaoFluxo")
@@ -37,7 +37,7 @@ public class PermissaoFluxo {
         if (quem.papel() == Papel.ADMIN) return true;
         List<Entrega> usos = entregas.findByTenantIdAndFluxoIdOrderByNome(quem.tenantId(), fluxoId);
         Long meu = setorDe(quem);
-        return usos.stream().anyMatch(e -> e.getSetorDonoId() == null || e.getSetorDonoId().equals(meu));
+        return meu != null && usos.stream().anyMatch(e -> meu.equals(e.getSetorDonoId()));
     }
 
     /** Pode alterar (etapas, requisitos, automações, situação, apagar). */

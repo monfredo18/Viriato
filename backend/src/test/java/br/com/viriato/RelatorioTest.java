@@ -107,9 +107,9 @@ class RelatorioTest {
                 .content("{\"empresa\":\"Construtora Teste\",\"nome\":\"Adm\",\"email\":\"adm-" + sfx + "@t.com\",\"senha\":\"senha12345\"}"))
                 .andExpect(status().isCreated()));
         String admin = reg.get("token").asText();
-        long entrega = consultar(admin, "/api/setores").get(0).get("entregas").get(0).get("id").asLong();
-        long eng = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Engenharia\",\"entregaIds\":[" + entrega + "]}").andExpect(status().isCreated())).get("id").asLong();
-        long fin = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Financeiro\",\"entregaIds\":[" + entrega + "]}").andExpect(status().isCreated())).get("id").asLong();
+        long eng = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Engenharia\"}").andExpect(status().isCreated())).get("id").asLong();
+        long fin = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Financeiro\"}").andExpect(status().isCreated())).get("id").asLong();
+        java.util.Map<Long, Long> entregaDe = java.util.Map.of(eng, TestesAuth.entregaDoSetor(mvc, json, admin, eng, "Entrega Eng"), fin, TestesAuth.entregaDoSetor(mvc, json, admin, fin, "Entrega Fin"));
         String[][] us = {{"Gestor Eng", "GESTOR", "ge", "" + eng}, {"Gestor Sem Setor", "GESTOR", "gs", ""},
                          {"Ursula Um", "USUARIO", "u1", "" + eng}, {"Ubiratan Dois", "USUARIO", "u2", "" + fin}};
         for (String[] u : us) {
@@ -123,7 +123,7 @@ class RelatorioTest {
 
         java.util.function.BiFunction<long[], String, Long> proc = (ids, ignorado) -> {
             try {
-                return corpo(enviar(admin, "/api/processos", "{\"clienteId\":" + ids[0] + ",\"entregaId\":" + entrega + ",\"setorId\":" + ids[1]
+                return corpo(enviar(admin, "/api/processos", "{\"clienteId\":" + ids[0] + ",\"entregaId\":" + entregaDe.get(ids[1]) + ",\"setorId\":" + ids[1]
                         + ",\"responsavelId\":" + ids[2] + "}").andExpect(status().isCreated())).get("id").asLong();
             } catch (Exception e) { throw new RuntimeException(e); }
         };

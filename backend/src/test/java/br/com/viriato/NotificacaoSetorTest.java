@@ -47,8 +47,8 @@ class NotificacaoSetorTest {
                 .content("{\"empresa\":\"E\",\"nome\":\"Adm Teste\",\"email\":\"a-" + s + "@t.com\",\"senha\":\"senha12345\"}")).andExpect(status().isCreated()));
         String admin = reg.get("token").asText();
         long entrega = consultar(admin, "/api/setores").get(0).get("entregas").get(0).get("id").asLong();
-        long eng = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Engenharia\",\"entregaIds\":[" + entrega + "]}").andExpect(status().isCreated())).get("id").asLong();
-        long fin = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Financeiro\",\"entregaIds\":[" + entrega + "]}").andExpect(status().isCreated())).get("id").asLong();
+        long eng = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Engenharia\"}").andExpect(status().isCreated())).get("id").asLong();
+        long fin = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Financeiro\"}").andExpect(status().isCreated())).get("id").asLong();
         usuario(admin, "Gestor Eng", "ge-" + s + "@t.com", "GESTOR", eng);
         usuario(admin, "Gestor Fin", "gf-" + s + "@t.com", "GESTOR", fin);
         long u1 = usuario(admin, "Ursula Eng", "u1-" + s + "@t.com", "USUARIO", eng);
@@ -59,7 +59,7 @@ class NotificacaoSetorTest {
     }
 
     private long processo(C c, String token, long setor, long resp) throws Exception {
-        return corpo(enviar(token, "/api/processos", "{\"clienteId\":" + c.empresa() + ",\"entregaId\":" + c.entrega() + ",\"setorId\":" + setor
+        return corpo(enviar(token, "/api/processos", "{\"clienteId\":" + c.empresa() + ",\"entregaId\":" + TestesAuth.entregaPadraoDoSetor(mvc, json, c.admin(), setor) + ",\"setorId\":" + setor
                 + ",\"responsavelId\":" + resp + "}").andExpect(status().isCreated())).get("id").asLong();
     }
 
@@ -122,7 +122,7 @@ class NotificacaoSetorTest {
         processo(c, c.gestorEng(), c.eng(), c.u1Id());
         assertThat(quantas(c.gestorEng())).isZero();
         // sem gestor no setor, ninguém é avisado e nada quebra
-        long semGestor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Sem gestor\",\"entregaIds\":[" + c.entrega() + "]}").andExpect(status().isCreated())).get("id").asLong();
+        long semGestor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Sem gestor\"}").andExpect(status().isCreated())).get("id").asLong();
         processo(c, c.admin(), semGestor, c.adminId());
         assertThat(quantas(c.admin())).isZero();
     }

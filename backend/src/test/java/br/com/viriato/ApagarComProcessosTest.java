@@ -50,9 +50,9 @@ class ApagarComProcessosTest {
         var reg = corpo(mvc.perform(post("/api/auth/registrar-empresa").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"empresa\":\"E\",\"nome\":\"Adm Teste\",\"email\":\"a-" + s + "@t.com\",\"senha\":\"senha12345\"}")).andExpect(status().isCreated()));
         String admin = reg.get("token").asText();
-        long entrega = consultar(admin, "/api/setores").get(0).get("entregas").get(0).get("id").asLong();
-        long eng = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Engenharia\",\"entregaIds\":[" + entrega + "]}").andExpect(status().isCreated())).get("id").asLong();
-        long fin = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Financeiro\",\"entregaIds\":[" + entrega + "]}").andExpect(status().isCreated())).get("id").asLong();
+        long eng = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Engenharia\"}").andExpect(status().isCreated())).get("id").asLong();
+        long entrega = TestesAuth.entregaDoSetor(mvc, json, admin, eng, "Atendimento Eng");
+        long fin = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Financeiro\"}").andExpect(status().isCreated())).get("id").asLong();
         usuario(admin, "Gestor Eng", "ge-" + s + "@t.com", "GESTOR", eng);
         usuario(admin, "Gestor Fin", "gf-" + s + "@t.com", "GESTOR", fin);
         long u1 = usuario(admin, "Ursula Eng", "u1-" + s + "@t.com", "USUARIO", eng);

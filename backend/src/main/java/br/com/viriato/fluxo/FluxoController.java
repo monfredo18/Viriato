@@ -34,6 +34,9 @@ public class FluxoController {
                             List<FluxoService.TransicaoReq> transicoes) {}
 
     public record AtivoReq(boolean ativo) {}
+    public record NovaEtapa(@NotBlank @Size(max = 100) String nome, Long antesDeEtapaId) {}
+    /** {@code mudarPrazo}: só mexe no prazo quando verdadeiro (vazio em {@code prazoDias} = sem prazo). */
+    public record DadosEtapa(@Size(max = 100) String nome, Integer prazoDias, boolean mudarPrazo) {}
 
     @GetMapping
     public List<FluxoService.FluxoDto> listar() {
@@ -85,6 +88,27 @@ public class FluxoController {
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
     public void apagarRequisito(@PathVariable Long fluxoId, @PathVariable Long etapaId, @PathVariable Long id) {
         requisitos.apagar(Contexto.tenantId(), fluxoId, etapaId, id);
+    }
+
+    // ---- etapas do fluxo: criar, renomear, definir o prazo para concluir e remover ----
+
+    @PostMapping("/{fluxoId}/etapas")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
+    public FluxoService.FluxoDto novaEtapa(@PathVariable Long fluxoId, @Valid @RequestBody NovaEtapa r) {
+        return service.adicionarEtapa(Contexto.tenantId(), fluxoId, r.nome(), r.antesDeEtapaId());
+    }
+
+    @PatchMapping("/{fluxoId}/etapas/{etapaId}/dados")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
+    public FluxoService.FluxoDto dadosDaEtapa(@PathVariable Long fluxoId, @PathVariable Long etapaId, @Valid @RequestBody DadosEtapa r) {
+        return service.alterarEtapa(Contexto.tenantId(), fluxoId, etapaId, r.nome(), r.prazoDias(), r.mudarPrazo());
+    }
+
+    @DeleteMapping("/{fluxoId}/etapas/{etapaId}")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
+    public FluxoService.FluxoDto removerEtapa(@PathVariable Long fluxoId, @PathVariable Long etapaId) {
+        return service.removerEtapa(Contexto.tenantId(), fluxoId, etapaId);
     }
 
     /** Quem pode mover processos PARA a etapa; os demais precisam solicitar aprovação. */
