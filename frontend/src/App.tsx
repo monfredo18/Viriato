@@ -13,7 +13,7 @@ import Login from './pages/Login'
 import Processos from './pages/Processos'
 import ProcessoDetalhe from './pages/ProcessoDetalhe'
 import Cadastros from './pages/Cadastros'
-import Fluxos from './pages/Fluxos'
+import Entregas from './pages/Entregas'
 import Usuarios from './pages/Usuarios'
 import Relatorios from './pages/Relatorios'
 import DefinirSenha from './pages/DefinirSenha'
@@ -26,7 +26,7 @@ const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean; so
   { para: '/processos', rotulo: 'Processos', icone: 'processos', fim: true },
   { para: '/painel', rotulo: 'Painel', icone: 'painel' },
   { para: '/cadastros', rotulo: 'Cadastros', icone: 'cadastros' },
-  { para: '/fluxos', rotulo: 'Fluxos', icone: 'fluxos' },
+  { para: '/entregas', rotulo: 'Entregas', icone: 'fluxos' },
   { para: '/usuarios', rotulo: 'Usuários', icone: 'usuarios' },
   { para: '/relatorios', rotulo: 'Relatórios', icone: 'relatorios' },
   { para: '/auditoria', rotulo: 'Auditoria', icone: 'escudo', soAdmin: true },
@@ -146,7 +146,8 @@ function Layout() {
             <Route path="/processos/:id" element={<ProcessoDetalhe />} />
             <Route path="/painel" element={<Painel />} />
             <Route path="/cadastros" element={<Cadastros />} />
-            <Route path="/fluxos" element={<Fluxos />} />
+            <Route path="/entregas" element={<Entregas />} />
+            <Route path="/fluxos" element={<Navigate to="/entregas" replace />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/relatorios" element={<Relatorios />} />
             {ehAdmin && <Route path="/auditoria" element={<Auditoria />} />}

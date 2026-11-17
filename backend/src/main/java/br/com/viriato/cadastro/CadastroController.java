@@ -6,7 +6,6 @@ import br.com.viriato.cadastro.CadastroService.SetorDto;
 import br.com.viriato.seguranca.Contexto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -30,7 +29,8 @@ public class CadastroController {
                               @NotBlank @Size(max = 150) String nome) {}
     public record AtualizaCliente(@Pattern(regexp = "\\d{1,10}", message = "deve ter de 1 a 10 dígitos") String numero,
                                   @Size(max = 150) String nome, Boolean ativo) {}
-    public record NovaEntrega(@NotBlank @Size(max = 150) String nome, @NotNull Long fluxoId) {}
+    /** Sem {@code fluxoId}, a entrega ganha um fluxo só dela, criado com as {@code etapas} informadas (ou as etapas padrão). */
+    public record NovaEntrega(@NotBlank @Size(max = 150) String nome, Long fluxoId, List<br.com.viriato.fluxo.FluxoService.EtapaReq> etapas) {}
     public record AtualizaEntrega(@Size(max = 150) String nome, Long fluxoId, Boolean ativo) {}
     public record NovoSetor(@NotBlank @Size(max = 100) String nome, List<Long> entregaIds) {}
     public record AtualizaSetor(@Size(max = 100) String nome, Boolean ativo, List<Long> entregaIds) {}
@@ -66,7 +66,7 @@ public class CadastroController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public EntregaDto criarEntrega(@Valid @RequestBody NovaEntrega r) {
-        return service.criarEntrega(Contexto.atual(), r.nome(), r.fluxoId());
+        return service.criarEntrega(Contexto.atual(), r.nome(), r.fluxoId(), r.etapas());
     }
 
     @PatchMapping("/entregas/{id}")

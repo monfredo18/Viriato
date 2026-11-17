@@ -20,27 +20,27 @@ public class AutomacaoController {
 
     /** Só administrador e gestor: a regra pode trazer endereços e segredos de integração. */
     @GetMapping("/fluxos/{fluxoId}/automacoes")
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.visivel(#fluxoId)")
     public List<AutomacaoService.RegraDto> listar(@PathVariable Long fluxoId) {
         return service.listar(Contexto.tenantId(), fluxoId);
     }
 
     @PostMapping("/fluxos/{fluxoId}/automacoes")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
     public AutomacaoService.RegraDto criar(@PathVariable Long fluxoId, @RequestBody AutomacaoService.RegraReq r) {
         return service.criar(Contexto.tenantId(), fluxoId, r);
     }
 
     @PatchMapping("/fluxos/{fluxoId}/automacoes/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
     public AutomacaoService.RegraDto atualizar(@PathVariable Long fluxoId, @PathVariable Long id, @RequestBody AutomacaoService.RegraReq r) {
         return service.atualizar(Contexto.tenantId(), fluxoId, id, r);
     }
 
     @DeleteMapping("/fluxos/{fluxoId}/automacoes/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
     public void apagar(@PathVariable Long fluxoId, @PathVariable Long id) {
         service.apagar(Contexto.tenantId(), fluxoId, id);
     }

@@ -201,7 +201,7 @@ export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: (
             {entregasDoSetor.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
           </select>
         </label>
-        {setor && entregasDoSetor.length === 0 && <small className="aviso-campo">Este setor ainda não tem entregas. Um gestor pode defini-las em Cadastros → Setores.</small>}
+        {setor && entregasDoSetor.length === 0 && <small className="aviso-campo">Este setor ainda não tem entregas. O gestor cria as entregas do setor em Entregas; o administrador também define em Cadastros → Setores.</small>}
         {entrega && <small className="dica-campo">Fluxo: {entrega.fluxoNome}</small>}
 
         {escolheResponsavel && (

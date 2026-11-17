@@ -86,7 +86,7 @@ class RequisitosTest {
     }
 
     private long requisito(C c, long etapa, String tipo, String descricao) throws Exception {
-        return corpo(enviar(c.gestor(), "/api/fluxos/" + c.fluxoId() + "/etapas/" + etapa + "/requisitos",
+        return corpo(enviar(c.admin(), "/api/fluxos/" + c.fluxoId() + "/etapas/" + etapa + "/requisitos",
                 "{\"tipo\":\"" + tipo + "\",\"descricao\":\"" + descricao + "\"}").andExpect(status().isCreated())).get("id").asLong();
     }
 
@@ -131,10 +131,10 @@ class RequisitosTest {
         assertThat(reqs.get(0).get("descricao").asText()).isEqualTo("Laudo técnico");
         assertThat(reqs.get(0).get("tipo").asText()).isEqualTo("DOCUMENTO");
         // renomear e apagar
-        mvc.perform(patch(url + "/" + id).header("Authorization", "Bearer " + c.gestor()).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(patch(url + "/" + id).header("Authorization", "Bearer " + c.admin()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"descricao\":\"Laudo assinado\"}")).andExpect(status().isOk());
         mvc.perform(delete(url + "/" + id).header("Authorization", "Bearer " + c.usuario())).andExpect(status().isForbidden());
-        mvc.perform(delete(url + "/" + id).header("Authorization", "Bearer " + c.gestor())).andExpect(status().isNoContent());
+        mvc.perform(delete(url + "/" + id).header("Authorization", "Bearer " + c.admin())).andExpect(status().isNoContent());
         assertThat(consultar(c.admin(), "/api/fluxos").get(0).get("etapas").get(1).get("requisitos")).isEmpty();
         // no máximo 10 por etapa
         for (int i = 0; i < 10; i++) requisito(c, c.analise(), "CONFIRMACAO", "Item " + i);
@@ -210,7 +210,7 @@ class RequisitosTest {
         mvc.perform(delete("/api/documentos/" + docId).header("Authorization", "Bearer " + c.usuario())).andExpect(status().isNoContent());
         avancar(c.usuario(), p, c.revisao()).andExpect(status().isUnprocessableEntity());          // sem o laudo de novo
         // apagar o requisito libera
-        mvc.perform(delete("/api/fluxos/" + c.fluxoId() + "/etapas/" + c.analise() + "/requisitos/" + laudo).header("Authorization", "Bearer " + c.gestor()))
+        mvc.perform(delete("/api/fluxos/" + c.fluxoId() + "/etapas/" + c.analise() + "/requisitos/" + laudo).header("Authorization", "Bearer " + c.admin()))
                 .andExpect(status().isNoContent());
         avancar(c.usuario(), p, c.revisao()).andExpect(status().isOk());
     }

@@ -87,7 +87,7 @@
     <li><strong>Documentos:</strong> upload e download de arquivos por processo, guardados no AWS S3.</li>
     <li><strong>Prazos e notificações:</strong> aviso dentro do sistema (sininho), com alerta automático de prazo vencendo ou vencido.</li>
     <li><strong>Relatórios em PDF:</strong> lista dos processos com filtros por setor, responsável, empresa, período e situação, dentro do que o papel de cada pessoa permite.</li>
-    <li><strong>Interface:</strong> visual limpo e sóbrio: fundos lisos, bordas leves, muito espaço em branco e rótulos em texto normal. Menu lateral com ícones (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatórios e Minhas tarefas, com a quantidade de processos em aberto sob sua responsabilidade), barra superior com busca de processos, botão Ajuda, avisos, tema claro/escuro e perfil com foto, e uma tela de <strong>Início</strong> com os indicadores do momento (em andamento, atrasados, concluídos e tempo médio), a carga por setor ou por funcionário, os processos recentes, os prazos mais próximos e atalhos. O azul é a cor principal; o vermelho e o dourado aparecem só quando significam algo (atrasos, cancelamentos, ações destrutivas, avisos novos e o anel da foto). Em telas estreitas o menu vira uma gaveta aberta pelo botão de menu.</li>
+    <li><strong>Interface:</strong> visual limpo e sóbrio: fundos lisos, bordas leves, muito espaço em branco e rótulos em texto normal. Menu lateral com ícones (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relatórios e Minhas tarefas, com a quantidade de processos em aberto sob sua responsabilidade), barra superior com busca de processos, botão Ajuda, avisos, tema claro/escuro e perfil com foto, e uma tela de <strong>Início</strong> com os indicadores do momento (em andamento, atrasados, concluídos e tempo médio), a carga por setor ou por funcionário, os processos recentes, os prazos mais próximos e atalhos. O azul é a cor principal; o vermelho e o dourado aparecem só quando significam algo (atrasos, cancelamentos, ações destrutivas, avisos novos e o anel da foto). Em telas estreitas o menu vira uma gaveta aberta pelo botão de menu.</li>
   </ul>
   <figure><img src="img/inicio-escuro.png" alt="Tela de início"><figcaption>Tela de início (tema escuro): indicadores, carga por setor, atalhos, processos recentes e prazos próximos.</figcaption></figure>
 
@@ -177,8 +177,8 @@
   </ol>
   <p>A empresa de cada requisição vem <strong>sempre do token</strong>, nunca de algo que o usuário digite. É isso que sustenta o isolamento entre empresas.</p>
 
-  <h2>3.3 Fluxos</h2>
-  <p>Administradores e Gestores criam fluxos na tela <em>Fluxos</em>: informam as etapas em ordem, o prazo em dias de cada uma, qual é a inicial (exatamente uma) e quais são finais (ao menos uma). Regras validadas pelo sistema:</p>
+  <h2>3.3 Entregas e fluxos</h2>
+  <p>Cada entrega tem o <strong>seu fluxo</strong>, e os dois são mantidos juntos na tela <em>Entregas</em> (a antiga tela Fluxos foi incorporada a ela). Ao criar uma entrega, o administrador ou o gestor informam as etapas do fluxo dela, e o sistema cria o fluxo junto; apagar a entrega apaga o fluxo. O fluxo segue a regra da entrega: o administrador vê e altera todos; gestor e usuário veem o fluxo das entregas gerais e das exclusivas do próprio setor, e o gestor só altera o das exclusivas do próprio setor. Na criação, informam-se as etapas em ordem, o prazo em dias de cada uma, qual é a inicial (exatamente uma) e quais são finais (ao menos uma). Regras validadas pelo sistema:</p>
   <ul>
     <li>mínimo de 2 etapas; todas com nome; prazo não negativo;</li>
     <li>uma etapa final não pode ter saída;</li>
@@ -273,7 +273,7 @@
   <figure><img src="img/relatorio-pdf.png" alt="Exemplo de relatório em PDF"><figcaption>Figura 12 — Primeira página de um relatório gerado pelo administrador, sem filtros.</figcaption></figure>
 
   <h2>3.10 Requisitos para avançar de etapa</h2>
-  <p>Cada etapa pode ter <strong>requisitos para sair dela</strong>, definidos por administrador ou gestor em <em>Fluxos → Configurar</em> (até 10 por etapa; a etapa final não tem saída). Há dois tipos:</p>
+  <p>Cada etapa pode ter <strong>requisitos para sair dela</strong>, definidos por administrador ou gestor em <em>Entregas → Configurar</em> (até 10 por etapa; a etapa final não tem saída). Há dois tipos:</p>
   <ul>
     <li><strong>Anexar documento:</strong> é preciso anexar um arquivo ligado ao requisito (por exemplo, <em>Laudo técnico assinado</em>);</li>
     <li><strong>Confirmação do responsável:</strong> alguém com permissão no processo marca que fez (por exemplo, <em>Dados do cliente conferidos</em>).</li>
@@ -378,12 +378,12 @@
     <tr><td>Cadastrar e alterar setores</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Cadastrar e alterar entregas</td><td class="c ok">sim, todas</td><td class="c ok">só as exclusivas do próprio setor</td><td class="c no">não</td></tr>
     <tr><td>Apagar empresas, setores e entregas</td><td class="c ok">sim, se não houver processo em andamento ligado</td><td class="c ok">empresas e as entregas exclusivas do próprio setor (nunca setores), se não houver processo em andamento ligado</td><td class="c no">não</td></tr>
-    <tr><td>Apagar fluxos</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c ok">sim, se nenhuma entrega o usa e não houver processo em andamento nele</td><td class="c no">não</td></tr>
+    <tr><td>Apagar o fluxo</td><td class="c ok">junto com a entrega, se não houver processo em andamento</td><td class="c ok">junto com a entrega exclusiva do próprio setor, se não houver processo em andamento</td><td class="c no">não</td></tr>
     <tr><td>Configurar requisitos, quem move para cada etapa e automações</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
     <tr><td>Mover para etapa que exige gestor (ou administrador)</td><td class="c ok">sempre</td><td class="c">se a etapa aceita gestor; senão pede aprovação</td><td class="c">pede aprovação</td></tr>
     <tr><td>Aprovar ou recusar pedido de aprovação</td><td class="c ok">qualquer um</td><td class="c">os de etapas que aceitam gestor, no próprio setor</td><td class="c no">não</td></tr>
     <tr><td>Ver o painel de indicadores</td><td class="c ok">todos os setores</td><td class="c">só o próprio setor</td><td class="c">só o próprio setor</td></tr>
-    <tr><td>Criar e ativar/desativar fluxos</td><td class="c ok">sim</td><td class="c ok">sim</td><td class="c no">não</td></tr>
+    <tr><td>Criar a entrega com o fluxo dela e alterar etapas, requisitos e automações</td><td class="c ok">sim, de todas</td><td class="c ok">só das exclusivas do próprio setor</td><td class="c no">não</td></tr>
     <tr><td>Adicionar funcionários</td><td class="c ok">com qualquer papel; informa nome, senha inicial, papel e setor</td><td class="c">só com papel Usuário; informa nome, senha inicial e papel, e o funcionário fica no setor do gestor</td><td class="c no">não</td></tr>
     <tr><td>Zerar a senha de uma conta</td><td class="c ok">de qualquer outra conta, informando a nova senha</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Alterar o setor de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
@@ -613,7 +613,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>111 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>112 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>

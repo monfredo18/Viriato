@@ -269,7 +269,7 @@ class ApagarCadastrosTest {
     @Test
     void fluxoNaoApagaComEntregaOuProcessoEmAndamento_encerradoNaoImpede() throws Exception {
         Cenario c = cenario();
-        long f2 = fluxo(c.gestor(), "Fluxo curto");
+        long f2 = fluxo(c.admin(), "Fluxo curto");
         apagar(c.usuario(), "/api/fluxos/" + f2).andExpect(status().isForbidden());
 
         // uma entrega usa o fluxo: não apaga
@@ -291,7 +291,7 @@ class ApagarCadastrosTest {
 
         // processo concluído não impede: o fluxo sai e o processo continua, sem fluxo
         concluir(c, p);
-        apagar(c.gestor(), "/api/fluxos/" + f2).andExpect(status().isNoContent());
+        apagar(c.admin(), "/api/fluxos/" + f2).andExpect(status().isNoContent());
         assertThat(consultar(c.admin(), "/api/fluxos")).hasSize(1);
         JsonNode det = consultar(c.admin(), "/api/processos/" + p);               // abrir o processo não pode quebrar
         assertThat(det.get("processo").get("status").asText()).isEqualTo("CONCLUIDO");
@@ -309,8 +309,8 @@ class ApagarCadastrosTest {
         long p3 = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + cliente + ",\"entregaId\":" + entrega3
                 + ",\"setorId\":" + setor3 + ",\"responsavelId\":" + c.adminId() + "}").andExpect(status().isCreated())).get("id").asLong();
         enviar(c.admin(), "/api/processos/" + p3 + "/cancelar", "{\"motivo\":\"x\"}").andExpect(status().isOk());
-        apagar(c.admin(), "/api/entregas/" + entrega3).andExpect(status().isNoContent());   // libera o fluxo
-        apagar(c.admin(), "/api/fluxos/" + f3).andExpect(status().isNoContent());
+        apagar(c.admin(), "/api/entregas/" + entrega3).andExpect(status().isNoContent());   // o fluxo da entrega sai junto
+        apagar(c.admin(), "/api/fluxos/" + f3).andExpect(status().isNotFound());
         assertThat(consultar(c.admin(), "/api/processos/" + p3).get("processo").get("status").asText()).isEqualTo("CANCELADO");
 
         // o fluxo da entrega padrão continua protegido; inexistente dá 404

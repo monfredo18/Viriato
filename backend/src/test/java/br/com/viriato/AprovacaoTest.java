@@ -62,7 +62,7 @@ class AprovacaoTest {
     }
 
     private void exigir(C c, long etapa, String papel) throws Exception {
-        mvc.perform(patch("/api/fluxos/" + c.fluxoId() + "/etapas/" + etapa).header("Authorization", "Bearer " + c.gestor())
+        mvc.perform(patch("/api/fluxos/" + c.fluxoId() + "/etapas/" + etapa).header("Authorization", "Bearer " + c.admin())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"papelMinimo\":\"" + papel + "\"}")).andExpect(status().isOk());
     }
 
@@ -95,7 +95,7 @@ class AprovacaoTest {
         mvc.perform(patch(url).header("Authorization", "Bearer " + c.gestor()).contentType(MediaType.APPLICATION_JSON).content("{\"papelMinimo\":\"DIRETOR\"}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(patch(url).header("Authorization", "Bearer " + c.gestor()).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isBadRequest());
-        mvc.perform(patch("/api/fluxos/" + c.fluxoId() + "/etapas/999999").header("Authorization", "Bearer " + c.gestor()).contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(patch("/api/fluxos/" + c.fluxoId() + "/etapas/999999").header("Authorization", "Bearer " + c.admin()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"papelMinimo\":\"GESTOR\"}")).andExpect(status().isNotFound());
         JsonNode antes = consultar(c.usuario(), "/api/fluxos").get(0).get("etapas");
         assertThat(antes.get(3).get("papelMinimo").asText()).isEqualTo("USUARIO");   // padrão: qualquer responsável
@@ -242,7 +242,7 @@ class AprovacaoTest {
     void requisitosDaEtapaDeOrigemValemParaPedirEParaAprovar() throws Exception {
         C c = cenario();
         exigir(c, c.concluido(), "GESTOR");
-        long req = corpo(enviar(c.gestor(), "/api/fluxos/" + c.fluxoId() + "/etapas/" + c.revisao() + "/requisitos",
+        long req = corpo(enviar(c.admin(), "/api/fluxos/" + c.fluxoId() + "/etapas/" + c.revisao() + "/requisitos",
                 "{\"tipo\":\"CONFIRMACAO\",\"descricao\":\"Visto final\"}").andExpect(status().isCreated())).get("id").asLong();
         long p = processoEmRevisao(c);
         var erro = corpo(solicitar(c.usuario(), p, c.concluido(), null).andExpect(status().isUnprocessableEntity())).get("erro").asText();

@@ -71,7 +71,7 @@ class EntregaExclusivaDoSetorTest {
         alterar(c.gestorGeral(), "/api/setores/" + c.geral(), "{\"nome\":\"Renomeado\"}").andExpect(status().isForbidden());
         mvc.perform(delete("/api/setores/" + c.fin()).header("Authorization", "Bearer " + c.gestorGeral())).andExpect(status().isForbidden());
 
-        JsonNode nova = corpo(enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"Laudo do Geral\",\"fluxoId\":" + c.fluxo() + "}").andExpect(status().isCreated()));
+        JsonNode nova = corpo(enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"Laudo do Geral\"}").andExpect(status().isCreated()));
         assertThat(nova.get("setorDonoId").asLong()).isEqualTo(c.geral());
         long entrega = nova.get("id").asLong();
 
@@ -105,7 +105,7 @@ class EntregaExclusivaDoSetorTest {
     @Test
     void gestorSoMexeNasEntregasExclusivasDoPropriosetor() throws Exception {
         C c = cenario();
-        long doGeral = corpo(enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"Exclusiva Geral\",\"fluxoId\":" + c.fluxo() + "}").andExpect(status().isCreated())).get("id").asLong();
+        long doGeral = corpo(enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"Exclusiva Geral\"}").andExpect(status().isCreated())).get("id").asLong();
         long geralDoAdmin = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Entrega Geral\",\"fluxoId\":" + c.fluxo() + "}").andExpect(status().isCreated())).get("id").asLong();
 
         alterar(c.gestorGeral(), "/api/entregas/" + doGeral, "{\"nome\":\"Exclusiva Geral 2\"}").andExpect(status().isOk());
@@ -116,9 +116,9 @@ class EntregaExclusivaDoSetorTest {
         enviar(c.usuarioGeral(), "/api/entregas", "{\"nome\":\"X\",\"fluxoId\":" + c.fluxo() + "}").andExpect(status().isForbidden());
 
         // o nome é único na empresa: nem repetir a exclusiva de outro setor, nem uma entrega geral
-        enviar(c.gestorFin(), "/api/entregas", "{\"nome\":\"Exclusiva Geral 2\",\"fluxoId\":" + c.fluxo() + "}").andExpect(status().isUnprocessableEntity());
-        enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"exclusiva geral 2\",\"fluxoId\":" + c.fluxo() + "}").andExpect(status().isUnprocessableEntity());
-        enviar(c.gestorFin(), "/api/entregas", "{\"nome\":\"Entrega Geral\",\"fluxoId\":" + c.fluxo() + "}").andExpect(status().isUnprocessableEntity());
+        enviar(c.gestorFin(), "/api/entregas", "{\"nome\":\"Exclusiva Geral 2\"}").andExpect(status().isUnprocessableEntity());
+        enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"exclusiva geral 2\"}").andExpect(status().isUnprocessableEntity());
+        enviar(c.gestorFin(), "/api/entregas", "{\"nome\":\"Entrega Geral\"}").andExpect(status().isUnprocessableEntity());
 
         mvc.perform(delete("/api/entregas/" + doGeral).header("Authorization", "Bearer " + c.gestorGeral())).andExpect(status().isNoContent());
         assertThat(nomes(corpo(ler(c.admin(), "/api/entregas")))).doesNotContain("Exclusiva Geral 2|Entrega");
@@ -127,9 +127,55 @@ class EntregaExclusivaDoSetorTest {
     @Test
     void apagarOSetorApagaAsEntregasExclusivasDele() throws Exception {
         C c = cenario();
-        enviar(c.gestorFin(), "/api/entregas", "{\"nome\":\"So do Financeiro\",\"fluxoId\":" + c.fluxo() + "}").andExpect(status().isCreated());
+        enviar(c.gestorFin(), "/api/entregas", "{\"nome\":\"So do Financeiro\"}").andExpect(status().isCreated());
         assertThat(nomes(corpo(ler(c.admin(), "/api/entregas")))).contains("So do Financeiro");
         mvc.perform(delete("/api/setores/" + c.fin()).header("Authorization", "Bearer " + c.admin())).andExpect(status().isNoContent());
         assertThat(nomes(corpo(ler(c.admin(), "/api/entregas")))).doesNotContain("So do Financeiro");
+    }
+
+    private JsonNode fluxoDaEntrega(String t, long entregaId) throws Exception {
+        long fluxoId = 0;
+        for (JsonNode e : corpo(ler(t, "/api/entregas"))) if (e.get("id").asLong() == entregaId) fluxoId = e.get("fluxoId").asLong();
+        for (JsonNode f : corpo(ler(t, "/api/fluxos"))) if (f.get("id").asLong() == fluxoId) return f;
+        return null;
+    }
+
+    @Test
+    void entregaNasceComFluxoProprioEOFluxoSegueARegraDaEntrega() throws Exception {
+        C c = cenario();
+        // com etapas informadas: o fluxo é criado junto, com o nome da entrega
+        String etapas = "[{\"nome\":\"Início\",\"prazoDias\":1,\"inicial\":true,\"finalEtapa\":false},{\"nome\":\"Meio\",\"prazoDias\":2,\"inicial\":false,\"finalEtapa\":false},{\"nome\":\"Fim\",\"inicial\":false,\"finalEtapa\":true}]";
+        JsonNode e1 = corpo(enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"Com etapas\",\"etapas\":" + etapas + "}").andExpect(status().isCreated()));
+        JsonNode f1 = fluxoDaEntrega(c.gestorGeral(), e1.get("id").asLong());
+        assertThat(f1.get("nome").asText()).isEqualTo("Com etapas");
+        assertThat(f1.get("etapas")).hasSize(3);
+        // sem etapas: etapas padrão
+        JsonNode e2 = corpo(enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"Padrão\"}").andExpect(status().isCreated()));
+        assertThat(fluxoDaEntrega(c.gestorGeral(), e2.get("id").asLong()).get("etapas")).hasSize(4);
+        // gestor não escolhe fluxo existente; etapas inválidas são recusadas
+        enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"Atalho\",\"fluxoId\":" + c.fluxo() + "}").andExpect(status().isForbidden());
+        enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"Ruim\",\"etapas\":[{\"nome\":\"Só uma\",\"inicial\":true,\"finalEtapa\":true}]}").andExpect(status().isUnprocessableEntity());
+        assertThat(nomes(corpo(ler(c.admin(), "/api/entregas")))).doesNotContain("Ruim");
+
+        long fluxo1 = f1.get("id").asLong();
+        long etapaMeio = f1.get("etapas").get(1).get("id").asLong();
+        // o gestor do setor dono configura o fluxo; o de outro setor nem o vê; o usuário só consulta
+        enviar(c.gestorGeral(), "/api/fluxos/" + fluxo1 + "/etapas/" + etapaMeio + "/requisitos", "{\"tipo\":\"CONFIRMACAO\",\"descricao\":\"Conferido\"}").andExpect(status().isCreated());
+        enviar(c.gestorFin(), "/api/fluxos/" + fluxo1 + "/etapas/" + etapaMeio + "/requisitos", "{\"tipo\":\"CONFIRMACAO\",\"descricao\":\"Intruso\"}").andExpect(status().isForbidden());
+        enviar(c.usuarioGeral(), "/api/fluxos/" + fluxo1 + "/etapas/" + etapaMeio + "/requisitos", "{\"tipo\":\"CONFIRMACAO\",\"descricao\":\"X\"}").andExpect(status().isForbidden());
+        assertThat(fluxoDaEntrega(c.usuarioGeral(), e1.get("id").asLong())).isNotNull();
+        ler(c.gestorFin(), "/api/fluxos/" + fluxo1).andExpect(status().isNotFound());
+        assertThat(corpo(ler(c.gestorFin(), "/api/fluxos")).toString()).doesNotContain("Com etapas");
+        ler(c.gestorFin(), "/api/fluxos/" + fluxo1 + "/automacoes").andExpect(status().isForbidden());
+        mvc.perform(patch("/api/fluxos/" + fluxo1).header("Authorization", "Bearer " + c.gestorFin()).contentType(MediaType.APPLICATION_JSON).content("{\"ativo\":false}")).andExpect(status().isForbidden());
+
+        // fluxo de entrega geral (ou compartilhado): o gestor consulta mas não altera
+        enviar(c.gestorGeral(), "/api/fluxos/" + c.fluxo() + "/etapas/" + corpo(ler(c.admin(), "/api/fluxos/" + c.fluxo())).get("etapas").get(1).get("id").asLong() + "/requisitos",
+                "{\"tipo\":\"CONFIRMACAO\",\"descricao\":\"Não pode\"}").andExpect(status().isForbidden());
+        enviar(c.gestorGeral(), "/api/fluxos", "{\"nome\":\"Solto\",\"etapas\":" + etapas + "}").andExpect(status().isForbidden());
+
+        // apagar a entrega leva o fluxo junto (com requisito e tudo)
+        mvc.perform(delete("/api/entregas/" + e1.get("id").asLong()).header("Authorization", "Bearer " + c.gestorGeral())).andExpect(status().isNoContent());
+        ler(c.admin(), "/api/fluxos/" + fluxo1).andExpect(status().isNotFound());
     }
 }

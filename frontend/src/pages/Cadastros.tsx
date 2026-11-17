@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { api, type Cliente, type Entrega, type Fluxo, type Setor } from '../api'
+import { api, type Cliente, type Entrega, type Setor } from '../api'
 import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 
-type Aba = 'empresas' | 'setores' | 'entregas'
+type Aba = 'empresas' | 'setores'
 
 export default function Cadastros() {
   const { podeGerenciar, ehAdmin } = useAuth()
@@ -17,11 +17,9 @@ export default function Cadastros() {
       <div className="abas" role="tablist">
         <button role="tab" aria-selected={aba === 'empresas'} className={aba === 'empresas' ? 'ativa' : ''} onClick={() => setAba('empresas')}>Empresas</button>
         <button role="tab" aria-selected={aba === 'setores'} className={aba === 'setores' ? 'ativa' : ''} onClick={() => setAba('setores')}>Setores</button>
-        <button role="tab" aria-selected={aba === 'entregas'} className={aba === 'entregas' ? 'ativa' : ''} onClick={() => setAba('entregas')}>Entregas</button>
       </div>
       {aba === 'empresas' && <Empresas pode={podeGerenciar} />}
       {aba === 'setores' && <Setores pode={ehAdmin} />}
-      {aba === 'entregas' && <Entregas pode={podeGerenciar} />}
     </>
   )
 }
@@ -138,79 +136,6 @@ function Empresas({ pode }: { pode: boolean }) {
 }
 
 // ---------------------------------------------------------------- Entregas
-function Entregas({ pode }: { pode: boolean }) {
-  const { ehAdmin } = useAuth()
-  // O administrador mexe em todas; o gestor só nas exclusivas do próprio setor (as gerais ele só consulta).
-  const podeMexer = (e: Entrega) => ehAdmin || (pode && e.setorDonoId !== null)
-  const [lista, setLista] = useState<Entrega[]>([])
-  const [fluxos, setFluxos] = useState<Fluxo[]>([])
-  const [f, setF] = useState({ nome: '', fluxoId: '' })
-  const [erro, setErro] = useState('')
-
-  const carregar = useCallback(() => { api.get<Entrega[]>('/entregas').then(setLista) }, [])
-  useEffect(() => {
-    carregar()
-    api.get<Fluxo[]>('/fluxos').then((l) => {
-      setFluxos(l)
-      const primeiro = l.find((x) => x.ativo)
-      if (primeiro) setF((s) => (s.fluxoId ? s : { ...s, fluxoId: String(primeiro.id) }))
-    })
-  }, [carregar])
-
-  const agir = (fn: () => Promise<unknown>) => fn().then(carregar).catch((e) => setErro(e.message))
-
-  const criar = async (e: FormEvent) => {
-    e.preventDefault()
-    setErro('')
-    await agir(async () => { await api.post('/entregas', { nome: f.nome, fluxoId: Number(f.fluxoId) }); setF({ ...f, nome: '' }) })
-  }
-
-  return (
-    <div className="grade">
-      <section className="cartao">
-        <h3>O que pode ser entregue</h3>
-        <p className="sub">Cada entrega define o fluxo (as etapas) do processo.{pode && !ehAdmin ? ' As entregas que você criar vão direto para o seu setor e só ele as vê e usa; as gerais, do administrador, você só consulta.' : ''}</p>
-        <Aviso pode={pode} quem="administrador e gestor" />
-        {erro && <p className="erro">{erro}</p>}
-        <table>
-          <thead><tr><th>Entrega</th><th>Fluxo</th><th>Vale para</th><th>Situação</th>{pode && <th></th>}</tr></thead>
-          <tbody>
-            {lista.map((e) => (
-              <tr key={e.id}>
-                <td><NomeEditavel nome={e.nome} pode={podeMexer(e)} salvar={(n) => agir(() => api.patch(`/entregas/${e.id}`, { nome: n }))} /></td>
-                <td>
-                  {podeMexer(e) ? (
-                    <select value={e.fluxoId} onChange={(ev) => agir(() => api.patch(`/entregas/${e.id}`, { fluxoId: Number(ev.target.value) }))}>
-                      {fluxos.map((x) => <option key={x.id} value={x.id}>{x.nome}{x.ativo ? '' : ' (inativo)'}</option>)}
-                    </select>
-                  ) : e.fluxoNome}
-                </td>
-                <td>{e.setorDonoId === null ? 'Todos os setores que a fazem' : <span className="selo aberto">Só o setor {e.setorDonoNome}</span>}</td>
-                <td><Situacao ativo={e.ativo} pode={podeMexer(e)} alternar={() => agir(() => api.patch(`/entregas/${e.id}`, { ativo: !e.ativo }))} /></td>
-                {pode && <td>{podeMexer(e) && <BotaoApagar nome={e.nome} aviso="Ela sai da lista dos setores que a faziam. Processos já concluídos ou cancelados continuam existindo, sem o vínculo com a entrega." apagar={() => { setErro(''); agir(() => api.del(`/entregas/${e.id}`)) }} />}</td>}
-              </tr>
-            ))}
-            {lista.length === 0 && <tr><td colSpan={pode ? 5 : 4} className="vazio">Nenhuma entrega cadastrada.</td></tr>}
-          </tbody>
-        </table>
-      </section>
-      {pode && (
-        <form className="cartao" onSubmit={criar}>
-          <h3>Nova entrega</h3>
-          {!ehAdmin && <p className="dica-campo">Ela vai direto para o seu setor e só ele poderá vê-la e usá-la.</p>}
-          <label>Nome<input required maxLength={150} value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></label>
-          <label>Fluxo
-            <select required value={f.fluxoId} onChange={(e) => setF({ ...f, fluxoId: e.target.value })}>
-              {fluxos.filter((x) => x.ativo).map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
-            </select>
-          </label>
-          <button className="primario">Adicionar entrega</button>
-        </form>
-      )}
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------- Setores
 function Setores({ pode }: { pode: boolean }) {
   const [lista, setLista] = useState<Setor[]>([])

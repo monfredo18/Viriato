@@ -155,8 +155,11 @@ public class FluxoService {
     }
 
     @Transactional
-    public FluxoDto criarFluxoPadrao(Long tenantId) {
-        return criar(tenantId, "Fluxo padrão", List.of(
+    public FluxoDto criarFluxoPadrao(Long tenantId) { return criarFluxoPadrao(tenantId, "Fluxo padrão"); }
+
+    @Transactional
+    public FluxoDto criarFluxoPadrao(Long tenantId, String nome) {
+        return criar(tenantId, nome, List.of(
                 new EtapaReq("Abertura", 2, true, false),
                 new EtapaReq("Análise", 5, false, false),
                 new EtapaReq("Revisão", 3, false, false),

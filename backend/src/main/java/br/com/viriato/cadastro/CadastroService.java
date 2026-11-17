@@ -4,6 +4,7 @@ import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.comum.NegocioException;
 import br.com.viriato.fluxo.Fluxo;
 import br.com.viriato.fluxo.FluxoRepository;
+import br.com.viriato.fluxo.FluxoService;
 import br.com.viriato.processo.ProcessoRepository;
 import br.com.viriato.processo.StatusProcesso;
 import br.com.viriato.seguranca.UsuarioLogado;
@@ -26,12 +27,14 @@ public class CadastroService {
     private final SetorRepository setores;
     private final EntregaRepository entregas;
     private final FluxoRepository fluxos;
+    private final FluxoService fluxoService;
     private final ProcessoRepository processos;
     private final UsuarioRepository usuarios;
 
     public CadastroService(ClienteRepository clientes, SetorRepository setores,
                            EntregaRepository entregas, FluxoRepository fluxos,
-                           ProcessoRepository processos, UsuarioRepository usuarios) {
+                           ProcessoRepository processos, UsuarioRepository usuarios, FluxoService fluxoService) {
+        this.fluxoService = fluxoService;
         this.clientes = clientes;
         this.setores = setores;
         this.entregas = entregas;
@@ -102,7 +105,7 @@ public class CadastroService {
      * exclusiva do setor dele e já entra na lista de entregas desse setor.
      */
     @Transactional
-    public EntregaDto criarEntrega(UsuarioLogado quem, String nome, Long fluxoId) {
+    public EntregaDto criarEntrega(UsuarioLogado quem, String nome, Long fluxoId, List<FluxoService.EtapaReq> etapas) {
         Long tid = quem.tenantId();
         String n = nome.trim();
         Long dono = null;
@@ -111,7 +114,16 @@ public class CadastroService {
             if (dono == null) throw new NegocioException("Seu usuário não tem setor definido. Peça ao administrador para definir o seu setor.");
         }
         exigirNomeLivre(tid, n, dono, null);
-        Fluxo f = fluxoDaEmpresa(tid, fluxoId);
+        Fluxo f;
+        if (fluxoId != null) {
+            f = fluxoDaEmpresa(tid, fluxoId);
+            if (quem.papel() != Papel.ADMIN) throw new org.springframework.security.access.AccessDeniedException("O fluxo da sua entrega é criado junto com ela");
+        } else {   // a entrega ganha um fluxo só dela, com o nome dela
+            var novo = etapas == null || etapas.isEmpty()
+                    ? fluxoService.criarFluxoPadrao(tid, n)
+                    : fluxoService.criar(tid, n, etapas, null);
+            f = fluxoDaEmpresa(tid, novo.id());
+        }
         Entrega e = new Entrega();
         e.setTenantId(tid);
         e.setNome(n);
@@ -204,7 +216,13 @@ public class CadastroService {
         for (Setor s : setores.findByTenantIdOrderByNome(tid)) {
             if (s.getEntregas().remove(e)) setores.save(s);
         }
+        Long fluxoId = e.getFluxoId();
         entregas.delete(e);
+        entregas.flush();
+        // o fluxo pertence à entrega: sai junto, a não ser que outra entrega (de dados antigos) ainda o use
+        if (fluxoId != null && entregas.findByTenantIdAndFluxoIdOrderByNome(tid, fluxoId).isEmpty()) {
+            fluxoService.apagar(fluxoId, tid);
+        }
     }
 
     /** Apagar o setor deixa seus funcionários sem setor (eles continuam existindo). */

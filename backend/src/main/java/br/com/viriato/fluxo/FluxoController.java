@@ -15,10 +15,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/fluxos")
 public class FluxoController {
     private final FluxoService service;
+    private final PermissaoFluxo permissao;
 
     private final RequisitoService requisitos;
 
-    public FluxoController(FluxoService service, RequisitoService requisitos) {
+    public FluxoController(FluxoService service, RequisitoService requisitos, PermissaoFluxo permissao) {
+        this.permissao = permissao;
         this.service = service;
         this.requisitos = requisitos;
     }
@@ -34,25 +36,30 @@ public class FluxoController {
     public record AtivoReq(boolean ativo) {}
 
     @GetMapping
-    public List<FluxoService.FluxoDto> listar() { return service.listar(Contexto.tenantId()); }
+    public List<FluxoService.FluxoDto> listar() {
+        return service.listar(Contexto.tenantId()).stream().filter(f -> permissao.visivel(f.id())).toList();   // cada um vê os fluxos das entregas que enxerga
+    }
 
     @GetMapping("/{id}")
-    public FluxoService.FluxoDto obter(@PathVariable Long id) { return service.obter(id, Contexto.tenantId()); }
+    public FluxoService.FluxoDto obter(@PathVariable Long id) {
+        if (!permissao.visivel(id)) throw new br.com.viriato.comum.NaoEncontradoException("Fluxo");
+        return service.obter(id, Contexto.tenantId());
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasRole('ADMIN')")   // fluxo novo nasce junto com a entrega (POST /entregas); este atalho é do administrador
     public FluxoService.FluxoDto criar(@Valid @RequestBody NovoFluxo r) {
         return service.criar(Contexto.tenantId(), r.nome(), r.etapas(), r.transicoes());
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#id)")
     public void apagar(@PathVariable Long id) { service.apagar(id, Contexto.tenantId()); }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#id)")
     public FluxoService.FluxoDto ativo(@PathVariable Long id, @RequestBody AtivoReq r) {
         return service.alterarAtivo(id, Contexto.tenantId(), r.ativo());
     }
@@ -61,13 +68,13 @@ public class FluxoController {
 
     @PostMapping("/{fluxoId}/etapas/{etapaId}/requisitos")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
     public RequisitoService.RequisitoDto criarRequisito(@PathVariable Long fluxoId, @PathVariable Long etapaId, @Valid @RequestBody NovoRequisito r) {
         return requisitos.criar(Contexto.tenantId(), fluxoId, etapaId, r.tipo(), r.descricao());
     }
 
     @PatchMapping("/{fluxoId}/etapas/{etapaId}/requisitos/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
     public RequisitoService.RequisitoDto renomearRequisito(@PathVariable Long fluxoId, @PathVariable Long etapaId, @PathVariable Long id,
                                                            @Valid @RequestBody DescricaoReq r) {
         return requisitos.renomear(Contexto.tenantId(), fluxoId, etapaId, id, r.descricao());
@@ -75,14 +82,14 @@ public class FluxoController {
 
     @DeleteMapping("/{fluxoId}/etapas/{etapaId}/requisitos/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
     public void apagarRequisito(@PathVariable Long fluxoId, @PathVariable Long etapaId, @PathVariable Long id) {
         requisitos.apagar(Contexto.tenantId(), fluxoId, etapaId, id);
     }
 
     /** Quem pode mover processos PARA a etapa; os demais precisam solicitar aprovação. */
     @PatchMapping("/{fluxoId}/etapas/{etapaId}")
-    @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#fluxoId)")
     public FluxoService.FluxoDto.EtapaResumo etapa(@PathVariable Long fluxoId, @PathVariable Long etapaId, @Valid @RequestBody PapelMinimoReq r) {
         return service.definirPapelMinimo(Contexto.tenantId(), fluxoId, etapaId, r.papelMinimo());
     }

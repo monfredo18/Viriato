@@ -94,7 +94,7 @@ class AutomacaoTest {
     }
 
     private long regra(C c, String corpoJson) throws Exception {
-        return corpo(enviar(c.gestor(), "/api/fluxos/" + c.fluxoId() + "/automacoes", corpoJson).andExpect(status().isCreated())).get("id").asLong();
+        return corpo(enviar(c.admin(), "/api/fluxos/" + c.fluxoId() + "/automacoes", corpoJson).andExpect(status().isCreated())).get("id").asLong();
     }
     private String entrando(long etapa, String resto) { return "{\"evento\":\"ENTRAR_ETAPA\",\"etapaId\":" + etapa + "," + resto + "}"; }
 
@@ -125,19 +125,19 @@ class AutomacaoTest {
         String url = "/api/fluxos/" + c.fluxoId() + "/automacoes";
         enviar(c.usuario(), url, entrando(c.analise(), "\"tipo\":\"GERAR_DOCUMENTO\"")).andExpect(status().isForbidden());
         ler(c.usuario(), url).andExpect(status().isForbidden());                       // nem consulta: pode ter endereços e segredos
-        enviar(c.gestor(), url, entrando(c.analise(), "\"tipo\":\"EMAIL_EMPRESA\"")).andExpect(status().isBadRequest());   // o envio de e-mail não existe mais
-        enviar(c.gestor(), url, entrando(c.analise(), "\"tipo\":\"WEBHOOK\",\"url\":\"ftp://x.com/y\"")).andExpect(status().isUnprocessableEntity());
-        enviar(c.gestor(), url, entrando(c.analise(), "\"tipo\":\"WEBHOOK\"")).andExpect(status().isUnprocessableEntity());
-        enviar(c.gestor(), url, "{\"evento\":\"ENTRAR_ETAPA\",\"tipo\":\"GERAR_DOCUMENTO\"}").andExpect(status().isUnprocessableEntity());   // sem etapa
-        enviar(c.gestor(), url, entrando(999999, "\"tipo\":\"GERAR_DOCUMENTO\"")).andExpect(status().isNotFound());
-        enviar(c.gestor(), url, "{\"tipo\":\"GERAR_DOCUMENTO\"}").andExpect(status().isUnprocessableEntity());                                  // sem evento
+        enviar(c.admin(), url, entrando(c.analise(), "\"tipo\":\"EMAIL_EMPRESA\"")).andExpect(status().isBadRequest());   // o envio de e-mail não existe mais
+        enviar(c.admin(), url, entrando(c.analise(), "\"tipo\":\"WEBHOOK\",\"url\":\"ftp://x.com/y\"")).andExpect(status().isUnprocessableEntity());
+        enviar(c.admin(), url, entrando(c.analise(), "\"tipo\":\"WEBHOOK\"")).andExpect(status().isUnprocessableEntity());
+        enviar(c.admin(), url, "{\"evento\":\"ENTRAR_ETAPA\",\"tipo\":\"GERAR_DOCUMENTO\"}").andExpect(status().isUnprocessableEntity());   // sem etapa
+        enviar(c.admin(), url, entrando(999999, "\"tipo\":\"GERAR_DOCUMENTO\"")).andExpect(status().isNotFound());
+        enviar(c.admin(), url, "{\"tipo\":\"GERAR_DOCUMENTO\"}").andExpect(status().isUnprocessableEntity());                                  // sem evento
 
         long doc = regra(c, entrando(c.analise(), "\"tipo\":\"GERAR_DOCUMENTO\""));
-        enviar(c.gestor(), url, entrando(c.analise(), "\"tipo\":\"GERAR_DOCUMENTO\"")).andExpect(status().isUnprocessableEntity());   // só um por etapa
+        enviar(c.admin(), url, entrando(c.analise(), "\"tipo\":\"GERAR_DOCUMENTO\"")).andExpect(status().isUnprocessableEntity());   // só um por etapa
         long hook = regra(c, entrando(c.revisao(), "\"tipo\":\"WEBHOOK\",\"url\":\"http://127.0.0.1:9/hook\",\"segredo\":\"abc\""));
         long cancel = regra(c, "{\"evento\":\"CANCELADO\",\"etapaId\":" + c.analise() + ",\"tipo\":\"GERAR_DOCUMENTO\"}");   // etapa é ignorada no cancelamento
 
-        JsonNode lista = consultar(c.gestor(), url);
+        JsonNode lista = consultar(c.admin(), url);
         assertThat(lista).hasSize(3);
         JsonNode h = null, x = null;
         for (JsonNode r : lista) { if (r.get("id").asLong() == hook) h = r; if (r.get("id").asLong() == cancel) x = r; }
@@ -153,8 +153,8 @@ class AutomacaoTest {
         mvc.perform(patch(url + "/" + hook).header("Authorization", "Bearer " + c.admin()).contentType(MediaType.APPLICATION_JSON).content("{\"segredo\":\"\"}")).andExpect(status().isOk());
         for (JsonNode r : consultar(c.admin(), url)) if (r.get("id").asLong() == hook) assertThat(r.get("temSegredo").asBoolean()).isFalse();   // vazio apaga
         mvc.perform(delete(url + "/" + doc).header("Authorization", "Bearer " + c.usuario())).andExpect(status().isForbidden());
-        mvc.perform(delete(url + "/" + doc).header("Authorization", "Bearer " + c.gestor())).andExpect(status().isNoContent());
-        assertThat(consultar(c.gestor(), url)).hasSize(2);
+        mvc.perform(delete(url + "/" + doc).header("Authorization", "Bearer " + c.admin())).andExpect(status().isNoContent());
+        assertThat(consultar(c.admin(), url)).hasSize(2);
     }
 
     @Test
@@ -232,7 +232,7 @@ class AutomacaoTest {
             // porta onde ninguém escuta: falha de conexão
             regra(c, entrando(c.analise(), "\"tipo\":\"WEBHOOK\",\"url\":\"http://127.0.0.1:9/hook\""));
             long desligada = regra(c, entrando(c.analise(), "\"tipo\":\"WEBHOOK\",\"url\":\"" + urlDe(erro) + "\""));
-            mvc.perform(patch("/api/fluxos/" + c.fluxoId() + "/automacoes/" + desligada).header("Authorization", "Bearer " + c.gestor())
+            mvc.perform(patch("/api/fluxos/" + c.fluxoId() + "/automacoes/" + desligada).header("Authorization", "Bearer " + c.admin())
                     .contentType(MediaType.APPLICATION_JSON).content("{\"ativo\":false}")).andExpect(status().isOk());
 
             long p = processo(c);

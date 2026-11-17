@@ -33,7 +33,7 @@ cd backend && VIRIATO_JWT_PERMITIR_PADRAO=true mvn spring-boot:run   # API em :8
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
 
-Testes: `cd backend && mvn test` (111 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
+Testes: `cd backend && mvn test` (112 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
 
 ## Arquitetura
 
@@ -43,7 +43,7 @@ backend/src/main/java/br/com/viriato/
   auditoria/   registro de eventos de segurança e administração
   usuario/     login por nome, senha provisória, primeiro administrador, usuários e papéis
   cadastro/    empresas atendidas, setores e entregas
-  fluxo/       fluxos, etapas, requisitos e transições configuráveis por empresa
+  fluxo/       fluxos de cada entrega: etapas, requisitos e transições, com a regra de quem vê e altera
   processo/    processos, movimentação, histórico, atribuição, cancelamento, aprovação
   automacao/   regras por etapa: ficha em PDF e webhook
   indicador/   painel de indicadores
@@ -62,7 +62,7 @@ backend/src/main/java/br/com/viriato/
 - Coberto por testes (`FluxoCompletoTest`).
 
 ### Interface
-Menu lateral (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatórios e **Minhas tarefas**, com a contagem dos seus processos em aberto) e barra superior com busca de processos, botão **Ajuda**, avisos, tema claro/escuro e perfil. A tela **Início** resume em andamento, atrasados, concluídos, tempo médio, carga, processos recentes e prazos próximos. No celular o menu vira uma gaveta. O indicador **Sistema online** do rodapé do menu é real: a tela consulta `GET /api/auth/saude` a cada 30 s e mostra vermelho ("Sem conexão com o servidor") quando a API não responde.
+Menu lateral (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relatórios e **Minhas tarefas**, com a contagem dos seus processos em aberto) e barra superior com busca de processos, botão **Ajuda**, avisos, tema claro/escuro e perfil. A tela **Início** resume em andamento, atrasados, concluídos, tempo médio, carga, processos recentes e prazos próximos. No celular o menu vira uma gaveta. O indicador **Sistema online** do rodapé do menu é real: a tela consulta `GET /api/auth/saude` a cada 30 s e mostra vermelho ("Sem conexão com o servidor") quando a API não responde.
 
 - **Foto de perfil:** clicando no próprio nome abre-se *Meu perfil*, onde se escolhe, troca ou remove a foto (JPEG, PNG ou WebP, até 2 MB; o tipo é conferido pelo conteúdo do arquivo e o navegador reduz a imagem antes de enviar). O administrador pode remover a foto de outra pessoa pela API.
 - **Ajuda:** gestor e usuário têm uma conversa própria com os administradores; os administradores veem a lista de conversas da empresa e qualquer um responde. Aviso de mensagem nova no botão; a janela atualiza sozinha (consulta a cada poucos segundos).
@@ -71,12 +71,13 @@ Menu lateral (Início, Processos, Painel, Cadastros, Fluxos, Usuários, Relatór
 - **Empresas atendidas** (para quem o processo é feito), **setores** e **entregas** são cadastros da empresa.
 - Cada empresa atendida tem **número** (código interno de 1 a 10 dígitos, sem repetir) e **nome**. O **número do processo é o número da empresa**: processos da mesma empresa compartilham o número.
 - Cada **setor** define quais entregas faz; cada **entrega** define o fluxo (etapas) do processo.
+- **Entregas e fluxos num lugar só:** a tela **Entregas** mostra cada entrega com o fluxo dela (etapas, prazos, requisitos, aprovação e automações). Criar uma entrega já cria o fluxo dela, com as etapas informadas (ou as padrão); apagar a entrega apaga o fluxo junto. O fluxo segue a regra da entrega: o gestor só vê e altera o das entregas do próprio setor.
 - **Só o administrador cria, altera e apaga setores.** A entrega criada pelo **gestor** vai direto para o setor dele e é **exclusiva**: outros setores não a veem nem a usam (nem o administrador consegue colocá-la na lista de outro setor). O gestor só altera e apaga as entregas exclusivas do próprio setor; as entregas gerais (do administrador) ele só consulta. Apagar o setor apaga as entregas exclusivas dele. O nome da entrega é único na empresa.
 - Novo processo: administrador informa empresa, departamento, entrega e responsável; gestor, empresa, entrega e responsável (departamento é o dele); usuário, só empresa e entrega (departamento e responsável são os dele). Só aparecem as entregas que o setor faz.
 - Cada setor vê apenas os próprios processos; só o administrador vê os de todos os setores.
 
 ### Controle do processo e automações
-- **Requisitos por etapa:** em *Fluxos → Configurar*, cada etapa pode exigir documentos anexados ou confirmações para o processo sair dela. O servidor bloqueia o avanço enquanto houver pendência (voltar de etapa não exige; ao reentrar, exige de novo).
+- **Requisitos por etapa:** em *Entregas → Configurar*, cada etapa pode exigir documentos anexados ou confirmações para o processo sair dela. O servidor bloqueia o avanço enquanto houver pendência (voltar de etapa não exige; ao reentrar, exige de novo).
 - **Aprovação:** cada etapa define quem pode mover processos para ela (qualquer responsável, gestor ou só administrador). Quem não pode, solicita; gestor/administrador aprova (e o processo avança) ou recusa com motivo.
 - **Painel:** aba com atrasados por setor, tempo médio por etapa e carga por funcionário. O administrador vê todos os setores; gestor e usuário veem só o próprio setor, e na carga por funcionário só pessoas desse setor (nunca administradores).
 - **Automações** (ao entrar numa etapa ou ao cancelar): gerar a ficha do processo em PDF e chamar um webhook (https, endereço público, JSON assinado com HMAC-SHA256). Falha nunca desfaz o movimento e fica registrada no processo.
@@ -120,7 +121,7 @@ Todos enxergam os cadastros e fluxos da empresa. **Processos e pessoas são por 
 | Empresas atendidas | cadastra, altera e apaga | cadastra, altera e apaga | só consulta |
 | Setores | cadastra, altera e apaga | só consulta | só consulta |
 | Entregas | cadastra (gerais), altera e apaga todas | cadastra e mexe só nas exclusivas do próprio setor | só consulta |
-| Fluxos | cria, desativa e apaga | cria, desativa e apaga | só consulta |
+| Fluxo (etapas, requisitos e automações de cada entrega) | altera todos | altera o das entregas exclusivas do próprio setor | só consulta |
 | Funcionários | adiciona (qualquer papel), altera papel, setor e situação, apaga (menos a si mesmo) | adiciona (só papel Usuário), ativa/desativa e apaga os de papel Usuário; não altera papel nem setor | só consulta |
 | Processos | mexe em qualquer um | mexe em qualquer um do próprio setor | abre processos; só mexe nos que é o responsável |
 
