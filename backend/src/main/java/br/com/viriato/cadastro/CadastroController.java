@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Consulta liberada a qualquer usuário da empresa (o formulário de processo precisa das listas).
- * Alteração: empresas, ADMIN e GESTOR; setores, só ADMIN; entregas, ADMIN (de qualquer setor) e GESTOR (as do próprio setor).
+ * Alteração: empresas, ADMIN e GESTOR; setores, só ADMIN; entregas, ADMIN (gerais) e GESTOR (as exclusivas do próprio setor).
  */
 @RestController
 @RequestMapping("/api")
@@ -34,10 +34,10 @@ public class CadastroController {
     public record AtualizaCliente(@Pattern(regexp = "\\d{1,10}", message = "deve ter de 1 a 10 dígitos") String numero,
                                   @Size(max = 150) String nome, Boolean ativo) {}
     /** Sem {@code fluxoId}, a entrega ganha um fluxo só dela, criado com as {@code etapas} informadas (ou as etapas padrão). */
-    public record NovaEntrega(@NotBlank @Size(max = 150) String nome, Long fluxoId, List<br.com.viriato.fluxo.FluxoService.EtapaReq> etapas, Long setorId) {}
+    public record NovaEntrega(@NotBlank @Size(max = 150) String nome, Long fluxoId, List<br.com.viriato.fluxo.FluxoService.EtapaReq> etapas) {}
     public record AtualizaEntrega(@Size(max = 150) String nome, Long fluxoId, Boolean ativo) {}
-    public record NovoSetor(@NotBlank @Size(max = 100) String nome) {}
-    public record AtualizaSetor(@Size(max = 100) String nome, Boolean ativo) {}
+    public record NovoSetor(@NotBlank @Size(max = 100) String nome, List<Long> entregaIds) {}
+    public record AtualizaSetor(@Size(max = 100) String nome, Boolean ativo, List<Long> entregaIds) {}
 
     // ----- empresas -----
     @GetMapping("/clientes")
@@ -65,12 +65,12 @@ public class CadastroController {
     @GetMapping("/entregas")
     public List<EntregaDto> entregas() { return service.listarEntregas(Contexto.atual()); }
 
-    /** Toda entrega pertence a um setor: o administrador informa o setor; o gestor cria no dele. Só o setor dono a vê e usa. */
+    /** Administrador cria entrega geral; gestor cria entrega que já nasce no setor dele e só ele usa. */
     @PostMapping("/entregas")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public EntregaDto criarEntrega(@Valid @RequestBody NovaEntrega r) {
-        return service.criarEntrega(Contexto.atual(), r.nome(), r.fluxoId(), r.etapas(), r.setorId());
+        return service.criarEntrega(Contexto.atual(), r.nome(), r.fluxoId(), r.etapas());
     }
 
     @PatchMapping("/entregas/{id}")
@@ -113,13 +113,13 @@ public class CadastroController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public SetorDto criarSetor(@Valid @RequestBody NovoSetor r) {
-        return service.criarSetor(Contexto.tenantId(), r.nome());
+        return service.criarSetor(Contexto.tenantId(), r.nome(), r.entregaIds());
     }
 
     @PatchMapping("/setores/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public SetorDto atualizarSetor(@PathVariable Long id, @Valid @RequestBody AtualizaSetor r) {
-        return service.atualizarSetor(Contexto.tenantId(), id, r.nome(), r.ativo());
+        return service.atualizarSetor(Contexto.tenantId(), id, r.nome(), r.ativo(), r.entregaIds());
     }
 
     @DeleteMapping("/setores/{id}")

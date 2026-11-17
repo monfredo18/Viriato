@@ -55,7 +55,7 @@ class IndicadoresTest {
         String admin = TestesAuth.entrar(mvc, json, "a-" + s + "@t.com");
         JsonNode geralNode = consultar(admin, "/api/setores").get(0);
         long geral = geralNode.get("id").asLong(), entregaGeral = geralNode.get("entregas").get(0).get("id").asLong();
-        long eng = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Engenharia\"}").andExpect(status().isCreated())).get("id").asLong();
+        long eng = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Engenharia\",\"entregaIds\":[" + entregaGeral + "]}").andExpect(status().isCreated())).get("id").asLong();
         usuario(admin, "GesG-" + s, "GESTOR", geral);
         long u1 = usuario(admin, "Ana-" + s, "USUARIO", geral);
         long u2 = usuario(admin, "Edu-" + s, "USUARIO", eng);
@@ -66,7 +66,7 @@ class IndicadoresTest {
     }
 
     private long processo(C c, long setor, long responsavel) throws Exception {
-        return corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.cliente() + ",\"entregaId\":" + TestesAuth.entregaPadraoDoSetor(mvc, json, c.admin(), setor) + ",\"setorId\":" + setor
+        return corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.cliente() + ",\"entregaId\":" + c.entregaGeral() + ",\"setorId\":" + setor
                 + ",\"responsavelId\":" + responsavel + "}").andExpect(status().isCreated())).get("id").asLong();
     }
 
@@ -137,10 +137,10 @@ class IndicadoresTest {
     }
 
     @Test
-    void tempoMedioPorEtapa_semPrazoNasEtapasIntermediarias() throws Exception {
+    void tempoMedioPorEtapa_comPrazoEPassagensForaDoPrazo() throws Exception {
         C c = cenario();
         Instant inicio = Instant.now().minus(10, ChronoUnit.DAYS);
-        // Abertura: 2 d e 4 d; Análise: 3 d e 1 d; Revisão: 1 d e 1 d (só a etapa de conclusão tem prazo, então as demais não têm prazo previsto)
+        // Abertura (prazo 2 d): 2 d e 4 d; Análise (prazo 5 d): 3 d e 1 d; Revisão (prazo 3 d): 1 d e 1 d
         concluirComTempos(c, processo(c, c.geral(), c.u1()), inicio, 2, 5, 6);
         concluirComTempos(c, processo(c, c.geral(), c.u1()), inicio, 4, 5, 6);
         long aberto = processo(c, c.geral(), c.u1());   // etapa atual (Abertura) ainda em curso: não entra na média
@@ -160,10 +160,11 @@ class IndicadoresTest {
         assertThat(abertura.get("fluxo").asText()).isEqualTo("Fluxo padrão");
         assertThat(abertura.get("passagens").asInt()).isEqualTo(2);
         assertThat(abertura.get("mediaHoras").asDouble()).isCloseTo(72.0, within(0.1));     // (2 d + 4 d) / 2
-        assertThat(abertura.get("prazoDias").isNull()).isTrue();
-        assertThat(abertura.get("foraDoPrazo").asInt()).isZero();                           // sem prazo, nada passa dele
+        assertThat(abertura.get("prazoDias").asInt()).isEqualTo(2);
+        assertThat(abertura.get("foraDoPrazo").asInt()).isEqualTo(1);                       // só a de 4 d passou do prazo
         assertThat(analise.get("mediaHoras").asDouble()).isCloseTo(48.0, within(0.1));      // (3 d + 1 d) / 2
-        assertThat(analise.get("prazoDias").isNull()).isTrue();
+        assertThat(analise.get("prazoDias").asInt()).isEqualTo(5);
+        assertThat(analise.get("foraDoPrazo").asInt()).isZero();
         assertThat(revisao.get("passagens").asInt()).isEqualTo(2);
         assertThat(revisao.get("mediaHoras").asDouble()).isCloseTo(24.0, within(0.1));      // 1 d nos dois
         // ordenado do mais demorado para o menos

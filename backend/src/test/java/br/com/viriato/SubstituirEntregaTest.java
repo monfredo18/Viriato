@@ -43,7 +43,7 @@ class SubstituirEntregaTest {
                 .content("{\"empresa\":\"E\",\"nome\":\"Adm " + s + "\",\"email\":\"a-" + s + "@t.com\",\"senha\":\"senha12345\"}")).andExpect(status().isCreated())).get("token").asText();
         JsonNode setorGeral = corpo(ler(admin, "/api/setores")).get(0);
         long geral = setorGeral.get("id").asLong(), padrao = setorGeral.get("entregas").get(0).get("id").asLong();
-        long fin = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Financeiro\"}").andExpect(status().isCreated())).get("id").asLong();
+        long fin = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Financeiro\",\"entregaIds\":[]}").andExpect(status().isCreated())).get("id").asLong();
         long cliente = corpo(enviar(admin, "/api/clientes", "{\"numero\":\"7\",\"nome\":\"Alfa\"}").andExpect(status().isCreated())).get("id").asLong();
         criar(admin, "GestorG " + s, "GESTOR", geral);
         long ug = criar(admin, "UsuG " + s, "USUARIO", geral);
@@ -56,7 +56,11 @@ class SubstituirEntregaTest {
     }
 
     private long entregaGeral(C c, String nome) throws Exception {
-        return TestesAuth.entregaDoSetor(mvc, json, c.admin(), c.geral(), nome);
+        long id = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"" + nome + "\"}").andExpect(status().isCreated())).get("id").asLong();
+        enviar(c.admin(), "/api/setores/" + c.geral(), "").andExpect(status().isMethodNotAllowed());   // (PATCH é o método certo; só confere a rota)
+        mvc.perform(patch("/api/setores/" + c.geral()).header("Authorization", "Bearer " + c.admin()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"entregaIds\":[" + c.entregaPadrao() + "," + id + "]}")).andExpect(status().isOk());
+        return id;
     }
 
     @Test
@@ -87,20 +91,23 @@ class SubstituirEntregaTest {
     }
 
     @Test
-    void substitutaPrecisaSerDoMesmoSetorDoProcesso() throws Exception {
+    void substitutaPrecisaSerUsavelPeloSetorDoProcesso() throws Exception {
         C c = cenario();
         long daGeral = corpo(enviar(c.gestorGeral(), "/api/entregas", "{\"nome\":\"Exclusiva Geral\"}").andExpect(status().isCreated())).get("id").asLong();
-        long doFin = TestesAuth.entregaDoSetor(mvc, json, c.admin(), c.fin(), "Do Financeiro");
+        long deOutroSetor = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Do Financeiro\"}").andExpect(status().isCreated())).get("id").asLong();
+        long semSetor = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Que o Geral não faz\"}").andExpect(status().isCreated())).get("id").asLong();
         long p = processo(c, daGeral);
-        // entrega de outro setor: recusada, e nada é apagado
-        enviar(c.gestorGeral(), "/api/entregas/" + daGeral + "/apagar", "{\"entregaSubstitutaId\":" + doFin + "}").andExpect(status().isUnprocessableEntity());
+        // entrega geral que o setor não faz: recusada, e nada é apagado
+        var erro = corpo(enviar(c.gestorGeral(), "/api/entregas/" + daGeral + "/apagar", "{\"entregaSubstitutaId\":" + semSetor + "}").andExpect(status().isUnprocessableEntity()));
+        assertThat(erro.get("erro").asText()).contains("não faz");
         assertThat(corpo(ler(c.admin(), "/api/processos/" + p)).get("processo").get("entregaNome").asText()).isEqualTo("Exclusiva Geral");
-        // a do próprio setor serve; o processo continua com o mesmo responsável e número
+        // a padrão (que o setor faz) serve; o processo continua com o mesmo responsável e número
         enviar(c.gestorGeral(), "/api/entregas/" + daGeral + "/apagar", "{\"entregaSubstitutaId\":" + c.entregaPadrao() + "}").andExpect(status().isNoContent());
         JsonNode depois = corpo(ler(c.admin(), "/api/processos/" + p)).get("processo");
         assertThat(depois.get("entregaNome").asText()).isEqualTo("Atendimento geral");
         assertThat(depois.get("responsavelNome").asText()).startsWith("UsuG");
         assertThat(depois.get("numero").asText()).isEqualTo("7");
+        assertThat(deOutroSetor).isPositive();
     }
 
     @Test

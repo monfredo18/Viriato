@@ -224,7 +224,9 @@ class RequisitosTest {
                  "transicoes":[{"de":0,"para":1},{"de":1,"para":2},{"de":2,"para":1},{"de":2,"para":3}]}""").andExpect(status().isCreated())).get("id").asLong();
         JsonNode et = consultar(c.admin(), "/api/fluxos/" + fluxo).get("etapas");
         long analise = et.get(1).get("id").asLong(), revisao = et.get(2).get("id").asLong(), fim = et.get(3).get("id").asLong();
-        long entrega = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo\",\"fluxoId\":" + fluxo + ",\"setorId\":" + c.setorId() + "}").andExpect(status().isCreated())).get("id").asLong();
+        long entrega = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo\",\"fluxoId\":" + fluxo + "}").andExpect(status().isCreated())).get("id").asLong();
+        mvc.perform(patch("/api/setores/" + c.setorId()).header("Authorization", "Bearer " + c.admin()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"entregaIds\":[" + c.entregaId() + "," + entrega + "]}")).andExpect(status().isOk());
         long laudo = corpo(enviar(c.admin(), "/api/fluxos/" + fluxo + "/etapas/" + analise + "/requisitos", "{\"tipo\":\"DOCUMENTO\",\"descricao\":\"Laudo\"}")
                 .andExpect(status().isCreated())).get("id").asLong();
         long visto = corpo(enviar(c.admin(), "/api/fluxos/" + fluxo + "/etapas/" + revisao + "/requisitos", "{\"tipo\":\"CONFIRMACAO\",\"descricao\":\"Visto\"}")

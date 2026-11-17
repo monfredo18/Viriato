@@ -143,15 +143,16 @@ class ApagarCadastrosTest {
     @Test
     void entregaApagadaSaiDosSetores_soProcessoEmAndamentoBloqueia() throws Exception {
         Cenario c = cenario();
-        long extra = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo\",\"fluxoId\":" + c.fluxoId() + ",\"setorId\":" + c.setorGeralId() + "}")
+        long extra = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo\",\"fluxoId\":" + c.fluxoId() + "}")
                 .andExpect(status().isCreated())).get("id").asLong();
-        long setor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Engenharia\"}")
+        long setor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Engenharia\",\"entregaIds\":[" + extra + "," + c.entregaPadraoId() + "]}")
                 .andExpect(status().isCreated())).get("id").asLong();
 
         apagar(c.usuario(), "/api/entregas/" + extra).andExpect(status().isForbidden());
-        apagar(c.gestor(), "/api/entregas/" + extra).andExpect(status().isNoContent());      // o gestor apaga as entregas do próprio setor
+        apagar(c.gestor(), "/api/entregas/" + extra).andExpect(status().isForbidden());      // entrega geral: só o administrador apaga
+        apagar(c.admin(), "/api/entregas/" + extra).andExpect(status().isNoContent());
         for (JsonNode s : consultar(c.admin(), "/api/setores")) {
-            if (s.get("id").asLong() == c.setorGeralId()) {
+            if (s.get("id").asLong() == setor) {
                 assertThat(s.get("entregas")).hasSize(1);                         // só sobrou a entrega padrão
                 assertThat(s.get("entregas").get(0).get("nome").asText()).isEqualTo("Atendimento geral");
             }
@@ -272,9 +273,10 @@ class ApagarCadastrosTest {
         apagar(c.usuario(), "/api/fluxos/" + f2).andExpect(status().isForbidden());
 
         // uma entrega usa o fluxo: não apaga
-        long entrega = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Curta\",\"fluxoId\":" + f2 + ",\"setorId\":" + c.setorGeralId() + "}")
+        long entrega = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Curta\",\"fluxoId\":" + f2 + "}")
                 .andExpect(status().isCreated())).get("id").asLong();
-        long setor = c.setorGeralId();
+        long setor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Curto\",\"entregaIds\":[" + entrega + "]}")
+                .andExpect(status().isCreated())).get("id").asLong();
         var porEntrega = corpo(apagar(c.admin(), "/api/fluxos/" + f2).andExpect(status().isUnprocessableEntity()));
         assertThat(porEntrega.get("erro").asText()).contains("1 entrega").contains("Curta");
 
@@ -302,8 +304,8 @@ class ApagarCadastrosTest {
 
         // processo cancelado também não impede
         long f3 = fluxo(c.admin(), "Fluxo cancelado");
-        long entrega3 = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Tres\",\"fluxoId\":" + f3 + ",\"setorId\":" + c.setorGeralId() + "}").andExpect(status().isCreated())).get("id").asLong();
-        long setor3 = c.setorGeralId();
+        long entrega3 = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Tres\",\"fluxoId\":" + f3 + "}").andExpect(status().isCreated())).get("id").asLong();
+        long setor3 = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Setor tres\",\"entregaIds\":[" + entrega3 + "]}").andExpect(status().isCreated())).get("id").asLong();
         long p3 = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + cliente + ",\"entregaId\":" + entrega3
                 + ",\"setorId\":" + setor3 + ",\"responsavelId\":" + c.adminId() + "}").andExpect(status().isCreated())).get("id").asLong();
         enviar(c.admin(), "/api/processos/" + p3 + "/cancelar", "{\"motivo\":\"x\"}").andExpect(status().isOk());

@@ -915,5 +915,3 @@ td .selo + .selo, td .selo + label { margin-left: .4rem; }
 .logo { display: block; }
 .logo-branca { filter: brightness(0) invert(1); }   /* logo de letras escuras vira branca sobre o menu escuro */
 .ponto-online.fora { background: #ff5565; box-shadow: 0 0 0 4px rgba(255, 85, 101, .22); }
-.etapa-simples { grid-template-columns: 1fr auto; }
-.abas button small { color: var(--suave); font-weight: 400; }

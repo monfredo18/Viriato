@@ -132,7 +132,7 @@ public class ProcessoService {
         p.setFluxoId(fluxoId);
         p.setEtapaAtualId(inicial.getId());
         p.setResponsavelId(responsavelId);
-        p.setPrazoEtapa(prazoParaConcluir(fluxoId, tid));
+        p.setPrazoEtapa(calcularPrazo(inicial));
         p.setEtapaDesde(Instant.now());
         p.setCamposExtras(serializar(extras));
         p.setCriadoPor(quem.id());
@@ -257,10 +257,13 @@ public class ProcessoService {
         p = processos.findById(p.getId()).orElseThrow();   // a atualização em lote limpa o contexto de persistência
         p.setEtapaAtualId(destino.getId());
         p.setEtapaDesde(Instant.now());
+        p.setPrazoAlertado(false);
         if (destino.isFinalEtapa()) {
             p.setStatus(StatusProcesso.CONCLUIDO);
             p.setPrazoEtapa(null);
-        }   // o prazo para concluir é um só, definido na abertura; mover de etapa não o reinicia
+        } else {
+            p.setPrazoEtapa(calcularPrazo(destino));
+        }
         p = processos.save(p);
         registrar(p, quem.id(), "MOVIDO", origem.getNome(), destino.getNome(), comentario);
 
@@ -421,7 +424,7 @@ public class ProcessoService {
             p.setEntregaId(nova.getId());
             p.setFluxoId(fluxo.getId());
             p.setEtapaAtualId(destino.getId());
-            p.setPrazoEtapa(prazoParaConcluir(fluxo.getId(), tid));
+            p.setPrazoEtapa(calcularPrazo(destino));
             p.setPrazoAlertado(false);
             p.setEtapaDesde(Instant.now());
             processos.save(p);
@@ -464,11 +467,8 @@ public class ProcessoService {
         }
     }
 
-    /** O prazo para concluir vem da etapa de conclusão do fluxo (dias a partir de hoje); sem prazo definido, o processo não atrasa. */
-    private LocalDate prazoParaConcluir(Long fluxoId, Long tid) {
-        return etapas.findByFluxoIdAndTenantIdOrderByOrdem(fluxoId, tid).stream()
-                .filter(e -> e.isFinalEtapa() && e.getPrazoDias() != null).map(Etapa::getPrazoDias).min(Integer::compare)
-                .map(d -> Datas.hoje().plusDays(d)).orElse(null);
+    private LocalDate calcularPrazo(Etapa e) {
+        return e.getPrazoDias() == null ? null : Datas.hoje().plusDays(e.getPrazoDias());
     }
 
     private List<EtapaDto> proximasEtapas(Processo p) {

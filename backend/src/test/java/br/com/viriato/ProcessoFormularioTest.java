@@ -129,20 +129,21 @@ class ProcessoFormularioTest {
     }
 
     @Test
-    void setorSoPodeAbrirProcessoDeEntregaDoProprioSetor() throws Exception {
+    void setorSoPodeAbrirProcessoDeEntregaQueFaz() throws Exception {
         Cenario c = cenario();
-        long outroSetor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Laudos\"}").andExpect(status().isCreated())).get("id").asLong();
-        long doOutro = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo técnico\",\"fluxoId\":" + c.fluxoId() + ",\"setorId\":" + outroSetor + "}")
+        long outraEntrega = corpo(enviar(c.admin(), "/api/entregas", "{\"nome\":\"Laudo técnico\",\"fluxoId\":" + c.fluxoId() + "}")
                 .andExpect(status().isCreated())).get("id").asLong();
-        // a entrega pertence a outro setor: o setor Geral não a usa
-        var resp = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + doOutro
+        // o setor Geral não faz "Laudo técnico"
+        var resp = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + outraEntrega
                 + ",\"setorId\":" + c.setorId() + ",\"responsavelId\":" + c.usuarioId() + "}").andExpect(status().isUnprocessableEntity()));
-        assertThat(resp.get("erro").asText()).contains("inválida");
-        // no setor dono, passa
-        long fora = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"Laudista\",\"email\":\"l-" + UUID.randomUUID()
-                + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + outroSetor + "}").andExpect(status().isCreated())).get("id").asLong();
-        enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + doOutro
-                + ",\"setorId\":" + outroSetor + ",\"responsavelId\":" + fora + "}").andExpect(status().isCreated());
+        assertThat(resp.get("erro").asText()).contains("não faz");
+
+        // depois de liberar a entrega para o setor, passa
+        mvc.perform(patch("/api/setores/" + c.setorId()).header("Authorization", "Bearer " + c.admin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"entregaIds\":[" + c.entregaId() + "," + outraEntrega + "]}")).andExpect(status().isOk());
+        enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + outraEntrega
+                + ",\"setorId\":" + c.setorId() + ",\"responsavelId\":" + c.usuarioId() + "}").andExpect(status().isCreated());
     }
 
     @Test
@@ -209,7 +210,7 @@ class ProcessoFormularioTest {
     void gestorInformaEmpresaEntregaEResponsavel_eUsuarioSoEmpresaEEntrega() throws Exception {
         Cenario c = cenario();
         // gestor: o setor é o dele, mesmo que tente mandar outro
-        long outroSetor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Outro\"}")
+        long outroSetor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Outro\",\"entregaIds\":[" + c.entregaId() + "]}")
                 .andExpect(status().isCreated())).get("id").asLong();
         var pg = corpo(enviar(c.gestor(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId()
                 + ",\"setorId\":" + outroSetor + ",\"responsavelId\":" + c.usuarioId() + "}").andExpect(status().isCreated()));
@@ -249,11 +250,11 @@ class ProcessoFormularioTest {
     void soOAdminVeProcessosDeOutrosSetores() throws Exception {
         Cenario c = cenario();
         long meu = criar(c.admin(), c, c.usuarioId());                        // setor Geral
-        long outroSetor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Outro\"}")
+        long outroSetor = corpo(enviar(c.admin(), "/api/setores", "{\"nome\":\"Outro\",\"entregaIds\":[" + c.entregaId() + "]}")
                 .andExpect(status().isCreated())).get("id").asLong();
         long fora = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"De fora\",\"email\":\"fora-" + UUID.randomUUID()
                 + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + outroSetor + "}").andExpect(status().isCreated())).get("id").asLong();
-        long doOutro = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + TestesAuth.entregaDoSetor(mvc, json, c.admin(), outroSetor, "Entrega do Outro")
+        long doOutro = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + c.entregaId()
                 + ",\"setorId\":" + outroSetor + ",\"responsavelId\":" + fora + "}").andExpect(status().isCreated())).get("id").asLong();
         var arq = new MockMultipartFile("arquivo", "x.pdf", "application/pdf", "x".getBytes());
         long doc = corpo(mvc.perform(multipart("/api/processos/" + doOutro + "/documentos").file(arq)
