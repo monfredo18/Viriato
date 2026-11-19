@@ -31,8 +31,8 @@
   --anel: rgba(107, 151, 255, .35);
   --sombra: rgba(8, 15, 35, .30);
   --raio: 3px;
-  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --sans: Arial, Helvetica, sans-serif;
+  --mono: Arial, Helvetica, sans-serif;
   color-scheme: light;
 }
 /* Tema escuro: ativado pelo botão (atributo data-tema no <html>). */
@@ -917,3 +917,83 @@ td .selo + .selo, td .selo + label { margin-left: .4rem; }
 .ponto-online.fora { background: #ff5565; box-shadow: 0 0 0 4px rgba(255, 85, 101, .22); }
 .etapa-simples { grid-template-columns: 1fr auto; }
 .abas button small { color: var(--suave); font-weight: 400; }
+
+
+/* ==========================================================================
+   Visual compacto: fonte Arial, tamanhos menores, quase nada arredondado e menu lateral em lista simples
+   ========================================================================== */
+:root { --raio: 2px; --raio-grande: 3px; --menu-larg: 220px; }
+body { font: 13px/1.45 var(--sans); font-feature-settings: normal; }
+input, select, textarea, button { font-family: inherit; }
+
+/* cantos: retos, com 2 px; só foto de perfil e bolinhas de estado continuam redondas */
+*, *::before, *::after { border-radius: 2px !important; }
+.avatar, img.avatar, .ponto-online, .prazos li::before, .historico li::before { border-radius: 50% !important; }
+input[type=radio] { border-radius: 50% !important; }
+
+/* títulos e blocos */
+main { padding: 1.4rem 1.6rem 3rem; }
+main > h2, .barra h2 { font-size: 1.25rem; }
+.boas-vindas h2 { font-size: 1.45rem; }
+.boas-vindas p, .sub { font-size: 13px; }
+.cartao { padding: 1rem 1.15rem 1.1rem; }
+.cartao > h3, .modal > h3, .cartao > form > h3 { font-size: 14px; margin-bottom: .8rem; }
+label { font-size: 12px; }
+dt { font-size: 12.5px; }
+.indicadores { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .75rem; }
+.indicador { padding: .85rem 1rem; gap: .8rem; }
+.indicador-icone { width: 40px; height: 40px; }
+.indicador div b { font-size: 1.55rem; }
+.indicador div span { font-size: 12.5px; }
+.indicador small { font-size: 11.5px; }
+.kpis b, .resumo-caixas b { font-size: 1.5rem; }
+.data-hoje { height: 32px; font-size: 12.5px; }
+
+/* tabelas, botões e campos menores */
+th { font-size: 12px; padding: .55rem .75rem; }
+td { font-size: 13px; padding: .6rem .75rem; }
+.selo { font-size: 11px; padding: 2px 8px 2px 7px; }
+button { height: 30px; font-size: 12.5px; padding: 0 .8rem; }
+button.primario.grande, .atalhos button.grande { height: 38px; font-size: 13.5px; }
+input, select, textarea { height: 32px; font-size: 13px; }
+textarea { height: auto; }
+.chat-form textarea { min-height: 34px; }
+.chat-form button { width: 34px; height: 34px; }
+
+/* barra superior */
+.topo { height: 54px; padding: 0 1.4rem; }
+.busca-global input:not([type=checkbox]):not([type=radio]):not([type=file]) { height: 32px; border-radius: 2px; }
+.topo .sino > button, .topo .tema-btn, .menu-btn { width: 32px; height: 32px; }
+.ajuda-btn { height: 32px; padding: 0 .75rem; }
+.avatar { width: 32px; height: 32px; font-size: 12px; }
+button.perfil .avatar { width: 32px !important; height: 32px !important; }
+.perfil-txt b { font-size: 13px; }
+.perfil-txt small { font-size: 11.5px; }
+button.sair { height: 30px; }
+
+/* menu lateral: lista simples, uma linha por item, com filete entre elas e sem retângulo arredondado nem seta */
+.lateral nav { gap: 0; padding: .25rem 0; }
+.lateral nav a {
+  height: 40px; padding: 0 1.15rem 0 1rem; gap: .75rem; font-size: 13px; font-weight: 400; color: #c3cde6;
+  border-bottom: 1px solid rgba(255, 255, 255, .08); border-left: 3px solid transparent;
+}
+.lateral nav a svg { width: 17px; height: 17px; }
+.lateral nav a:hover { background: rgba(255, 255, 255, .05); color: #fff; }
+.lateral nav a.ativo { background: rgba(255, 255, 255, .07); color: #fff; font-weight: 700; border-left-color: var(--azul); box-shadow: none; }
+.lateral-marca { padding: 1.1rem 1rem .9rem; }
+.contador { min-width: 18px; height: 18px; font-size: 10.5px; }
+.lateral-rodape { margin: .5rem 1rem 1rem; padding: .6rem .75rem; }
+.lateral-rodape b { font-size: 12px; }
+
+/* login */
+.login-texto h1 { font-size: 1.5rem; }
+.login-form .cartao { padding: 1.6rem 1.6rem 1.4rem; }
+.login-form h2 { font-size: 1.1rem; }
+.login-form button.primario { height: 36px; }
+
+/* chat e janelas */
+.chat { width: 360px; }
+.balao { padding: .45rem .7rem .35rem; }
+.modal { padding: 1.3rem 1.4rem; }
+@media (max-width: 980px) { .lateral { width: var(--menu-larg); } }
+table, thead, tbody, tr, th, td { border-radius: 0 !important; }   /* sem frestas nos filetes da tabela */
