@@ -997,3 +997,13 @@ button.sair { height: 30px; }
 .modal { padding: 1.3rem 1.4rem; }
 @media (max-width: 980px) { .lateral { width: var(--menu-larg); } }
 table, thead, tbody, tr, th, td { border-radius: 0 !important; }   /* sem frestas nos filetes da tabela */
+
+/* Voltam ao formato de antes (redondos): notificação, tema, ajuda, sair, data do topo e situação (aberto, atrasado…) */
+.topo .sino > button, .topo .tema-btn, .menu-btn { width: 40px; height: 40px; border-radius: 50% !important; }
+.ajuda-btn { height: 40px; padding: 0 1rem 0 .85rem; border-radius: 999px !important; }
+button.sair { height: 38px; padding: 0 1rem; border-radius: 999px !important; }
+.data-hoje { height: 40px; padding: 0 1.1rem; font-size: 13.5px; border-radius: 999px !important; }
+.selo { border-radius: 999px !important; padding: 3px 11px 3px 9px; font-size: 12px; }
+.selo::before { border-radius: 50% !important; }
+.badge { border-radius: 999px !important; }
+.legenda i { border-radius: 2px !important; }
