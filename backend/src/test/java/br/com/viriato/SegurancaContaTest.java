@@ -41,7 +41,7 @@ class SegurancaContaTest {
                 .content("{\"nome\":\"" + nome + "\",\"senha\":\"" + senha + "\"" + (codigo == null ? "" : ",\"codigo\":\"" + codigo + "\"") + "}"));
     }
     private long criar(String admin, String nome, String papel, long setor) throws Exception {
-        return corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\",\"setorId\":" + setor + "}").andExpect(status().isCreated())).get("id").asLong();
+        return corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\",\"setorId\":" + setor + "}").andExpect(status().isCreated())).get("id").asLong();
     }
 
     private C cenario() throws Exception {

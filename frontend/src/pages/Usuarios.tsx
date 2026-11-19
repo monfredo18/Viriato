@@ -15,7 +15,7 @@ export default function Usuarios() {
   const { usuario: eu, ehAdmin, podeGerenciar } = useAuth()
   const [lista, setLista] = useState<Usuario[]>([])
   const [setores, setSetores] = useState<Setor[]>([])
-  const [f, setF] = useState({ nome: '', senha: '', papel: 'USUARIO' as Papel, setorId: '' })
+  const [f, setF] = useState({ nome: '', email: '', senha: '', papel: 'USUARIO' as Papel, setorId: '' })
   const [erro, setErro] = useState('')
 
   const carregar = () => api.get<Usuario[]>('/usuarios').then(setLista)
@@ -30,7 +30,7 @@ export default function Usuarios() {
     try {
       // gestor não escolhe setor: o servidor usa o do gestor
       await api.post('/usuarios', { ...f, setorId: ehAdmin && f.setorId ? Number(f.setorId) : null })
-      setF({ nome: '', senha: '', papel: 'USUARIO', setorId: '' })
+      setF({ nome: '', email: '', senha: '', papel: 'USUARIO', setorId: '' })
       carregar()
     } catch (err) {
       setErro((err as Error).message)
@@ -38,6 +38,12 @@ export default function Usuarios() {
   }
 
   const patch = (id: number, data: object) => api.patch(`/usuarios/${id}`, data).then(carregar).catch((e) => setErro(e.message))
+  const editarEmail = (u: Usuario) => {
+    const novo = prompt(`E-mail de ${u.nome}:`, u.email ?? '')
+    if (novo === null || novo.trim() === '' || novo.trim() === u.email) return
+    setErro('')
+    api.patch(`/usuarios/${u.id}`, { email: novo.trim() }).then(carregar).catch((e) => setErro(e.message))
+  }
   const desbloquear = (u: Usuario) => api.post(`/usuarios/${u.id}/desbloquear`).then(carregar).catch((e) => setErro(e.message))
   const removerDoisFatores = (u: Usuario) => {
     if (!confirm(`Desligar a verificação em duas etapas de "${u.nome}"? Use quando a pessoa perdeu o celular.`)) return
@@ -78,11 +84,19 @@ export default function Usuarios() {
       <div className="grade usuarios">
         <section className="cartao">
           <table>
-            <thead><tr><th>Nome</th><th>Papel</th><th>Setor</th><th>Situação</th>{podeGerenciar && <th></th>}</tr></thead>
+            <thead><tr><th>Nome</th>{podeGerenciar && <th>E-mail</th>}<th>Papel</th><th>Setor</th><th>Situação</th>{podeGerenciar && <th></th>}</tr></thead>
             <tbody>
               {lista.map((u) => (
                 <tr key={u.id}>
                   <td><span className="pessoa"><Avatar id={u.id} nome={u.nome} versao={u.fotoVersao} tamanho={30} />{u.nome}</span></td>
+                  {podeGerenciar && (
+                    <td>
+                      {u.email ?? <span className="vazio">—</span>}
+                      {(ehAdmin || (u.papel === 'USUARIO' && meuSetorId !== null && u.setorId === meuSetorId)) && (
+                        <button type="button" className="link" onClick={() => editarEmail(u)}>{u.email ? 'editar' : 'informar'}</button>
+                      )}
+                    </td>
+                  )}
                   <td>
                     {ehAdmin ? (
                       <select value={u.papel} disabled={u.id === eu?.id} onChange={(e) => patch(u.id, { papel: e.target.value })}>
@@ -137,6 +151,7 @@ export default function Usuarios() {
           <form className="cartao" onSubmit={criar}>
             <h3>Novo funcionário</h3>
             <label>Nome<input required value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></label>
+            <label>E-mail<input type="email" required maxLength={150} autoComplete="off" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
             <label>Senha inicial<input type="password" required minLength={8} autoComplete="new-password" value={f.senha} onChange={(e) => setF({ ...f, senha: e.target.value })} /></label>
             <small>Mínimo de 8 caracteres. No primeiro acesso, a pessoa cria a própria senha.</small>
             <label>Papel

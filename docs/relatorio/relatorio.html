@@ -384,7 +384,7 @@
     <tr><td>Aprovar ou recusar pedido de aprovação</td><td class="c ok">qualquer um</td><td class="c">os de etapas que aceitam gestor, no próprio setor</td><td class="c no">não</td></tr>
     <tr><td>Ver o painel de indicadores</td><td class="c ok">todos os setores</td><td class="c">só o próprio setor</td><td class="c">só o próprio setor</td></tr>
     <tr><td>Criar a entrega com o fluxo dela e alterar etapas, requisitos e automações</td><td class="c ok">sim, de todas</td><td class="c ok">só das exclusivas do próprio setor</td><td class="c no">não</td></tr>
-    <tr><td>Adicionar funcionários</td><td class="c ok">com qualquer papel; informa nome, senha inicial, papel e setor</td><td class="c">só com papel Usuário; informa nome, senha inicial e papel, e o funcionário fica no setor do gestor</td><td class="c no">não</td></tr>
+    <tr><td>Adicionar funcionários</td><td class="c ok">com qualquer papel; informa nome, e-mail (obrigatório), senha inicial, papel e setor</td><td class="c">só com papel Usuário; informa nome, senha inicial e papel, e o funcionário fica no setor do gestor</td><td class="c no">não</td></tr>
     <tr><td>Zerar a senha de uma conta</td><td class="c ok">de qualquer outra conta, informando a nova senha</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Alterar o setor de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
     <tr><td>Alterar o papel de um funcionário</td><td class="c ok">sim</td><td class="c no">não</td><td class="c no">não</td></tr>
@@ -479,7 +479,7 @@
     <tr><td>PUT</td><td><code>/usuarios/{id}/senha</code></td><td>Zera a senha de outra conta, informando a nova (<code>senha</code>); encerra as sessões abertas dela</td><td>Admin</td></tr>
     <tr><td>GET</td><td><code>/me</code></td><td>Dados do usuário logado</td><td>todos</td></tr>
     <tr><td>GET</td><td><code>/usuarios</code></td><td>Lista usuários da empresa</td><td>todos</td></tr>
-    <tr><td>POST</td><td><code>/usuarios</code></td><td>Adiciona funcionário com nome, senha inicial (provisória) e papel; setor só para o administrador (o gestor cria sempre no próprio setor); e-mail opcional. Nome único na empresa</td><td>Admin (qualquer papel); Gestor (só Usuário)</td></tr>
+    <tr><td>POST</td><td><code>/usuarios</code></td><td>Adiciona funcionário com nome, e-mail (obrigatório), senha inicial (provisória) e papel; setor só para o administrador (o gestor cria sempre no próprio setor); e-mail opcional. Nome único na empresa</td><td>Admin (qualquer papel); Gestor (só Usuário)</td></tr>
     <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel, ativo ou setor</td><td>Admin (tudo); Gestor (só <code>ativo</code>, e só de quem é Usuário)</td></tr>
     <tr><td>GET</td><td><code>/clientes</code>, <code>/setores</code>, <code>/entregas</code></td><td>Listas de empresas atendidas, setores (com suas entregas) e entregas (com o fluxo)</td><td>todos</td></tr>
     <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (<code>numero</code> obrigatório, só dígitos, único; <code>nome</code>; ativo). Mudar o número atualiza o dos processos da empresa</td><td>Admin, Gestor</td></tr>
@@ -614,7 +614,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>118 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>119 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>

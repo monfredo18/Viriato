@@ -33,7 +33,7 @@ cd backend && VIRIATO_JWT_PERMITIR_PADRAO=true mvn spring-boot:run   # API em :8
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
 
-Testes: `cd backend && mvn test` (118 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
+Testes: `cd backend && mvn test` (119 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
 
 ## Arquitetura
 
@@ -87,7 +87,7 @@ Menu lateral (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relat�
 ### Acesso e senhas
 - Entra-se com **nome e senha**. O nome não diferencia maiúsculas de minúsculas e é único na empresa (não aceita `@`). Contas antigas ainda podem entrar com o e-mail.
 - Não há cadastro aberto de empresas: o primeiro administrador nasce da configuração (`ADMIN_NOME`, `ADMIN_SENHA`, `ADMIN_EMPRESA`) quando o banco está vazio. Para reativar o cadastro aberto (uso em testes), defina `CADASTRO_EMPRESA_ABERTO=true`.
-- Administrador cria usuários com nome, senha inicial, papel e setor. Gestor informa só nome, senha inicial e papel (Usuário); o funcionário já nasce no setor do gestor.
+- Administrador cria usuários com nome, **e-mail (obrigatório)**, senha inicial, papel e setor. Gestor informa nome, e-mail, senha inicial e papel (Usuário); o funcionário já nasce no setor do gestor. O e-mail é único no sistema, e o administrador (qualquer pessoa) e o gestor (funcionários do próprio setor) podem **editá-lo** na aba Usuários; ele só aparece para administrador, gestor e para a própria pessoa. O acesso continua sendo por nome e senha.
 - A senha inicial é **provisória**: no primeiro acesso a pessoa cria a própria senha, e o servidor bloqueia o resto do sistema até isso acontecer.
 - O administrador pode **zerar a senha** de qualquer outra conta (funcionário, gestor ou administrador): ele informa na hora a nova senha, que também é provisória. A sessão aberta da pessoa é encerrada.
 - O usuário é conferido a cada requisição: quem é desativado ou apagado perde o acesso imediatamente.

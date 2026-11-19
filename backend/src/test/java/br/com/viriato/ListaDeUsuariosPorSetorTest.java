@@ -34,7 +34,7 @@ class ListaDeUsuariosPorSetorTest {
         return mvc.perform(post(url).header("Authorization", "Bearer " + t).contentType(MediaType.APPLICATION_JSON).content(b));
     }
     private void criar(String admin, String nome, String papel, Long setor) throws Exception {
-        enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\"" + (setor == null ? "" : ",\"setorId\":" + setor) + "}").andExpect(status().isCreated());
+        enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\"" + (setor == null ? "" : ",\"setorId\":" + setor) + "}").andExpect(status().isCreated());
     }
     private List<String> nomes(String t) throws Exception {
         List<String> l = new ArrayList<>();

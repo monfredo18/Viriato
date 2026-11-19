@@ -63,7 +63,7 @@ class FotoPerfilTest {
     private ResultActions ler(String t, String url) throws Exception { return mvc.perform(get(url).header("Authorization", "Bearer " + t)); }
     private long criar(String admin, String nome, String papel) throws Exception {
         return corpo(mvc.perform(post("/api/usuarios").header("Authorization", "Bearer " + admin).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"nome\":\"" + nome + "\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\"}")).andExpect(status().isCreated())).get("id").asLong();
+                .content("{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\"}")).andExpect(status().isCreated())).get("id").asLong();
     }
 
     private Cenario cenario() throws Exception {

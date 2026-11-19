@@ -55,7 +55,7 @@ class AcessoPorNomeTest {
         String admin = corpo(login(adminNome, "senha12345").andExpect(status().isOk())).get("token").asText();
         long setor = corpo(ler(admin, "/api/setores")).get(0).get("id").asLong();
         long outro = corpo(enviar(admin, "/api/setores", "{\"nome\":\"Outro\",\"entregaIds\":[]}").andExpect(status().isCreated())).get("id").asLong();
-        enviar(admin, "/api/usuarios", "{\"nome\":\"" + gestorNome + "\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\",\"setorId\":" + setor + "}").andExpect(status().isCreated());
+        enviar(admin, "/api/usuarios", "{\"nome\":\"" + gestorNome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\",\"setorId\":" + setor + "}").andExpect(status().isCreated());
         String gestor = TestesAuth.entrar(mvc, json, gestorNome);
         return new C(s, admin, adminNome, gestor, gestorNome, setor, outro);
     }
@@ -65,7 +65,7 @@ class AcessoPorNomeTest {
         C c = cenario();
         var s = corpo(login(c.gestorNome().toUpperCase(), TestesAuth.SENHA_PROPRIA).andExpect(status().isOk()));
         assertThat(s.get("usuario").get("nome").asText()).isEqualTo(c.gestorNome());
-        assertThat(s.get("usuario").has("email")).isFalse();                       // e-mail não é exposto
+        assertThat(s.get("usuario").get("email").asText()).contains("@");          // a própria pessoa vê o seu e-mail
         login(c.gestorNome(), "errada-12345").andExpect(status().isUnauthorized());
         login("Ninguem-" + c.sfx(), "senha12345").andExpect(status().isUnauthorized());
         assertThat(corpo(login("x", "y").andExpect(status().isUnauthorized())).get("erro").asText()).isEqualTo("Nome ou senha inválidos");
@@ -75,28 +75,28 @@ class AcessoPorNomeTest {
     void gestorCriaFuncionarioSoComNomeSenhaEPapel_comOSetorDele() throws Exception {
         C c = cenario();
         String nome = "Novo-" + c.sfx();
-        // sem e-mail; mesmo mandando outro setor, vale o do gestor
-        var novo = corpo(enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\",\"setorId\":" + c.outroSetorId() + "}")
+        // mesmo mandando outro setor, vale o do gestor
+        var novo = corpo(enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\",\"setorId\":" + c.outroSetorId() + "}")
                 .andExpect(status().isCreated()));
         assertThat(novo.get("setorId").asLong()).isEqualTo(c.setorId());
         assertThat(novo.get("setorNome").asText()).isEqualTo("Geral");
         assertThat(novo.get("deveTrocarSenha").asBoolean()).isTrue();
         // o nome identifica a pessoa: não repete (nem com outra caixa) e não aceita @
-        assertThat(corpo(enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"" + nome.toUpperCase() + "\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}")
+        assertThat(corpo(enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"" + nome.toUpperCase() + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}")
                 .andExpect(status().isUnprocessableEntity())).get("erro").asText()).contains("nome");
-        enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"a@b\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}").andExpect(status().isUnprocessableEntity());
+        enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"a@b\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}").andExpect(status().isUnprocessableEntity());
         // gestor sem setor não cria funcionário
         String semSetor = "Sem-" + c.sfx();
-        enviar(c.admin(), "/api/usuarios", "{\"nome\":\"" + semSetor + "\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\"}").andExpect(status().isCreated());
+        enviar(c.admin(), "/api/usuarios", "{\"nome\":\"" + semSetor + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"GESTOR\"}").andExpect(status().isCreated());
         String tokenSem = TestesAuth.entrar(mvc, json, semSetor);
-        enviar(tokenSem, "/api/usuarios", "{\"nome\":\"Outro-" + c.sfx() + "\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}").andExpect(status().isUnprocessableEntity());
+        enviar(tokenSem, "/api/usuarios", "{\"nome\":\"Outro-" + c.sfx() + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}").andExpect(status().isUnprocessableEntity());
     }
 
     @Test
     void primeiroAcessoExigeSenhaPropria_eSoDepoisLiberaOSistema() throws Exception {
         C c = cenario();
         String nome = "Func-" + c.sfx();
-        enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated());
+        enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated());
 
         var s = corpo(login(nome, "inicial-123").andExpect(status().isOk()));
         String token = s.get("token").asText();
@@ -126,7 +126,7 @@ class AcessoPorNomeTest {
     void soOAdminZeraSenha_novaSenhaVaiNaHora_ePessoaTrocaNoProximoAcesso() throws Exception {
         C c = cenario();
         String nome = "Func-" + c.sfx();
-        long id = corpo(enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated())).get("id").asLong();
+        long id = corpo(enviar(c.gestor(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"inicial-123\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated())).get("id").asLong();
         String tokenFunc = corpo(login(nome, "inicial-123").andExpect(status().isOk())).get("token").asText();
         trocar(tokenFunc, "senha-do-func-1").andExpect(status().isOk());
         ler(tokenFunc, "/api/processos").andExpect(status().isOk());
@@ -158,7 +158,7 @@ class AcessoPorNomeTest {
     void adminTambemZeraSenhaDeGestorEDeOutroAdmin_eDesativadoPerdeAcessoNaHora() throws Exception {
         C c = cenario();
         String outroAdmin = "Adm2-" + c.sfx();
-        long idAdm2 = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"" + outroAdmin + "\",\"senha\":\"senha12345\",\"papel\":\"ADMIN\"}").andExpect(status().isCreated())).get("id").asLong();
+        long idAdm2 = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"" + outroAdmin + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"ADMIN\"}").andExpect(status().isCreated())).get("id").asLong();
         long idGestor = corpo(ler(c.gestor(), "/api/me")).get("id").asLong();
         zerar(c.admin(), idAdm2, "zerada-adm-1").andExpect(status().isNoContent());
         zerar(c.admin(), idGestor, "zerada-ges-1").andExpect(status().isNoContent());
@@ -167,7 +167,7 @@ class AcessoPorNomeTest {
 
         // desativar corta a sessão que já estava aberta
         String nome = "Func-" + c.sfx();
-        long id = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated())).get("id").asLong();
+        long id = corpo(enviar(c.admin(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated())).get("id").asLong();
         String t = TestesAuth.entrar(mvc, json, nome);
         ler(t, "/api/processos").andExpect(status().isOk());
         mvc.perform(patch("/api/usuarios/" + id).header("Authorization", "Bearer " + c.admin()).contentType(MediaType.APPLICATION_JSON).content("{\"ativo\":false}")).andExpect(status().isOk());

@@ -77,7 +77,7 @@ export type Papel = 'ADMIN' | 'GESTOR' | 'USUARIO'
 export type Status = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO'
 
 export interface PendenciasUsuario { nome: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
-export interface Usuario { id: number; nome: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null; deveTrocarSenha: boolean; fotoVersao: number | null; bloqueado: boolean; doisFatores: boolean }
+export interface Usuario { id: number; nome: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null; deveTrocarSenha: boolean; fotoVersao: number | null; bloqueado: boolean; doisFatores: boolean; email: string | null }
 export const ROTULO_PAPEL: Record<Papel, string> = { ADMIN: 'Administrador', GESTOR: 'Gestor', USUARIO: 'Usuário' }
 export interface Cliente { id: number; numero: string; nome: string; ativo: boolean }
 export interface EntregaResumo { id: number; nome: string; ativo: boolean }

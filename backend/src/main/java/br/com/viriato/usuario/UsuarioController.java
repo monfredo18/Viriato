@@ -70,13 +70,13 @@ public class UsuarioController {
 
     /** O acesso é por nome e senha; o e-mail é opcional (e a tela não o pede). */
     public record NovoUsuario(@NotBlank @Size(max = 150) String nome,
-                              @Email String email,
+                              @NotBlank @Email @Size(max = 150) String email,
                               @NotBlank @Size(min = 8, max = 72) String senha,
                               @NotNull Papel papel,
                               Long setorId) {}
 
     /** {@code removerSetor=true} limpa o setor; {@code setorId} define um novo. */
-    public record AtualizaUsuario(Papel papel, Boolean ativo, Long setorId, Boolean removerSetor) {}
+    public record AtualizaUsuario(Papel papel, Boolean ativo, Long setorId, Boolean removerSetor, @Size(max = 150) String email) {}
 
     /**
      * O administrador vê todas as pessoas da empresa; gestor e usuário veem só as do próprio setor (e nunca
@@ -97,7 +97,8 @@ public class UsuarioController {
                     || (setorDele != null && u.getPapel() != Papel.ADMIN && setorDele.equals(u.getSetorId()))).toList();
         }
         return todos.stream()
-                .map(u -> UsuarioDto.de(u, u.getSetorId() == null ? null : nomesSetor.get(u.getSetorId())))
+                .map(u -> UsuarioDto.de(u, u.getSetorId() == null ? null : nomesSetor.get(u.getSetorId()))
+                        .comEmail(quem.papel() != Papel.USUARIO || u.getId().equals(quem.id()) ? u.getEmail() : null))
                 .toList();
     }
 
@@ -118,8 +119,8 @@ public class UsuarioController {
         if (repo.existsByTenantIdAndNomeIgnoreCase(quem.tenantId(), nome)) {
             throw new NegocioException("Já existe um funcionário com este nome. O nome é usado para entrar no sistema, então precisa ser único.");
         }
-        String email = req.email() == null || req.email().isBlank() ? null : req.email().trim().toLowerCase();
-        if (email != null && repo.existsByEmailIgnoreCase(email)) throw new NegocioException("E-mail já cadastrado");
+        String email = req.email().trim().toLowerCase();
+        if (repo.existsByEmailIgnoreCase(email)) throw new NegocioException("E-mail já cadastrado");
         Long setorId = req.setorId();
         if (quem.papel() == Papel.GESTOR) {
             setorId = repo.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
@@ -137,7 +138,7 @@ public class UsuarioController {
         u.setSetorId(setor == null ? null : setor.getId());
         Usuario novo = repo.save(u);
         auditoria.registrar(quem.tenantId(), quem.id(), "USUARIO_CRIADO", novo.getNome() + " (" + novo.getPapel() + (setor == null ? "" : ", setor " + setor.getNome()) + ")");
-        return UsuarioDto.de(novo, setor == null ? null : setor.getNome());
+        return UsuarioDto.de(novo, setor == null ? null : setor.getNome()).comEmail(novo.getEmail());
     }
 
     public record ZerarSenha(@NotBlank @Size(min = 8, max = 72) String senha) {}
@@ -204,6 +205,7 @@ public class UsuarioController {
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public UsuarioDto atualizar(@PathVariable Long id, @RequestBody AtualizaUsuario req) {
         UsuarioLogado quem = Contexto.atual();
+        boolean mexeEmEmail = req.email() != null;
         boolean mexeEmPapelOuSetor = req.papel() != null || req.setorId() != null || Boolean.TRUE.equals(req.removerSetor());
         if (quem.papel() == Papel.GESTOR && mexeEmPapelOuSetor) {
             throw new AccessDeniedException("Gestor só pode alterar a situação do funcionário");
@@ -213,9 +215,22 @@ public class UsuarioController {
             // evita que um gestor tire do ar o administrador ou outro gestor
             throw new AccessDeniedException("Gestor só pode alterar a situação de funcionários com papel Usuário");
         }
+        if (quem.papel() == Papel.GESTOR && mexeEmEmail) {   // o gestor edita o e-mail dos funcionários (papel Usuário) do próprio setor
+            Long meuSetor = repo.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
+            if (u.getPapel() != Papel.USUARIO || meuSetor == null || !meuSetor.equals(u.getSetorId())) {
+                throw new AccessDeniedException("Gestor só altera o e-mail de funcionários do próprio setor");
+            }
+        }
         boolean ehEle = u.getId().equals(quem.id());
         if (ehEle && (Boolean.FALSE.equals(req.ativo()) || (req.papel() != null && req.papel() != Papel.ADMIN))) {
             throw new NegocioException("Você não pode desativar ou rebaixar a si mesmo");
+        }
+        if (mexeEmEmail) {
+            String novo = req.email().trim().toLowerCase();
+            if (novo.isEmpty()) throw new NegocioException("O e-mail não pode ficar vazio");
+            if (!novo.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) throw new NegocioException("E-mail inválido");
+            if (!novo.equalsIgnoreCase(u.getEmail()) && repo.existsByEmailIgnoreCase(novo)) throw new NegocioException("E-mail já cadastrado");
+            u.setEmail(novo);
         }
         if (req.papel() != null) u.setPapel(req.papel());
         if (req.ativo() != null) u.setAtivo(req.ativo());
@@ -227,10 +242,11 @@ public class UsuarioController {
         Usuario salvo = repo.save(u);
         auditoria.registrar(quem.tenantId(), quem.id(), "USUARIO_ALTERADO", salvo.getNome() + ": " + (req.papel() != null ? "papel " + req.papel() + "; " : "")
                 + (req.ativo() != null ? (req.ativo() ? "ativado; " : "desativado; ") : "")
+                + (mexeEmEmail ? "e-mail alterado; " : "")
                 + (Boolean.TRUE.equals(req.removerSetor()) ? "setor removido; " : req.setorId() != null ? "setor alterado; " : ""));
         String nomeSetor = salvo.getSetorId() == null ? null
                 : setores.findByIdAndTenantId(salvo.getSetorId(), quem.tenantId()).map(Setor::getNome).orElse(null);
-        return UsuarioDto.de(salvo, nomeSetor);
+        return UsuarioDto.de(salvo, nomeSetor).comEmail(salvo.getEmail());
     }
 
     /** Quem pode apagar: administrador qualquer um; gestor só funcionário (papel Usuário) do próprio setor. Nunca a si mesmo. */

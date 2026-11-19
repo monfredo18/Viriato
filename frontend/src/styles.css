@@ -1007,3 +1007,43 @@ button.sair { height: 38px; padding: 0 1rem; border-radius: 999px !important; }
 .selo::before { border-radius: 50% !important; }
 .badge { border-radius: 999px !important; }
 .legenda i { border-radius: 2px !important; }
+
+/* ==========================================================================
+   Tema claro: paleta revisada
+   Fundo cinza-azulado suave, cartões brancos com borda leve, azul mais fechado (texto branco nos botões, bom contraste),
+   situação com cores que dizem algo (azul = aberto, verde = concluído, vermelho = atraso/cancelado) e menu lateral marinho.
+   ========================================================================== */
+:root:not([data-tema='escuro']) {
+  --bg: #eef1f6; --card: #ffffff;
+  --texto: #1b2436; --suave: #5a6579;
+  --borda: #dbe1ec; --borda-forte: #c5cddc;
+  --azul: #2b5bd7; --azul-fg: #ffffff; --azul-hover: #2149b4; --link: #2149b4;
+  --azul-fundo: #e8eefc; --azul-borda: #b9caf3;
+  --anel: rgba(43, 91, 215, .24); --destaque: rgba(43, 91, 215, .05);
+  --verde: #1b8a5a; --verde-texto: #13603f;
+  --vermelho-fundo: #fdecee;
+}
+:root:not([data-tema='escuro']) body { background: var(--bg); }
+:root:not([data-tema='escuro']) .lateral { background: #16244d; }
+:root:not([data-tema='escuro']) .lateral nav a { border-bottom-color: rgba(255, 255, 255, .07); }
+:root:not([data-tema='escuro']) .lateral nav a.ativo { border-left-color: #7fa3ff; background: rgba(255, 255, 255, .09); }
+:root:not([data-tema='escuro']) .chat-topo { background: #16244d; }
+:root:not([data-tema='escuro']) .topo { border-bottom-color: var(--borda); }
+:root:not([data-tema='escuro']) .busca-global input:not([type=checkbox]):not([type=radio]):not([type=file]) { background: #f4f6fa; border-color: var(--borda); }
+:root:not([data-tema='escuro']) th { color: #4a5568; background: #f7f9fc; }
+:root:not([data-tema='escuro']) tbody tr:hover { background: #f4f7fd; }
+:root:not([data-tema='escuro']) .cartao, :root:not([data-tema='escuro']) .tabela-wrap, :root:not([data-tema='escuro']) .indicador { box-shadow: 0 1px 2px rgba(20, 36, 77, .05); }
+:root:not([data-tema='escuro']) button:hover:not(:disabled) { background: #f1f5fe; }
+:root:not([data-tema='escuro']) button.primario:hover:not(:disabled) { background: var(--azul-hover); }
+:root:not([data-tema='escuro']) button.perigo:hover:not(:disabled) { background: var(--vermelho-solido); }
+/* situação */
+:root:not([data-tema='escuro']) .selo.aberto { background: #e8eefc; border-color: #b9caf3; color: #1f45b0; }
+:root:not([data-tema='escuro']) .selo.concluido { background: #e3f4ec; border-color: #a6d9bf; color: #13603f; }
+:root:not([data-tema='escuro']) .selo.cancelado { background: #f1f2f5; border-color: #c9ced8; color: #5a6579; }
+:root:not([data-tema='escuro']) .selo.atrasado { background: #d92d3f; border-color: #d92d3f; color: #fff; }
+/* indicadores do início em cores consistentes */
+:root:not([data-tema='escuro']) .ind-ouro { --c: #c98a0a; --c-texto: #8a5a00; }
+:root:not([data-tema='escuro']) .indicador { border-color: var(--borda); }
+:root:not([data-tema='escuro']) .indicador-icone { background: color-mix(in srgb, var(--c) 14%, #fff); }
+:root:not([data-tema='escuro']) .boas-vindas em { color: var(--azul); }
+:root:not([data-tema='escuro']) .data-hoje { background: #fff; }

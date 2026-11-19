@@ -37,7 +37,7 @@ class AjudaChatTest {
     private long naoLidas(String t) throws Exception { return corpo(ler(t, "/api/ajuda/nao-lidas").andExpect(status().isOk())).get("total").asLong(); }
 
     private long usuario(String admin, String nome, String papel) throws Exception {
-        return corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\"}").andExpect(status().isCreated())).get("id").asLong();
+        return corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\"}").andExpect(status().isCreated())).get("id").asLong();
     }
 
     private Cenario cenario() throws Exception {

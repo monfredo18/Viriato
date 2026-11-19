@@ -44,7 +44,7 @@ class IndicadoresTest {
     private ResultActions ler(String t, String url) throws Exception { return mvc.perform(get(url).header("Authorization", "Bearer " + t)); }
     private JsonNode consultar(String t, String url) throws Exception { return corpo(ler(t, url).andExpect(status().isOk())); }
     private long usuario(String admin, String nome, String papel, long setor) throws Exception {
-        return corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\",\"setorId\":" + setor + "}")
+        return corpo(enviar(admin, "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"" + papel + "\",\"setorId\":" + setor + "}")
                 .andExpect(status().isCreated())).get("id").asLong();
     }
 
@@ -248,7 +248,7 @@ class IndicadoresTest {
     void usuarioSemSetorRecebePainelVazioComAviso() throws Exception {
         C c = cenario();
         String nome = "Sem-" + UUID.randomUUID().toString().substring(0, 6);
-        enviar(c.admin(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated());
+        enviar(c.admin(), "/api/usuarios", "{\"nome\":\"" + nome + "\",\"email\":\"u" + System.nanoTime() + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\"}").andExpect(status().isCreated());
         JsonNode p = consultar(TestesAuth.entrar(mvc, json, nome), "/api/indicadores");
         assertThat(p.get("escopo").asText()).contains("não tem setor");
         assertThat(p.get("resumo").get("abertos").asInt()).isZero();
