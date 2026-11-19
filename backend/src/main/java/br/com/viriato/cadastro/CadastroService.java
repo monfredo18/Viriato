@@ -45,7 +45,7 @@ public class CadastroService {
 
     // ---------- DTOs ----------
     public record ClienteDto(Long id, String numero, String nome, boolean ativo) {}
-    public record EntregaDto(Long id, String nome, Long fluxoId, String fluxoNome, boolean ativo, Long setorDonoId, String setorDonoNome) {}
+    public record EntregaDto(Long id, String nome, Long fluxoId, String fluxoNome, boolean ativo, Long setorDonoId, String setorDonoNome, java.time.LocalDate prazoPadrao) {}
     public record EntregaResumo(Long id, String nome, boolean ativo) {}
     public record SetorDto(Long id, String nome, boolean ativo, List<EntregaResumo> entregas) {}
 
@@ -105,7 +105,7 @@ public class CadastroService {
      * com a entrega (etapas informadas ou as padrão) e a entrega já entra na lista do setor.
      */
     @Transactional
-    public EntregaDto criarEntrega(UsuarioLogado quem, String nome, Long fluxoId, List<FluxoService.EtapaReq> etapas, Long setorId) {
+    public EntregaDto criarEntrega(UsuarioLogado quem, String nome, Long fluxoId, List<FluxoService.EtapaReq> etapas, Long setorId, java.time.LocalDate prazoPadrao) {
         Long tid = quem.tenantId();
         String n = nome.trim();
         Long donoId = quem.papel() == Papel.ADMIN ? setorId : setorDe(quem);
@@ -130,6 +130,8 @@ public class CadastroService {
         e.setNome(n);
         e.setFluxoId(f.getId());
         e.setSetorDonoId(dono.getId());
+        exigirPrazoFuturo(prazoPadrao);
+        e.setPrazoPadrao(prazoPadrao);
         e = entregas.save(e);
         dono.getEntregas().add(e);
         setores.save(dono);
@@ -137,9 +139,13 @@ public class CadastroService {
     }
 
     @Transactional
-    public EntregaDto atualizarEntrega(UsuarioLogado quem, Long id, String nome, Long fluxoId, Boolean ativo) {
+    public EntregaDto atualizarEntrega(UsuarioLogado quem, Long id, String nome, Long fluxoId, Boolean ativo, java.time.LocalDate prazoPadrao, boolean mudarPrazo) {
         Long tid = quem.tenantId();
         Entrega e = entregaQueEleMexe(quem, id);
+        if (mudarPrazo) {
+            exigirPrazoFuturo(prazoPadrao);
+            e.setPrazoPadrao(prazoPadrao);
+        }
         if (nome != null && !nome.isBlank() && !nome.trim().equalsIgnoreCase(e.getNome())) {
             exigirNomeLivre(tid, nome.trim(), e.getSetorDonoId(), e.getId());
             e.setNome(nome.trim());
@@ -147,6 +153,10 @@ public class CadastroService {
         if (fluxoId != null) e.setFluxoId(fluxoDaEmpresa(tid, fluxoId).getId());
         if (ativo != null) e.setAtivo(ativo);
         return dto(entregas.save(e), nomesDosFluxos(tid), nomesDosSetores(tid));
+    }
+
+    private static void exigirPrazoFuturo(java.time.LocalDate prazo) {
+        if (prazo != null && prazo.isBefore(br.com.viriato.comum.Datas.hoje())) throw new NegocioException("O prazo padrão não pode ser anterior a hoje");
     }
 
     // ---------- setores ----------
@@ -334,7 +344,7 @@ public class CadastroService {
 
     private EntregaDto dto(Entrega e, Map<Long, String> nomesFluxo, Map<Long, String> nomesSetor) {
         return new EntregaDto(e.getId(), e.getNome(), e.getFluxoId(), nomesFluxo.get(e.getFluxoId()), e.isAtivo(),
-                e.getSetorDonoId(), e.getSetorDonoId() == null ? null : nomesSetor.get(e.getSetorDonoId()));
+                e.getSetorDonoId(), e.getSetorDonoId() == null ? null : nomesSetor.get(e.getSetorDonoId()), e.getPrazoPadrao());
     }
 
     private SetorDto dto(Setor s) { return dto(s, null, false); }

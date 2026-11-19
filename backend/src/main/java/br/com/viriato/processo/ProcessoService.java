@@ -133,7 +133,7 @@ public class ProcessoService {
         p.setEtapaAtualId(inicial.getId());
         p.setResponsavelId(responsavelId);
         if (n.prazo() != null && n.prazo().isBefore(Datas.hoje())) throw new NegocioException("O prazo para concluir não pode ser anterior a hoje");
-        p.setPrazoEtapa(n.prazo() != null ? n.prazo() : prazoParaConcluir(fluxoId, tid));
+        p.setPrazoEtapa(n.prazo() != null ? n.prazo() : prazoPadrao(entrega, fluxoId, tid));
         p.setEtapaDesde(Instant.now());
         p.setCamposExtras(serializar(extras));
         p.setCriadoPor(quem.id());
@@ -422,7 +422,7 @@ public class ProcessoService {
             p.setEntregaId(nova.getId());
             p.setFluxoId(fluxo.getId());
             p.setEtapaAtualId(destino.getId());
-            p.setPrazoEtapa(prazoParaConcluir(fluxo.getId(), tid));
+            p.setPrazoEtapa(prazoPadrao(nova, fluxo.getId(), tid));
             p.setPrazoAlertado(false);
             p.setEtapaDesde(Instant.now());
             processos.save(p);
@@ -463,6 +463,12 @@ public class ProcessoService {
         if (u.getPapel() != Papel.ADMIN && !Objects.equals(u.getSetorId(), setorId)) {
             throw new NegocioException("O responsável precisa ser do setor do processo");
         }
+    }
+
+    /** Prazo padrão da entrega (data, se ainda não passou); na falta dela, o de dias da etapa de conclusão (dados antigos). */
+    private LocalDate prazoPadrao(Entrega entrega, Long fluxoId, Long tid) {
+        LocalDate d = entrega.getPrazoPadrao();
+        return d != null && !d.isBefore(Datas.hoje()) ? d : prazoParaConcluir(fluxoId, tid);
     }
 
     /** O prazo para concluir vem da etapa de conclusão do fluxo (dias a partir de hoje); sem prazo definido, o processo não atrasa. */

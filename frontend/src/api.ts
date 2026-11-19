@@ -83,7 +83,7 @@ export interface Cliente { id: number; numero: string; nome: string; ativo: bool
 export interface EntregaResumo { id: number; nome: string; ativo: boolean }
 export interface Setor { id: number; nome: string; ativo: boolean; entregas: EntregaResumo[] }
 /** {@code setorDonoId} vazio = entrega geral (do administrador); com valor = exclusiva desse setor. */
-export interface Entrega { id: number; nome: string; fluxoId: number; fluxoNome: string; ativo: boolean; setorDonoId: number | null; setorDonoNome: string | null }
+export interface Entrega { id: number; nome: string; fluxoId: number; fluxoNome: string; ativo: boolean; setorDonoId: number | null; setorDonoNome: string | null; prazoPadrao: string | null }
 export interface Sessao { token: string; usuario: Usuario; empresa: string }
 export type TipoRequisito = 'DOCUMENTO' | 'CONFIRMACAO'
 export interface Requisito { id: number; tipo: TipoRequisito; descricao: string }

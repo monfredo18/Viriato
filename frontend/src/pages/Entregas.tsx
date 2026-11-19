@@ -5,6 +5,10 @@ import { useAuth } from '../auth'
 import ConfigurarEtapa from './ConfigurarEtapa'
 import { JanelaCancelamento } from './AutomacoesSecao'
 
+const fmtData = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
+/** Hoje em aaaa-mm-dd (fuso do navegador), para o mínimo do campo de data. */
+const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+
 /** Etapas do formulário: "Abertura" e "Concluído" são fixas; entre elas, as etapas intermediárias que a pessoa criar. */
 const INTERMEDIARIAS = () => ['Análise']
 
@@ -67,17 +71,29 @@ export default function Entregas() {
     }
   }
 
+  const prazoTexto = (e: Entrega) => (e.prazoPadrao ? `prazo padrão para concluir: ${fmtData(e.prazoPadrao)}` : 'sem prazo padrão para concluir')
+  const alterarPrazo = (e: Entrega) => {
+    const atual = e.prazoPadrao ?? ''
+    const nova = prompt('Novo prazo padrão para concluir, em dd/mm/aaaa (vazio = sem prazo):', atual ? fmtData(atual) : '')
+    if (nova === null) return
+    const m = nova.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+    if (nova.trim() !== '' && !m) { setErro('Use o formato dd/mm/aaaa'); return }
+    setErro('')
+    agir(() => api.patch(`/entregas/${e.id}`, { mudarPrazo: true, prazoPadrao: m ? `${m[3]}-${m[2]}-${m[1]}` : null }))
+  }
+
   const criar = async (ev: FormEvent) => {
     ev.preventDefault()
     setErroForm('')
     try {
       await api.post('/entregas', {
         nome: f.nome,
+        prazoPadrao: f.prazo || null,
         ...(ehAdmin ? { setorId: setorAtual } : {}),
         etapas: [
           { nome: 'Abertura', prazoDias: null, inicial: true, finalEtapa: false },
           ...f.etapas.filter((n) => n.trim() !== '').map((n) => ({ nome: n, prazoDias: null, inicial: false, finalEtapa: false })),
-          { nome: 'Concluído', prazoDias: f.prazo === '' ? null : Number(f.prazo), inicial: false, finalEtapa: true },
+          { nome: 'Concluído', prazoDias: null, inicial: false, finalEtapa: true },
         ],
       })
       setF({ nome: '', prazo: '', etapas: INTERMEDIARIAS() })
@@ -131,6 +147,11 @@ export default function Entregas() {
                     </span>
                   )}
                 </div>
+                {mexer && (
+                  <p className="dica-campo">
+                    <button type="button" className="link" onClick={() => alterarPrazo(e)}>Alterar prazo padrão</button>
+                  </p>
+                )}
                 {outras.length > 0 && <p className="dica-campo">Este fluxo é compartilhado com: {outras.map((o) => o.nome).join(', ')}.</p>}
                 {fluxo ? (
                   <>
@@ -140,7 +161,7 @@ export default function Entregas() {
                         return (
                           <li key={et.id}>
                             <span className="etapa-nome"><b>{et.nome}</b>
-                              {et.finalEtapa && <small> · {et.prazoDias !== null ? `prazo padrão para concluir: ${et.prazoDias} dia(s)` : 'sem prazo padrão para concluir'}</small>}
+                              {et.finalEtapa && <small> · {prazoTexto(e)}</small>}
                               {et.inicial && <small> · inicial</small>}{et.finalEtapa && <small> · final</small>}
                               {auto > 0 && <small className="so-gestor"> · {auto} automação(ões)</small>}
                               {et.papelMinimo !== 'USUARIO' && <small className="so-gestor"> · {et.papelMinimo === 'ADMIN' ? 'só administrador' : 'só gestor'} move para cá</small>}
@@ -192,9 +213,10 @@ export default function Entregas() {
               </div>
             ))}
             <button type="button" onClick={() => setF({ ...f, etapas: [...f.etapas, ''] })}>+ Etapa</button>
-            <label>Prazo padrão para concluir (dias, opcional)
-              <input type="number" min={0} placeholder="sem prazo" value={f.prazo} onChange={(e) => setF({ ...f, prazo: e.target.value })} />
+            <label>Prazo padrão para concluir (dd/mm/aaaa, opcional)
+              <input type="date" min={hojeIso()} value={f.prazo} onChange={(e) => setF({ ...f, prazo: e.target.value })} />
             </label>
+            <small className="dica-campo">Vale para os processos novos que não escolherem outra data.</small>
             {erroForm && <p className="erro">{erroForm}</p>}
             <button className="primario">Criar entrega</button>
           </form>

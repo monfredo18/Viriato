@@ -15,7 +15,6 @@ export default function ConfigurarEtapa({ fluxo, etapa, regras, recarregar, fech
   const [descricao, setDescricao] = useState('')
   const [erro, setErro] = useState('')
   const [nome, setNome] = useState(etapa.nome)
-  const [prazo, setPrazo] = useState(etapa.prazoDias === null ? '' : String(etapa.prazoDias))
   const base = `/fluxos/${fluxo.id}/etapas/${etapa.id}`
 
   const tentar = async (fn: () => Promise<unknown>) => {
@@ -43,16 +42,14 @@ export default function ConfigurarEtapa({ fluxo, etapa, regras, recarregar, fech
         {erro && <p className="erro">{erro}</p>}
 
         <section className="config-secao">
-          <h4>Nome{etapa.finalEtapa ? ' e prazo padrão para concluir' : ''}</h4>
+          <h4>Nome</h4>
           <form className="linha-form" onSubmit={(e) => {
             e.preventDefault()
-            tentar(() => api.patch(`${base}/dados`, { nome, ...(etapa.finalEtapa ? { prazoDias: prazo === '' ? null : Number(prazo), mudarPrazo: true } : {}) }))
+            tentar(() => api.patch(`${base}/dados`, { nome }))
           }}>
             <input required maxLength={100} value={nome} onChange={(e) => setNome(e.target.value)} aria-label="Nome da etapa" />
-            {etapa.finalEtapa && <input type="number" min={0} placeholder="prazo (dias)" value={prazo} onChange={(e) => setPrazo(e.target.value)} aria-label="Prazo para concluir, em dias" />}
             <button>Salvar</button>
           </form>
-          {etapa.finalEtapa && <p className="sub">Prazo padrão, em dias a partir da abertura: quem abre o processo vê a data (dd/mm/aaaa) já preenchida e pode escolher outra. Vazio = sem prazo padrão.</p>}
           {!etapa.inicial && !etapa.finalEtapa && (
             <button type="button" className="perigo" onClick={() => confirm(`Remover a etapa “${etapa.nome}”? Os requisitos e as automações dela também são apagados.`) && api.del(base).then(async () => { await recarregar(); fechar() }).catch((e) => setErro(e.message))}>Remover esta etapa</button>
           )}

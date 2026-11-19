@@ -159,7 +159,8 @@ export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: (
   // O responsável é do setor do processo (o administrador pode ser responsável em qualquer um).
   const candidatos = (usuarios ?? []).filter((u) => u.papel === 'ADMIN' || (setorDoProcesso !== null && u.setorId === setorDoProcesso))
   // prazo padrão da entrega: dias da etapa de conclusão do fluxo dela
-  const padrao = fluxos.find((x) => x.id === entrega?.fluxoId)?.etapas.find((et) => et.finalEtapa)?.prazoDias ?? null
+  const dias = fluxos.find((x) => x.id === entrega?.fluxoId)?.etapas.find((et) => et.finalEtapa)?.prazoDias ?? null
+  const padrao = entrega?.prazoPadrao && entrega.prazoPadrao >= hojeIso() ? new Date(entrega.prazoPadrao + 'T00:00:00').toLocaleDateString('pt-BR') : dias !== null ? `${dias} dia(s) a partir de hoje` : null
   const semSetor = !escolheSetor && usuarios !== null && meuSetorId === null
 
   const enviar = async (e: FormEvent) => {
@@ -224,7 +225,7 @@ export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: (
         <label>Prazo para concluir (opcional)
           <input type="date" min={hojeIso()} value={f.prazo} onChange={(e) => setF({ ...f, prazo: e.target.value })} />
         </label>
-        {entrega && padrao !== null && !f.prazo && <small className="dica-campo">Sem data, vale o prazo padrão da entrega: {padrao} dia(s) a partir de hoje.</small>}
+        {entrega && padrao !== null && !f.prazo && <small className="dica-campo">Sem data, vale o prazo padrão da entrega: {padrao}.</small>}
 
         <label>Observações (opcional)
           <textarea rows={3} maxLength={10000} value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} />

@@ -138,4 +138,29 @@ class EtapasEPrazoTest {
         // o processo continua e ainda anda pelas etapas que sobraram
         assertThat(corpo(ler(adm, "/api/processos/" + p2)).get("proximasEtapas").get(0).get("nome").asText()).isEqualTo("Revisão");
     }
+
+    @Test
+    void prazoPadraoDaEntregaEUmaDataEValeParaOsProcessosNovos() throws Exception {
+        String adm = admin();
+        long setor = corpo(ler(adm, "/api/setores")).get(0).get("id").asLong();
+        long cliente = corpo(enviar(adm, "/api/clientes", "{\"numero\":\"5\",\"nome\":\"Alfa\"}").andExpect(status().isCreated())).get("id").asLong();
+        long adminId = 0;
+        for (JsonNode u : corpo(ler(adm, "/api/usuarios"))) adminId = u.get("id").asLong();
+        String data = Datas.hoje().plusDays(20).toString();
+        enviar(adm, "/api/entregas", "{\"nome\":\"Antiga\",\"setorId\":" + setor + ",\"prazoPadrao\":\"" + Datas.hoje().minusDays(1) + "\"}").andExpect(status().isUnprocessableEntity());
+        JsonNode e = corpo(enviar(adm, "/api/entregas", "{\"nome\":\"Com data\",\"setorId\":" + setor + ",\"prazoPadrao\":\"" + data + "\"}").andExpect(status().isCreated()));
+        assertThat(e.get("prazoPadrao").asText()).isEqualTo(data);
+        String abrir = "{\"clienteId\":" + cliente + ",\"entregaId\":" + e.get("id").asLong() + ",\"setorId\":" + setor + ",\"responsavelId\":" + adminId + "}";
+        long p = corpo(enviar(adm, "/api/processos", abrir).andExpect(status().isCreated())).get("id").asLong();
+        assertThat(corpo(ler(adm, "/api/processos/" + p)).get("processo").get("prazoEtapa").asText()).isEqualTo(data);   // herdou a data da entrega
+        // trocar e tirar o prazo padrão
+        String outra = Datas.hoje().plusDays(40).toString();
+        alterar(adm, "/api/entregas/" + e.get("id").asLong(), "{\"mudarPrazo\":true,\"prazoPadrao\":\"" + outra + "\"}").andExpect(status().isOk());
+        long p2 = corpo(enviar(adm, "/api/processos", abrir).andExpect(status().isCreated())).get("id").asLong();
+        assertThat(corpo(ler(adm, "/api/processos/" + p2)).get("processo").get("prazoEtapa").asText()).isEqualTo(outra);
+        alterar(adm, "/api/entregas/" + e.get("id").asLong(), "{\"mudarPrazo\":true}").andExpect(status().isOk());
+        long p3 = corpo(enviar(adm, "/api/processos", abrir).andExpect(status().isCreated())).get("id").asLong();
+        assertThat(corpo(ler(adm, "/api/processos/" + p3)).get("processo").get("prazoEtapa").asText()).isEqualTo(Datas.hoje().plusDays(10).toString());   // sem data: o padrão antigo em dias do fluxo
+        alterar(adm, "/api/entregas/" + e.get("id").asLong(), "{\"mudarPrazo\":true,\"prazoPadrao\":\"" + Datas.hoje().minusDays(2) + "\"}").andExpect(status().isUnprocessableEntity());
+    }
 }

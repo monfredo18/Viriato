@@ -34,8 +34,10 @@ public class CadastroController {
     public record AtualizaCliente(@Pattern(regexp = "\\d{1,10}", message = "deve ter de 1 a 10 dígitos") String numero,
                                   @Size(max = 150) String nome, Boolean ativo) {}
     /** Sem {@code fluxoId}, a entrega ganha um fluxo só dela, criado com as {@code etapas} informadas (ou as etapas padrão). */
-    public record NovaEntrega(@NotBlank @Size(max = 150) String nome, Long fluxoId, List<br.com.viriato.fluxo.FluxoService.EtapaReq> etapas, Long setorId) {}
-    public record AtualizaEntrega(@Size(max = 150) String nome, Long fluxoId, Boolean ativo) {}
+    public record NovaEntrega(@NotBlank @Size(max = 150) String nome, Long fluxoId, List<br.com.viriato.fluxo.FluxoService.EtapaReq> etapas, Long setorId,
+                              java.time.LocalDate prazoPadrao) {}
+    /** {@code mudarPrazo}: só mexe no prazo padrão quando verdadeiro (vazio em {@code prazoPadrao} = sem prazo). */
+    public record AtualizaEntrega(@Size(max = 150) String nome, Long fluxoId, Boolean ativo, java.time.LocalDate prazoPadrao, boolean mudarPrazo) {}
     public record NovoSetor(@NotBlank @Size(max = 100) String nome) {}
     public record AtualizaSetor(@Size(max = 100) String nome, Boolean ativo) {}
 
@@ -70,13 +72,13 @@ public class CadastroController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public EntregaDto criarEntrega(@Valid @RequestBody NovaEntrega r) {
-        return service.criarEntrega(Contexto.atual(), r.nome(), r.fluxoId(), r.etapas(), r.setorId());
+        return service.criarEntrega(Contexto.atual(), r.nome(), r.fluxoId(), r.etapas(), r.setorId(), r.prazoPadrao());
     }
 
     @PatchMapping("/entregas/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public EntregaDto atualizarEntrega(@PathVariable Long id, @Valid @RequestBody AtualizaEntrega r) {
-        return service.atualizarEntrega(Contexto.atual(), id, r.nome(), r.fluxoId(), r.ativo());
+        return service.atualizarEntrega(Contexto.atual(), id, r.nome(), r.fluxoId(), r.ativo(), r.prazoPadrao(), r.mudarPrazo());
     }
 
     public record ApagarEntrega(Long entregaSubstitutaId) {}

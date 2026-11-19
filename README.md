@@ -33,7 +33,7 @@ cd backend && VIRIATO_JWT_PERMITIR_PADRAO=true mvn spring-boot:run   # API em :8
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
 
-Testes: `cd backend && mvn test` (119 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
+Testes: `cd backend && mvn test` (120 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
 
 ## Arquitetura
 
@@ -128,7 +128,7 @@ Todos enxergam os cadastros e fluxos da empresa. **Processos e pessoas são por 
 | Processos | mexe em qualquer um | mexe em qualquer um do próprio setor | abre processos; só mexe nos que é o responsável |
 
 ### Prazos
-**Só a etapa de conclusão tem prazo** (`prazo_dias`, opcional): o prazo **padrão** da entrega, em dias. Ao abrir o processo, o campo **Prazo para concluir** aparece como data (**dd/mm/aaaa**), opcional: vazio vale o padrão da entrega; ou se escolhe outra data (não anterior a hoje). Esse prazo **não reinicia** a cada mudança de etapa; sem prazo, o processo não atrasa. Um job diário (`PRAZOS_CRON`, padrão 08:00 America/Sao_Paulo) avisa o gestor do setor sobre prazos vencendo/vencidos, **uma vez por processo**.
+**O prazo para concluir é uma data (dd/mm/aaaa).** A entrega pode ter um **prazo padrão** (data, opcional, não anterior a hoje; alterável em *Entregas → Alterar prazo padrão*). Ao abrir o processo, o campo **Prazo para concluir** (opcional) vale o padrão da entrega se ficar vazio, ou se escolhe outra data (não anterior a hoje). Entregas antigas com prazo em dias na etapa de conclusão continuam valendo como reserva. Esse prazo **não reinicia** a cada mudança de etapa; sem prazo, o processo não atrasa. Um job diário (`PRAZOS_CRON`, padrão 08:00 America/Sao_Paulo) avisa o gestor do setor sobre prazos vencendo/vencidos, **uma vez por processo**.
 
 ## Configuração (variáveis de ambiente)
 
