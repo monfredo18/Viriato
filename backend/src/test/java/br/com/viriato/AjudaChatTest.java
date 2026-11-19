@@ -70,16 +70,18 @@ class AjudaChatTest {
         long id = lista.get(0).get("id").asLong();
 
         JsonNode aberta = corpo(ler(c.admin(), "/api/ajuda/conversas/" + id).andExpect(status().isOk()));
-        assertThat(aberta.get("mensagens")).hasSize(1);
+        assertThat(aberta.get("mensagens")).hasSize(2);                                            // a da pessoa + a resposta automática
         assertThat(aberta.get("mensagens").get(0).get("deAdmin").asBoolean()).isFalse();
+        assertThat(aberta.get("mensagens").get(1).get("texto").asText()).isEqualTo("Entendo sua necessidade, por favor abra um chamado para continuarmos");
+        assertThat(aberta.get("mensagens").get(1).get("autorNome").asText()).isEqualTo("Suporte");
         assertThat(naoLidas(c.admin())).isZero();               // abrir marca como visto
 
         enviar(c.admin2(), "/api/ajuda/conversas/" + id + "/mensagens", texto("Já liberei, tente de novo")).andExpect(status().isCreated());
         assertThat(naoLidas(c.ana())).isEqualTo(1);
         JsonNode minha = corpo(ler(c.ana(), "/api/ajuda/minha").andExpect(status().isOk()));
-        assertThat(minha).hasSize(2);
-        assertThat(minha.get(1).get("deAdmin").asBoolean()).isTrue();
-        assertThat(minha.get(1).get("autorNome").asText()).startsWith("Adm2");
+        assertThat(minha).hasSize(3);
+        assertThat(minha.get(2).get("deAdmin").asBoolean()).isTrue();
+        assertThat(minha.get(2).get("autorNome").asText()).startsWith("Adm2");
         assertThat(naoLidas(c.ana())).isZero();
     }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type PointerEvent as EventoPonteiro } from 'react'
 import { createPortal } from 'react-dom'
 import { api, type ConversaAjuda, type ConversaAjudaAberta, type MensagemAjuda } from './api'
 import { useAuth } from './auth'
@@ -163,6 +163,17 @@ function Atendimento({ aoMudar }: { aoMudar: () => void }) {
   )
 }
 
+const CHAVE_POSICAO = 'viriato.chat.posicao'
+interface Posicao { x: number; y: number }
+const celular = () => window.matchMedia('(max-width: 560px)').matches
+
+function posicaoSalva(): Posicao | null {
+  try {
+    const p = JSON.parse(localStorage.getItem(CHAVE_POSICAO) ?? 'null')
+    return p && typeof p.x === 'number' && typeof p.y === 'number' ? p : null
+  } catch { return null }
+}
+
 /** Botão de ajuda da barra superior: abre o chat com os administradores (e, para eles, o atendimento). */
 export default function Ajuda() {
   const { ehAdmin } = useAuth()
@@ -170,6 +181,9 @@ export default function Ajuda() {
   const [naoLidas, setNaoLidas] = useState(0)
   const botao = useRef<HTMLDivElement>(null)
   const janela = useRef<HTMLElement>(null)
+  // posição da janela: vazio = canto padrão; arrastando pelo topo ela vai para qualquer lugar da tela (e a escolha fica salva)
+  const [pos, setPos] = useState<Posicao | null>(posicaoSalva)
+  const desvio = useRef<Posicao | null>(null)
 
   const contar = useCallback(() => {
     api.get<{ total: number }>('/ajuda/nao-lidas').then((r) => setNaoLidas(r.total)).catch(() => {})
@@ -193,6 +207,33 @@ export default function Ajuda() {
 
   const fechar = () => { setAberto(false); contar() }
 
+  const limitar = (x: number, y: number): Posicao => {
+    const larg = janela.current?.offsetWidth ?? 360
+    return { x: Math.min(Math.max(0, x), Math.max(0, window.innerWidth - larg)), y: Math.min(Math.max(0, y), Math.max(0, window.innerHeight - 48)) }
+  }
+  const comecarArrasto = (e: EventoPonteiro<HTMLElement>) => {
+    if (celular() || !janela.current || (e.target as HTMLElement).closest('button')) return
+    const r = janela.current.getBoundingClientRect()
+    desvio.current = { x: e.clientX - r.left, y: e.clientY - r.top }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const arrastar = (e: EventoPonteiro<HTMLElement>) => {
+    if (desvio.current) setPos(limitar(e.clientX - desvio.current.x, e.clientY - desvio.current.y))
+  }
+  const soltar = () => {
+    if (!desvio.current) return
+    desvio.current = null
+    setPos((p) => { try { if (p) localStorage.setItem(CHAVE_POSICAO, JSON.stringify(p)) } catch { /* sem armazenamento: vale só nesta sessão */ } return p })
+  }
+  const posicaoPadrao = () => { setPos(null); try { localStorage.removeItem(CHAVE_POSICAO) } catch { /* ignora */ } }
+
+  // se a tela diminuir, a janela não fica para fora
+  useEffect(() => {
+    const ajustar = () => setPos((p) => (p ? limitar(p.x, p.y) : p))
+    window.addEventListener('resize', ajustar)
+    return () => window.removeEventListener('resize', ajustar)
+  }, [])
+
   return (
     <div className="ajuda" ref={botao}>
       <button type="button" className="ajuda-btn" onClick={() => (aberto ? fechar() : setAberto(true))} aria-expanded={aberto} aria-haspopup="dialog" title="Ajuda: falar com os administradores">
@@ -200,8 +241,8 @@ export default function Ajuda() {
         {naoLidas > 0 && <b className="badge">{naoLidas > 99 ? '99+' : naoLidas}</b>}
       </button>
       {aberto && createPortal(
-        <section className="chat" ref={janela} role="dialog" aria-label={ehAdmin ? 'Atendimento de ajuda' : 'Ajuda: conversa com os administradores'}>
-          <header className="chat-topo">
+        <section className="chat" ref={janela} style={pos && !celular() ? { left: pos.x, top: pos.y, right: 'auto' } : undefined} role="dialog" aria-label={ehAdmin ? 'Atendimento de ajuda' : 'Ajuda: conversa com os administradores'}>
+          <header className="chat-topo" onPointerDown={comecarArrasto} onPointerMove={arrastar} onPointerUp={soltar} onPointerCancel={soltar} onDoubleClick={posicaoPadrao} title="Arraste para mudar de lugar (clique duplo volta ao canto)">
             <span className="chat-icone"><Icone nome="ajuda" tamanho={20} /></span>
             <div>
               <strong>{ehAdmin ? 'Atendimento' : 'Ajuda'}</strong>

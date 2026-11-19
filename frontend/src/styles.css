@@ -1047,3 +1047,7 @@ button.sair { height: 38px; padding: 0 1rem; border-radius: 999px !important; }
 :root:not([data-tema='escuro']) .indicador-icone { background: color-mix(in srgb, var(--c) 14%, #fff); }
 :root:not([data-tema='escuro']) .boas-vindas em { color: var(--azul); }
 :root:not([data-tema='escuro']) .data-hoje { background: #fff; }
+.chat-topo { cursor: grab; touch-action: none; user-select: none; }
+.chat-topo:active { cursor: grabbing; }
+.chat-topo button { cursor: pointer; }
+@media (max-width: 560px) { .chat-topo { cursor: default; } }

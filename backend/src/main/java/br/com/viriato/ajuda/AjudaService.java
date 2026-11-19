@@ -125,9 +125,26 @@ public class AjudaService {
             nova.setUsuarioId(quem.id());
             return conversas.save(nova);
         });
+        boolean primeira = mensagens.findByConversaIdAndTenantIdOrderByIdDesc(c.getId(), quem.tenantId(), PageRequest.of(0, 1)).isEmpty();
         AjudaMensagem m = gravar(c, quem, eu.getNome(), false, t);
         conversas.pessoaEscreveu(c.getId(), resumo(t), m.getCriadoEm());
+        if (primeira) respostaAutomatica(c, quem.tenantId());
         return new MensagemDto(m.getId(), m.getAutorNome(), false, m.getTexto(), m.getCriadoEm());
+    }
+
+    /** Resposta que a pessoa recebe logo após a primeira mensagem: pede que abra um chamado. Não conta como não lida para ninguém. */
+    static final String RESPOSTA_AUTOMATICA = "Entendo sua necessidade, por favor abra um chamado para continuarmos";
+
+    private void respostaAutomatica(AjudaConversa c, Long tenantId) {
+        AjudaMensagem r = new AjudaMensagem();
+        r.setTenantId(tenantId);
+        r.setConversaId(c.getId());
+        r.setAutorId(null);
+        r.setAutorNome("Suporte");
+        r.setDeAdmin(true);
+        r.setTexto(RESPOSTA_AUTOMATICA);
+        r.setCriadoEm(Instant.now().plusMillis(1));
+        mensagens.save(r);
     }
 
     // ---------- administradores ----------
