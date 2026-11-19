@@ -1,6 +1,7 @@
 package br.com.viriato.relatorio;
 
 import br.com.viriato.comum.Datas;
+import br.com.viriato.comum.MarcaPdf;
 import br.com.viriato.relatorio.RelatorioService.Dados;
 import br.com.viriato.relatorio.RelatorioService.Linha;
 import com.lowagie.text.Document;
@@ -48,7 +49,7 @@ public final class RelatorioPdf {
     public static byte[] gerar(Dados d) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            Document doc = new Document(new Rectangle(PageSize.A4.getHeight(), PageSize.A4.getWidth()), 36, 36, 36, 52);   // A4 paisagem
+            Document doc = new Document(new Rectangle(PageSize.A4.getHeight(), PageSize.A4.getWidth()), 36, 36, 46, 52);   // A4 paisagem
             PdfWriter writer = PdfWriter.getInstance(doc, out);
             writer.setPageEvent(new Rodape(d));
             doc.addTitle("Relatório de processos");
@@ -69,26 +70,24 @@ public final class RelatorioPdf {
     // ------------------------------------------------------------ blocos
 
     private static void cabecalho(Document doc, Dados d) throws DocumentException {
-        Paragraph marca = new Paragraph("V I R I A T O", f(9, Font.BOLD, SUAVE));
-        marca.setSpacingAfter(2);
-        doc.add(marca);
-
-        Paragraph titulo = new Paragraph("Relatório de processos", f(20, Font.BOLD, MARINHO));
-        doc.add(titulo);
-
-        PdfPTable regua = new PdfPTable(new float[]{1, 11});          // filete dourado curto sob o título
-        regua.setWidthPercentage(100);
-        regua.setSpacingBefore(3);
-        regua.setSpacingAfter(8);
-        PdfPCell ouro = new PdfPCell(new Phrase(" ", f(1, Font.NORMAL, OURO)));
-        ouro.setFixedHeight(3);
-        ouro.setBorder(Rectangle.NO_BORDER);
-        ouro.setBackgroundColor(OURO);
-        regua.addCell(ouro);
-        PdfPCell vazio = new PdfPCell(new Phrase(" ", f(1, Font.NORMAL, OURO)));
-        vazio.setBorder(Rectangle.NO_BORDER);
-        regua.addCell(vazio);
-        doc.add(regua);
+        // logo do Grupo Viriato à esquerda; título e empresa à direita
+        PdfPTable topo = new PdfPTable(new float[]{1.5f, 5});
+        topo.setWidthPercentage(100);
+        PdfPCell logo = new PdfPCell(MarcaPdf.logo(104, 70), false);
+        logo.setBorder(Rectangle.NO_BORDER);
+        logo.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        topo.addCell(logo);
+        PdfPCell texto = new PdfPCell();
+        texto.setBorder(Rectangle.NO_BORDER);
+        texto.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        texto.setPaddingLeft(10);
+        texto.addElement(new Paragraph("Relatório de processos", f(22, Font.BOLD, MARINHO)));
+        Paragraph quem = new Paragraph(d.nomeDoSistema(), f(11, Font.NORMAL, SUAVE));
+        quem.setSpacingBefore(2);
+        texto.addElement(quem);
+        topo.addCell(texto);
+        topo.setSpacingAfter(8);
+        doc.add(topo);
 
         PdfPTable meta = new PdfPTable(new float[]{1.1f, 5, 1.1f, 5});
         meta.setWidthPercentage(100);
@@ -230,6 +229,7 @@ public final class RelatorioPdf {
         @Override
         public void onEndPage(PdfWriter writer, Document document) {
             PdfContentByte cb = writer.getDirectContent();
+            MarcaPdf.faixaTopo(cb, document.getPageSize());
             float esquerda = document.leftMargin();
             float direita = document.getPageSize().getWidth() - document.rightMargin();
             cb.saveState();
@@ -243,7 +243,7 @@ public final class RelatorioPdf {
             cb.setFontAndSize(base, 8);
             cb.setColorFill(SUAVE);
             cb.setTextMatrix(esquerda, 24);
-            cb.showText("Viriato — Relatório de processos — " + dados.nomeDoSistema() + " — "
+            cb.showText("Grupo Viriato — Relatório de processos — " + dados.nomeDoSistema() + " — "
                     + dados.geradoEm().atZone(Datas.ZONA).format(DATA_HORA));
             String pagina = "Página " + writer.getPageNumber() + " de ";
             float largura = base.getWidthPoint(pagina, 8);

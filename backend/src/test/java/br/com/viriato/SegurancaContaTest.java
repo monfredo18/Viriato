@@ -118,8 +118,9 @@ class SegurancaContaTest {
         enviar(c.ana(), "/api/me/sair", "").andExpect(status().isNoContent());
         ler(c.ana(), "/api/me").andExpect(status().isUnauthorized());                            // o token não volta a valer
 
-        String nome = "Bia " + c.s();
-        String t = c.bia();
+        enviar(c.bia(), "/api/me/alterar-senha", "{\"senhaAtual\":\"" + TestesAuth.SENHA_PROPRIA + "\",\"novaSenha\":\"nova-senha-1\"}").andExpect(status().isForbidden());   // papel Usuário não troca a própria senha
+        String nome = "Gestor " + c.s();
+        String t = c.gestor();
         enviar(t, "/api/me/alterar-senha", "{\"senhaAtual\":\"errada-123\",\"novaSenha\":\"nova-senha-1\"}").andExpect(status().isUnprocessableEntity());
         enviar(t, "/api/me/alterar-senha", "{\"senhaAtual\":\"" + TestesAuth.SENHA_PROPRIA + "\",\"novaSenha\":\"" + TestesAuth.SENHA_PROPRIA + "\"}").andExpect(status().isUnprocessableEntity());
         enviar(t, "/api/me/alterar-senha", "{\"senhaAtual\":\"" + TestesAuth.SENHA_PROPRIA + "\",\"novaSenha\":\"curta\"}").andExpect(status().isBadRequest());

@@ -125,14 +125,18 @@ public class AjudaService {
             nova.setUsuarioId(quem.id());
             return conversas.save(nova);
         });
-        boolean primeira = mensagens.findByConversaIdAndTenantIdOrderByIdDesc(c.getId(), quem.tenantId(), PageRequest.of(0, 1)).isEmpty();
+        // a resposta automática volta a aparecer quando a última passou de 5 minutos (e não a cada mensagem)
+        Instant limite = Instant.now().minus(INTERVALO_DA_RESPOSTA_AUTOMATICA);
+        boolean responder = mensagens.findFirstByConversaIdAndTenantIdAndAutorIdIsNullOrderByIdDesc(c.getId(), quem.tenantId())
+                .map(a -> a.getCriadoEm().isBefore(limite)).orElse(true);
         AjudaMensagem m = gravar(c, quem, eu.getNome(), false, t);
         conversas.pessoaEscreveu(c.getId(), resumo(t), m.getCriadoEm());
-        if (primeira) respostaAutomatica(c, quem.tenantId());
+        if (responder) respostaAutomatica(c, quem.tenantId());
         return new MensagemDto(m.getId(), m.getAutorNome(), false, m.getTexto(), m.getCriadoEm());
     }
 
-    /** Resposta que a pessoa recebe logo após a primeira mensagem: pede que abra um chamado. Não conta como não lida para ninguém. */
+    /** Resposta que a pessoa recebe logo após a mensagem: pede que abra um chamado. Vem no máximo a cada 5 minutos e não conta como não lida. */
+    static final java.time.Duration INTERVALO_DA_RESPOSTA_AUTOMATICA = java.time.Duration.ofMinutes(5);
     static final String RESPOSTA_AUTOMATICA = "Entendo sua necessidade, por favor abra um chamado para continuarmos";
 
     private void respostaAutomatica(AjudaConversa c, Long tenantId) {

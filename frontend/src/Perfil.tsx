@@ -159,7 +159,7 @@ export default function Perfil({ fechar }: { fechar: () => void }) {
         </div>
         <small className="dica-campo">JPEG, PNG ou WebP. A imagem é recortada em quadrado e reduzida automaticamente.</small>
         {erro && <p className="erro">{erro}</p>}
-        <TrocarSenha />
+        {usuario.papel !== 'USUARIO' && <TrocarSenha />}
         <DoisFatores usuario={usuario} atualizar={atualizarUsuario} />
         <div className="acoes"><button onClick={fechar}>Fechar</button></div>
       </div>

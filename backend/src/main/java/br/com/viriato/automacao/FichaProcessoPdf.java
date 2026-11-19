@@ -1,5 +1,6 @@
 package br.com.viriato.automacao;
 
+import br.com.viriato.comum.MarcaPdf;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
@@ -8,10 +9,16 @@ import com.lowagie.text.FontFactory;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
+import com.lowagie.text.Rectangle;
+import com.lowagie.text.pdf.BaseFont;
+import com.lowagie.text.pdf.PdfContentByte;
+import com.lowagie.text.pdf.PdfPageEventHelper;
+import com.lowagie.text.pdf.PdfTemplate;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import java.awt.Color;
+import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
@@ -31,27 +38,36 @@ final class FichaProcessoPdf {
     static byte[] gerar(Map<String, String> v, String geradoEm, List<Linha> historico) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            Document doc = new Document(PageSize.A4, 48, 48, 48, 48);
-            PdfWriter.getInstance(doc, out);
+            Document doc = new Document(PageSize.A4, 48, 48, 58, 56);
+            PdfWriter writer = PdfWriter.getInstance(doc, out);
+            writer.setPageEvent(new Pagina(v.get("numero")));
             doc.addTitle("Ficha do processo " + v.get("numero"));
             doc.addAuthor("Viriato");
             doc.open();
 
-            Paragraph marca = new Paragraph("V I R I A T O", f(9, Font.BOLD, SUAVE));
-            marca.setSpacingAfter(2);
-            doc.add(marca);
-            Paragraph titulo = new Paragraph("Ficha do processo " + v.get("numero"), f(20, Font.BOLD, MARINHO));
-            titulo.setSpacingAfter(2);
-            doc.add(titulo);
-            Paragraph sub = new Paragraph(v.get("titulo"), f(11, Font.NORMAL, SUAVE));
-            sub.setSpacingAfter(14);
-            doc.add(sub);
+            PdfPTable topo = new PdfPTable(new float[]{1.4f, 3.6f});
+            topo.setWidthPercentage(100);
+            PdfPCell logo = new PdfPCell(MarcaPdf.logo(92, 62), false);
+            logo.setBorder(Rectangle.NO_BORDER);
+            logo.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            topo.addCell(logo);
+            PdfPCell texto = new PdfPCell();
+            texto.setBorder(Rectangle.NO_BORDER);
+            texto.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            texto.setPaddingLeft(8);
+            texto.addElement(new Paragraph("Ficha do processo " + v.get("numero"), f(19, Font.BOLD, MARINHO)));
+            Paragraph sub = new Paragraph(v.get("titulo"), f(10.5f, Font.NORMAL, SUAVE));
+            sub.setSpacingBefore(2);
+            texto.addElement(sub);
+            topo.addCell(texto);
+            topo.setSpacingAfter(14);
+            doc.add(topo);
 
             PdfPTable dados = new PdfPTable(new float[]{1.1f, 2.9f});
             dados.setWidthPercentage(100);
             for (String[] par : new String[][]{
                     {"Empresa", v.get("empresa")}, {"Entrega", v.get("entrega")}, {"Setor", v.get("setor")},
-                    {"Responsável", v.get("responsavel")}, {"Etapa", v.get("etapa")}, {"Prazo da etapa", v.get("prazo")},
+                    {"Responsável", v.get("responsavel")}, {"Etapa", v.get("etapa")}, {"Prazo para concluir", v.get("prazo")},
                     {"Situação", v.get("situacao")}}) {
                 dados.addCell(celula(par[0], f(9, Font.BOLD, SUAVE), false));
                 dados.addCell(celula(par[1], f(10.5f, Font.NORMAL, Color.BLACK), false));
@@ -85,8 +101,62 @@ final class FichaProcessoPdf {
         }
     }
 
+    /** Faixa no topo e rodapé com a numeração "Página X de Y" em cada página. */
+    private static final class Pagina extends PdfPageEventHelper {
+        private final String numero;
+        private PdfTemplate total;
+        private BaseFont base;
+
+        Pagina(String numero) { this.numero = numero; }
+
+        @Override
+        public void onOpenDocument(PdfWriter writer, Document document) {
+            try {
+                base = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, false);
+            } catch (DocumentException | IOException e) {
+                throw new IllegalStateException(e);
+            }
+            total = writer.getDirectContent().createTemplate(30, 12);
+        }
+
+        @Override
+        public void onEndPage(PdfWriter writer, Document document) {
+            PdfContentByte cb = writer.getDirectContent();
+            MarcaPdf.faixaTopo(cb, document.getPageSize());
+            float esq = document.leftMargin(), dir = document.getPageSize().getWidth() - document.rightMargin();
+            cb.saveState();
+            cb.setColorStroke(BORDA);
+            cb.setLineWidth(0.6f);
+            cb.moveTo(esq, 40);
+            cb.lineTo(dir, 40);
+            cb.stroke();
+            cb.beginText();
+            cb.setFontAndSize(base, 8);
+            cb.setColorFill(SUAVE);
+            cb.setTextMatrix(esq, 28);
+            cb.showText("Grupo Viriato — Ficha do processo " + numero);
+            String pagina = "Página " + writer.getPageNumber() + " de ";
+            float x = dir - base.getWidthPoint(pagina, 8) - 14;
+            cb.setTextMatrix(x, 28);
+            cb.showText(pagina);
+            cb.endText();
+            cb.addTemplate(total, x + base.getWidthPoint(pagina, 8), 28);
+            cb.restoreState();
+        }
+
+        @Override
+        public void onCloseDocument(PdfWriter writer, Document document) {
+            total.beginText();
+            total.setFontAndSize(base, 8);
+            total.setColorFill(SUAVE);
+            total.setTextMatrix(0, 0);
+            total.showText(String.valueOf(writer.getPageNumber() - 1));
+            total.endText();
+        }
+    }
+
     private static PdfPCell celula(String texto, Font fonte, boolean cabecalho) {
-        PdfPCell c = new PdfPCell(new Phrase(texto == null ? "—" : texto, fonte));
+        PdfPCell c = new PdfPCell(new Phrase(texto == null ? "—" : texto.replace("→", "›"), fonte));   // a fonte padrão do PDF não tem a seta
         c.setPadding(5);
         c.setBorderColor(BORDA);
         c.setBorderWidth(0.6f);

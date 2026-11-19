@@ -116,6 +116,9 @@ public class AuthService {
     /** Troca a própria senha (quem não está com senha provisória). Encerra as outras sessões e devolve uma sessão nova. */
     @Transactional
     public Sessao alterarSenha(UsuarioLogado quem, String senhaAtual, String novaSenha) {
+        if (quem.papel() == br.com.viriato.usuario.Papel.USUARIO) {
+            throw new org.springframework.security.access.AccessDeniedException("Quem tem papel Usuário não troca a própria senha: peça ao administrador");
+        }
         Usuario u = usuarios.findByIdAndTenantId(quem.id(), quem.tenantId()).orElseThrow();
         if (u.isBloqueado()) throw new ContaBloqueadaException();
         if (!encoder.matches(senhaAtual, u.getSenhaHash())) {

@@ -130,4 +130,30 @@ class AjudaChatTest {
         assertThat(corpo(ler(c.admin(), "/api/ajuda/conversas"))).isEmpty();
         assertThat(naoLidas(c.admin())).isZero();
     }
+
+    @Autowired br.com.viriato.ajuda.AjudaMensagemRepository mensagens;
+
+    private long automaticas(String token) throws Exception {
+        long n = 0;
+        for (JsonNode m : corpo(ler(token, "/api/ajuda/minha").andExpect(status().isOk()))) if (m.get("autorNome").asText().equals("Suporte")) n++;
+        return n;
+    }
+
+    @Test
+    void respostaAutomaticaVoltaDepoisDeCincoMinutos() throws Exception {
+        var c = cenario();
+        enviar(c.ana(), "/api/ajuda/minha", texto("Primeira")).andExpect(status().isCreated());
+        enviar(c.ana(), "/api/ajuda/minha", texto("Logo em seguida")).andExpect(status().isCreated());
+        enviar(c.ana(), "/api/ajuda/minha", texto("De novo")).andExpect(status().isCreated());
+        assertThat(automaticas(c.ana())).isEqualTo(1);                       // dentro dos 5 minutos: só a primeira
+        // passam-se 5 minutos: recua a hora da automática
+        var ultima = mensagens.findAll().stream().filter(m -> m.getAutorId() == null && "Suporte".equals(m.getAutorNome()))
+                .max(java.util.Comparator.comparingLong(m -> m.getId())).orElseThrow();
+        ultima.setCriadoEm(java.time.Instant.now().minus(java.time.Duration.ofMinutes(6)));
+        mensagens.save(ultima);
+        enviar(c.ana(), "/api/ajuda/minha", texto("Outro assunto")).andExpect(status().isCreated());
+        assertThat(automaticas(c.ana())).isEqualTo(2);                       // voltou a avisar
+        enviar(c.ana(), "/api/ajuda/minha", texto("E mais uma")).andExpect(status().isCreated());
+        assertThat(automaticas(c.ana())).isEqualTo(2);                       // e de novo espera mais 5 minutos
+    }
 }

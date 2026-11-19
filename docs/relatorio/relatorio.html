@@ -333,7 +333,7 @@
     <li>Cada pessoa só vê a própria conversa; as rotas do atendimento são exclusivas de administrador, e conversas de outra empresa respondem “não encontrado”.</li>
     <li>Mensagens de até 2.000 caracteres (Enter envia; Shift+Enter quebra a linha). O histórico mostra as 200 mais recentes.</li>
     <li>Ao apagar uma pessoa, a conversa dela é apagada junto. O nome de quem respondeu fica guardado na mensagem, mesmo que o administrador seja removido depois.</li>
-    <li>A primeira mensagem de quem pede ajuda recebe a resposta automática <em>“Entendo sua necessidade, por favor abra um chamado para continuarmos”</em> (assinada “Suporte”, sem aviso de não lida). A janela pode ser <strong>arrastada pelo topo</strong> para qualquer posição da tela, e a escolha fica salva; clique duplo no topo volta ao canto.</li>
+    <li>Quem pede ajuda recebe a resposta automática <em>“Entendo sua necessidade, por favor abra um chamado para continuarmos”</em> (assinada “Suporte”, sem aviso de não lida) <strong>no máximo a cada 5 minutos</strong>: se a pessoa mandar outra mensagem depois desse intervalo, recebe de novo. A janela pode ser <strong>arrastada pelo topo</strong> para qualquer posição da tela, e a escolha fica salva; clique duplo no topo volta ao canto.</li>
     <li>A janela atualiza a cada poucos segundos (consulta periódica, sem conexão permanente); fora dela, o aviso no botão é conferido a cada 15 segundos.</li>
   </ul>
   <figure><img src="img/ajuda-chat.png" alt="Atendimento de ajuda"><figcaption>Figura 17 — Atendimento: o administrador responde a uma pessoa da empresa.</figcaption></figure>
@@ -354,7 +354,7 @@
     <tr><td>Bloqueio por tentativas</td><td>Cada senha (ou código) errado soma um erro na conta. Com <strong>5 erros</strong> a pessoa ainda vê “nome ou senha inválidos”; no erro seguinte a conta é <strong>bloqueada</strong> e a tela avisa para <strong>entrar em contato com o suporte</strong>. Nem a senha certa entra enquanto estiver bloqueada. Entrar com sucesso zera a contagem. Sessões que já estavam abertas não são derrubadas (assim, quem erra senhas de outra pessoa não a tira do sistema).</td></tr>
     <tr><td>Desbloquear</td><td>Na aba Usuários, o botão <em>Desbloquear</em> só aparece em quem está bloqueado. O administrador desbloqueia qualquer pessoa; o gestor, funcionários (papel Usuário) do próprio setor. Zerar a senha também desbloqueia.</td></tr>
     <tr><td>Verificação em duas etapas</td><td>Opcional, em <em>Meu perfil</em>: a pessoa cadastra uma chave num aplicativo autenticador (códigos de 6 dígitos, TOTP) e, depois, o login pede o código. O segredo fica <strong>cifrado</strong> (AES-256-GCM) no banco; o mesmo código não vale duas vezes; código errado conta como erro de senha. Se a pessoa perder o celular, o administrador desliga a verificação dela.</td></tr>
-    <tr><td>Alterar a própria senha</td><td>Em <em>Meu perfil</em>, informando a senha atual. As outras sessões são encerradas.</td></tr>
+    <tr><td>Alterar a própria senha</td><td>Em <em>Meu perfil</em>, informando a senha atual, para administrador e gestor; as outras sessões são encerradas. <strong>Quem tem papel Usuário não troca a própria senha</strong> (pede ao administrador, que a zera).</td></tr>
     <tr><td>Sair de verdade</td><td>Ao sair, o token usado é invalidado no servidor (e a lista de tokens revogados é limpa todo dia, quando eles já venceriam).</td></tr>
     <tr><td>Auditoria</td><td>Aba <em>Auditoria</em>, só para o administrador: entradas, bloqueios e desbloqueios, senhas zeradas ou trocadas, usuários criados, alterados e apagados, ligar e desligar duas etapas, remoção de foto pelo administrador. Guarda o nome de quem fez, mesmo se a pessoa for apagada depois.</td></tr>
     <tr><td>Cabeçalhos de segurança</td><td>nginx: política de conteúdo (CSP) só do próprio site, sem scripts embutidos, <code>X-Frame-Options</code>, <code>nosniff</code>, <code>Referrer-Policy</code> e <code>Permissions-Policy</code>. API: CSP restritiva, sem exibição em quadros e HSTS.</td></tr>
@@ -615,7 +615,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>120 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>121 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>

@@ -11,7 +11,7 @@ Sistema web multi-empresa (SaaS) para cadastrar, acompanhar e automatizar proces
 | Notificações | In-app (sininho) |
 | Ajuda | Chat interno com os administradores (botão "Ajuda") |
 | Foto de perfil | Mesmo armazenamento dos documentos (S3 ou disco) |
-| Relatórios | PDF gerado no servidor (OpenPDF) |
+| Relatórios | PDF gerado no servidor (OpenPDF), com a logo do Grupo Viriato e faixa na identidade visual (relatório de processos e ficha do processo) |
 | Infra | Docker / Docker Compose |
 
 > 📄 **[Relatório completo do sistema (PDF)](docs/relatorio-viriato.pdf)**: como funciona, arquitetura, regras, segurança, limitações conhecidas e próximos passos. A fonte está em `docs/relatorio/` (regerar: `node docs/relatorio/gerar-pdf.js`).
@@ -33,7 +33,7 @@ cd backend && VIRIATO_JWT_PERMITIR_PADRAO=true mvn spring-boot:run   # API em :8
 cd frontend && npm install && npm run dev   # UI em :5173 (proxy para :8080)
 ```
 
-Testes: `cd backend && mvn test` (120 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
+Testes: `cd backend && mvn test` (121 testes de integração; usam H2 em modo MySQL, não precisam de Docker).
 
 ## Arquitetura
 
@@ -65,7 +65,7 @@ backend/src/main/java/br/com/viriato/
 Menu lateral (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relatórios e **Minhas tarefas**, com a contagem dos seus processos em aberto) e barra superior com busca de processos, botão **Ajuda**, avisos, tema claro/escuro e perfil. A tela **Início** resume em andamento, atrasados, concluídos, tempo médio, carga, processos recentes e prazos próximos. No celular o menu vira uma gaveta. O indicador **Sistema online** do rodapé do menu é real: a tela consulta `GET /api/auth/saude` a cada 30 s e mostra vermelho ("Sem conexão com o servidor") quando a API não responde.
 
 - **Foto de perfil:** clicando no próprio nome abre-se *Meu perfil*, onde se escolhe, troca ou remove a foto (JPEG, PNG ou WebP, até 2 MB; o tipo é conferido pelo conteúdo do arquivo e o navegador reduz a imagem antes de enviar). O administrador pode remover a foto de outra pessoa pela API.
-- **Ajuda:** gestor e usuário têm uma conversa própria com os administradores; os administradores veem a lista de conversas da empresa e qualquer um responde. Aviso de mensagem nova no botão; a janela atualiza sozinha (consulta a cada poucos segundos). A **primeira mensagem** de quem pede ajuda recebe a resposta automática "Entendo sua necessidade, por favor abra um chamado para continuarmos". A janela do chat pode ser **arrastada pelo topo azul-escuro** para qualquer lugar da tela (a posição fica salva; clique duplo no topo volta ao canto); no celular ela ocupa a tela.
+- **Ajuda:** gestor e usuário têm uma conversa própria com os administradores; os administradores veem a lista de conversas da empresa e qualquer um responde. Aviso de mensagem nova no botão; a janela atualiza sozinha (consulta a cada poucos segundos). Quem pede ajuda recebe a resposta automática "Entendo sua necessidade, por favor abra um chamado para continuarmos" **no máximo a cada 5 minutos**: mandou mensagem, recebeu; mandou outra logo em seguida, não repete; mandou outra mais de 5 minutos depois, recebe de novo. A janela do chat pode ser **arrastada pelo topo azul-escuro** para qualquer lugar da tela (a posição fica salva; clique duplo no topo volta ao canto); no celular ela ocupa a tela.
 
 ### Cadastros e processos
 - **Empresas atendidas** (para quem o processo é feito), **setores** e **entregas** são cadastros da empresa.
@@ -93,7 +93,7 @@ Menu lateral (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relat�
 - O usuário é conferido a cada requisição: quem é desativado ou apagado perde o acesso imediatamente.
 - **Bloqueio de conta:** depois de 5 erros de senha, o erro seguinte bloqueia a conta e a tela manda **entrar em contato com o suporte**. Na aba Usuários, o botão **Desbloquear** só aparece para quem está bloqueado (administrador desbloqueia qualquer pessoa; gestor, funcionários do próprio setor). Zerar a senha também desbloqueia.
 - **Verificação em duas etapas (opcional):** em *Meu perfil*, com aplicativo autenticador (TOTP). O segredo é guardado cifrado. O administrador desliga a de quem perdeu o celular.
-- **Meu perfil** também permite alterar a própria senha (informando a atual). **Sair** invalida o token no servidor.
+- **Meu perfil** permite a administrador e gestor alterar a própria senha (informando a atual). **Quem tem papel Usuário não troca a própria senha**: pede ao administrador, que a zera (no primeiro acesso a pessoa define a sua, como sempre). **Sair** invalida o token no servidor.
 - **Auditoria** (aba só do administrador): entradas, bloqueios, senhas, criação e alteração de usuários.
 - **Cabeçalhos de segurança** no nginx (CSP, X-Frame-Options, nosniff…) e na API; chat de ajuda com limite de 20 mensagens a cada 10 minutos por pessoa.
 - Limitações: sem recuperação de senha por e-mail (o suporte zera); o bloqueio é por conta, não por endereço de origem; o token fica no `localStorage` do navegador.
