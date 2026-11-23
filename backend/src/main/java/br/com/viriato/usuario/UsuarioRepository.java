@@ -12,6 +12,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     boolean existsByTenantIdAndNomeIgnoreCase(Long tenantId, String nome);
     boolean existsByEmailIgnoreCase(String email);
     Optional<Usuario> findByIdAndTenantId(Long id, Long tenantId);
+    /** Setor atual de quem está logado (lido do banco, não do token, para refletir mudanças). */
+    default Long setorDe(br.com.viriato.seguranca.UsuarioLogado quem) {
+        return findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
+    }
     List<Usuario> findByTenantIdOrderByNome(Long tenantId);
     List<Usuario> findByTenantIdAndSetorId(Long tenantId, Long setorId);
     List<Usuario> findByTenantIdAndPapelAndSetorIdAndAtivoTrue(Long tenantId, Papel papel, Long setorId);

@@ -1,3 +1,4 @@
+import { hojeIso } from '../formato'
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, ROTULO_PAPEL, type Papel, type PendenciasUsuario, type Setor, type Usuario } from '../api'
 import BotaoApagar from '../BotaoApagar'
@@ -239,7 +240,6 @@ function ZerarSenha({ alvo, fechar }: { alvo: Usuario; fechar: () => void }) {
   )
 }
 
-const hojeISO = () => new Date().toLocaleDateString('sv-SE')   // aaaa-mm-dd no horário local
 
 /**
  * Passo 1: aviso de que o funcionário tem processos. Passo 2 (só se há processos em andamento): escolher quem
@@ -316,7 +316,7 @@ function ApagarFuncionario({ alvo, pend, colegas, fechar, apagado }: {
           ))}
         </fieldset>
         <label>Novo prazo dos processos
-          <input type="date" required min={hojeISO()} value={prazo} onChange={(e) => setPrazo(e.target.value)} />
+          <input type="date" required min={hojeIso()} value={prazo} onChange={(e) => setPrazo(e.target.value)} />
         </label>
         {erro && <p className="erro">{erro}</p>}
         <div className="acoes">

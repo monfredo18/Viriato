@@ -19,7 +19,6 @@ import br.com.viriato.usuario.UsuarioRepository;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RelatorioService {
     public static final int LIMITE = 10_000;
-    private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public enum Abrangencia { TODOS_SETORES, SEU_SETOR }
 
@@ -188,8 +186,8 @@ public class RelatorioService {
         if (f.usuarioId() != null) l.add("Responsável: " + usuarios.findByIdAndTenantId(f.usuarioId(), tid).map(Usuario::getNome).orElse("(inexistente)"));
         if (f.de() != null || f.ate() != null) {
             String ref = f.referencia() == Referencia.ENCERRAMENTO ? "encerramento" : "abertura";
-            String de = f.de() == null ? "início" : f.de().format(DATA);
-            String ate = f.ate() == null ? "hoje" : f.ate().format(DATA);
+            String de = f.de() == null ? "início" : f.de().format(Datas.DATA);
+            String ate = f.ate() == null ? "hoje" : f.ate().format(Datas.DATA);
             l.add("Período (" + ref + "): " + de + " a " + ate);
         }
         if (f.situacoes() != null && !f.situacoes().isEmpty() && f.situacoes().size() < StatusProcesso.values().length) {

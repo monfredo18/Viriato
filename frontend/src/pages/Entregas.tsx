@@ -4,10 +4,9 @@ import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 import ConfigurarEtapa from './ConfigurarEtapa'
 import { JanelaCancelamento } from './AutomacoesSecao'
+import { fmtData, hojeIso } from '../formato'
 
-const fmtData = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
 /** Hoje em aaaa-mm-dd (fuso do navegador), para o mínimo do campo de data. */
-const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 
 /** Etapas do formulário: "Abertura" e "Concluído" são fixas; entre elas, as etapas intermediárias que a pessoa criar. */
 const INTERMEDIARIAS = () => ['Análise']

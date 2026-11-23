@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, type Painel as PainelDados, type PainelEtapa, type Setor } from '../api'
 import { useAuth } from '../auth'
+import { dec } from '../formato'
 
 const PERIODOS = [30, 90, 180, 365]
 const n = (v: number) => v.toLocaleString('pt-BR')
-const dec = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 /** Menos de um dia em horas; a partir daí em dias com uma casa. */
 const duracao = (horas: number) => (horas < 24 ? `${Math.max(1, Math.round(horas))} h` : `${dec(horas / 24)} d`)
 

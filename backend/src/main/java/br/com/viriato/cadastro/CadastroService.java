@@ -11,6 +11,7 @@ import br.com.viriato.seguranca.UsuarioLogado;
 import br.com.viriato.usuario.Papel;
 import br.com.viriato.usuario.Usuario;
 import br.com.viriato.usuario.UsuarioRepository;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,7 @@ public class CadastroService {
 
     // ---------- DTOs ----------
     public record ClienteDto(Long id, String numero, String nome, boolean ativo) {}
-    public record EntregaDto(Long id, String nome, Long fluxoId, String fluxoNome, boolean ativo, Long setorDonoId, String setorDonoNome, java.time.LocalDate prazoPadrao) {}
+    public record EntregaDto(Long id, String nome, Long fluxoId, String fluxoNome, boolean ativo, Long setorDonoId, String setorDonoNome, LocalDate prazoPadrao) {}
     public record EntregaResumo(Long id, String nome, boolean ativo) {}
     public record SetorDto(Long id, String nome, boolean ativo, List<EntregaResumo> entregas) {}
 
@@ -93,7 +94,7 @@ public class CadastroService {
     public List<EntregaDto> listarEntregas(UsuarioLogado quem) {
         Long tid = quem.tenantId();
         Map<Long, String> nomesFluxo = nomesDosFluxos(tid);
-        Long meuSetor = quem.papel() == Papel.ADMIN ? null : setorDe(quem);
+        Long meuSetor = quem.papel() == Papel.ADMIN ? null : usuarios.setorDe(quem);
         Map<Long, String> nomesSetor = nomesDosSetores(tid);
         return entregas.findByTenantIdOrderByNome(tid).stream()
                 .filter(e -> quem.papel() == Papel.ADMIN || visivelParaSetor(e, meuSetor))
@@ -105,10 +106,10 @@ public class CadastroService {
      * com a entrega (etapas informadas ou as padrão) e a entrega já entra na lista do setor.
      */
     @Transactional
-    public EntregaDto criarEntrega(UsuarioLogado quem, String nome, Long fluxoId, List<FluxoService.EtapaReq> etapas, Long setorId, java.time.LocalDate prazoPadrao) {
+    public EntregaDto criarEntrega(UsuarioLogado quem, String nome, Long fluxoId, List<FluxoService.EtapaReq> etapas, Long setorId, LocalDate prazoPadrao) {
         Long tid = quem.tenantId();
         String n = nome.trim();
-        Long donoId = quem.papel() == Papel.ADMIN ? setorId : setorDe(quem);
+        Long donoId = quem.papel() == Papel.ADMIN ? setorId : usuarios.setorDe(quem);
         if (donoId == null) {
             throw new NegocioException(quem.papel() == Papel.ADMIN ? "Escolha o setor da entrega"
                     : "Seu usuário não tem setor definido. Peça ao administrador para definir o seu setor.");
@@ -139,7 +140,7 @@ public class CadastroService {
     }
 
     @Transactional
-    public EntregaDto atualizarEntrega(UsuarioLogado quem, Long id, String nome, Long fluxoId, Boolean ativo, java.time.LocalDate prazoPadrao, boolean mudarPrazo) {
+    public EntregaDto atualizarEntrega(UsuarioLogado quem, Long id, String nome, Long fluxoId, Boolean ativo, LocalDate prazoPadrao, boolean mudarPrazo) {
         Long tid = quem.tenantId();
         Entrega e = entregaQueEleMexe(quem, id);
         if (mudarPrazo) {
@@ -155,7 +156,7 @@ public class CadastroService {
         return dto(entregas.save(e), nomesDosFluxos(tid), nomesDosSetores(tid));
     }
 
-    private static void exigirPrazoFuturo(java.time.LocalDate prazo) {
+    private static void exigirPrazoFuturo(LocalDate prazo) {
         if (prazo != null && prazo.isBefore(br.com.viriato.comum.Datas.hoje())) throw new NegocioException("O prazo padrão não pode ser anterior a hoje");
     }
 
@@ -163,7 +164,7 @@ public class CadastroService {
     /** As entregas exclusivas de outro setor não aparecem para quem não é administrador. */
     @Transactional(readOnly = true)
     public List<SetorDto> listarSetores(UsuarioLogado quem) {
-        Long meuSetor = quem.papel() == Papel.ADMIN ? null : setorDe(quem);
+        Long meuSetor = quem.papel() == Papel.ADMIN ? null : usuarios.setorDe(quem);
         return setores.findByTenantIdOrderByNome(quem.tenantId()).stream()
                 .map(s -> dto(s, quem.papel() == Papel.ADMIN ? null : meuSetor, quem.papel() != Papel.ADMIN)).toList();
     }
@@ -309,9 +310,6 @@ public class CadastroService {
         return fluxos.findByIdAndTenantId(fluxoId, tid).orElseThrow(() -> new NaoEncontradoException("Fluxo"));
     }
 
-    private Long setorDe(UsuarioLogado quem) {
-        return usuarios.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
-    }
 
     private static boolean visivelParaSetor(Entrega e, Long setorId) {
         return e.getSetorDonoId() != null && e.getSetorDonoId().equals(setorId);
@@ -321,7 +319,7 @@ public class CadastroService {
     private Entrega entregaQueEleMexe(UsuarioLogado quem, Long id) {
         Entrega e = entregas.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Entrega"));
         if (quem.papel() == Papel.ADMIN) return e;
-        if (e.getSetorDonoId() == null || !e.getSetorDonoId().equals(setorDe(quem))) throw new NaoEncontradoException("Entrega");
+        if (e.getSetorDonoId() == null || !e.getSetorDonoId().equals(usuarios.setorDe(quem))) throw new NaoEncontradoException("Entrega");
         return e;
     }
 

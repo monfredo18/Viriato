@@ -181,7 +181,6 @@ dd { margin: 0; font-size: 13.5px; }
 .fluxo-item { padding: .8rem 0; border-bottom: 1px solid var(--borda); }
 .fluxo-item:last-child { border-bottom: none; }
 .fluxo-topo { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
-.trilha { color: var(--suave); font-size: 13px; margin: .2rem 0 .3rem; }
 .etapa-form { display: grid; grid-template-columns: 1fr 110px auto auto auto; gap: .45rem; align-items: center; margin-bottom: .5rem; }
 
 /* ---------- login ---------- */
@@ -782,7 +781,6 @@ button.sair:hover:not(:disabled) { background: var(--vermelho-solido); border-co
 .conversa-item { display: flex; align-items: center; gap: .8rem; width: 100%; height: auto; padding: .8rem 1rem; border: 0; border-bottom: 1px solid var(--borda); border-radius: 0; background: transparent; text-align: left; font-weight: 400; }
 .conversa-item:hover:not(:disabled) { background: var(--azul-fundo); }
 .conversa-item.nova { background: color-mix(in srgb, var(--azul) 8%, transparent); }
-.avatar-mini { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; flex: none; background: linear-gradient(145deg, #4b7cf5, #2447b8); color: #fff; font-weight: 700; }
 .conversa-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .conversa-txt b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conversa-txt b small { font-weight: 400; color: var(--suave); }

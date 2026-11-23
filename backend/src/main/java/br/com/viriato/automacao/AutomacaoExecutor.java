@@ -21,7 +21,6 @@ import br.com.viriato.usuario.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
@@ -43,8 +42,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Component
 public class AutomacaoExecutor {
     private static final Logger log = LoggerFactory.getLogger(AutomacaoExecutor.class);
-    private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DateTimeFormatter DATA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final AutomacaoRegraRepository regras;
     private final AutomacaoExecucaoRepository execucoes;
@@ -113,7 +110,7 @@ public class AutomacaoExecutor {
                 switch (r.getTipo()) {
                     case GERAR_DOCUMENTO -> {
                         String nomeFicha = nomeFicha(c);
-                        byte[] ficha = FichaProcessoPdf.gerar(c.variaveis(), DATA_HORA.format(Instant.now().atZone(Datas.ZONA)), c.historico());
+                        byte[] ficha = FichaProcessoPdf.gerar(c.variaveis(), Datas.DATA_HORA.format(Instant.now().atZone(Datas.ZONA)), c.historico());
                         guardar(c, nomeFicha, ficha);
                         status = StatusExecucao.OK;
                         msg = "Documento \"" + nomeFicha + "\" anexado ao processo";
@@ -157,7 +154,7 @@ public class AutomacaoExecutor {
         v.put("setor", setor == null ? "—" : setor);
         v.put("responsavel", resp == null ? "—" : resp);
         v.put("etapa", etapa == null ? "—" : etapa);
-        v.put("prazo", p.getPrazoEtapa() == null ? "sem prazo" : DATA.format(p.getPrazoEtapa()));
+        v.put("prazo", p.getPrazoEtapa() == null ? "sem prazo" : Datas.DATA.format(p.getPrazoEtapa()));
         v.put("situacao", switch (p.getStatus()) { case ABERTO -> "Em andamento"; case CONCLUIDO -> "Concluído"; case CANCELADO -> "Cancelado"; });
 
         List<FichaProcessoPdf.Linha> linhas = List.of();
@@ -166,7 +163,7 @@ public class AutomacaoExecutor {
             if (hs.size() > 100) hs = hs.subList(0, 100);
             Collections.reverse(hs);
             Map<Long, String> nomes = usuarios.findByTenantIdOrderByNome(tid).stream().collect(Collectors.toMap(Usuario::getId, Usuario::getNome));
-            linhas = hs.stream().map(h -> new FichaProcessoPdf.Linha(DATA_HORA.format(h.getCriadoEm().atZone(Datas.ZONA)), h.getAcao(),
+            linhas = hs.stream().map(h -> new FichaProcessoPdf.Linha(Datas.DATA_HORA.format(h.getCriadoEm().atZone(Datas.ZONA)), h.getAcao(),
                     ((h.getDeEtapa() != null || h.getParaEtapa() != null ? (h.getDeEtapa() == null ? "" : h.getDeEtapa() + " → ") + h.getParaEtapa() + " " : "")
                             + (h.getComentario() == null ? "" : h.getComentario())).trim(),
                     h.getUsuarioId() == null ? null : nomes.getOrDefault(h.getUsuarioId(), "usuário removido"))).toList();

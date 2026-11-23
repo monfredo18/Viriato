@@ -18,6 +18,7 @@ public class Setor {
     private boolean ativo = true;
 
     @ManyToMany
+    @org.hibernate.annotations.BatchSize(size = 50)
     @JoinTable(name = "setor_entrega",
             joinColumns = @JoinColumn(name = "setor_id"),
             inverseJoinColumns = @JoinColumn(name = "entrega_id"))

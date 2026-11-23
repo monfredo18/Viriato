@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class JwtService {
     private final SecretKey chave;
+    private final io.jsonwebtoken.JwtParser parser;
     private final Duration expiracao;
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JwtService.class);
@@ -38,6 +39,7 @@ public class JwtService {
             throw new IllegalStateException("viriato.jwt.secret precisa ter ao menos 32 bytes");
         }
         this.chave = Keys.hmacShaKeyFor(segredo.getBytes(StandardCharsets.UTF_8));
+        this.parser = Jwts.parser().verifyWith(chave).build();
         this.expiracao = Duration.ofHours(horas);
     }
 
@@ -60,7 +62,7 @@ public class JwtService {
 
     public Optional<TokenValido> validar(String token) {
         try {
-            Claims c = Jwts.parser().verifyWith(chave).build().parseSignedClaims(token).getPayload();
+            Claims c = parser.parseSignedClaims(token).getPayload();
             Integer versao = c.get("v", Integer.class);
             return Optional.of(new TokenValido(new UsuarioLogado(
                     Long.valueOf(c.getSubject()),

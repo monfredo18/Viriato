@@ -80,14 +80,14 @@ export interface PendenciasUsuario { nome: string; abertos: number; atrasados: n
 export interface Usuario { id: number; nome: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null; deveTrocarSenha: boolean; fotoVersao: number | null; bloqueado: boolean; doisFatores: boolean; email: string | null }
 export const ROTULO_PAPEL: Record<Papel, string> = { ADMIN: 'Administrador', GESTOR: 'Gestor', USUARIO: 'Usuário' }
 export interface Cliente { id: number; numero: string; nome: string; ativo: boolean }
-export interface EntregaResumo { id: number; nome: string; ativo: boolean }
+interface EntregaResumo { id: number; nome: string; ativo: boolean }
 export interface Setor { id: number; nome: string; ativo: boolean; entregas: EntregaResumo[] }
 /** {@code setorDonoId} vazio = entrega geral (do administrador); com valor = exclusiva desse setor. */
 export interface Entrega { id: number; nome: string; fluxoId: number; fluxoNome: string; ativo: boolean; setorDonoId: number | null; setorDonoNome: string | null; prazoPadrao: string | null }
 export interface Sessao { token: string; usuario: Usuario; empresa: string }
 export type TipoRequisito = 'DOCUMENTO' | 'CONFIRMACAO'
 export interface Requisito { id: number; tipo: TipoRequisito; descricao: string }
-export interface RequisitoStatus extends Requisito { cumprido: boolean; cumpridoPor: string | null; cumpridoEm: string | null; documentoId: number | null; documentoNome: string | null }
+interface RequisitoStatus extends Requisito { cumprido: boolean; cumpridoPor: string | null; cumpridoEm: string | null; documentoId: number | null; documentoNome: string | null }
 export interface Etapa { id: number; nome: string; ordem: number; prazoDias: number | null; inicial: boolean; finalEtapa: boolean; requisitos: Requisito[]; papelMinimo: Papel }
 export interface Fluxo { id: number; nome: string; ativo: boolean; etapas: Etapa[]; transicoes: { de: number; para: number }[] }
 export interface Processo {
@@ -99,9 +99,9 @@ export interface Processo {
   status: Status; prazoEtapa: string | null; atrasado: boolean
   camposExtras: Record<string, unknown>; criadoEm: string; atualizadoEm: string
 }
-export interface Historico { id: number; acao: string; usuarioNome: string | null; deEtapa: string | null; paraEtapa: string | null; comentario: string | null; criadoEm: string }
-export type StatusAprovacao = 'PENDENTE' | 'APROVADA' | 'RECUSADA' | 'CANCELADA'
-export interface Aprovacao {
+interface Historico { id: number; acao: string; usuarioNome: string | null; deEtapa: string | null; paraEtapa: string | null; comentario: string | null; criadoEm: string }
+type StatusAprovacao = 'PENDENTE' | 'APROVADA' | 'RECUSADA' | 'CANCELADA'
+interface Aprovacao {
   id: number; etapaDestinoId: number; etapaDestino: string | null; papelMinimo: Papel
   solicitadoPorId: number | null; solicitadoPor: string | null; solicitadoEm: string; comentario: string | null
   status: StatusAprovacao; decididoPor: string | null; decididoEm: string | null; motivo: string | null
@@ -112,10 +112,10 @@ export const NIVEL_PAPEL: Record<Papel, number> = { ADMIN: 2, GESTOR: 1, USUARIO
 export const ROTULO_QUEM_MOVE: Record<Papel, string> = { USUARIO: 'Qualquer responsável', GESTOR: 'Somente gestor ou administrador', ADMIN: 'Somente administrador' }
 export interface Pagina<T> { content: T[]; totalPages: number; number: number; totalElements: number }
 export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string; requisitoId: number | null; requisito: string | null; automatico: boolean }
-export interface PainelResumo { abertos: number; atrasados: number; concluidos: number; cancelados: number; tempoMedioConclusaoDias: number | null }
-export interface PainelSetor { setorId: number | null; setor: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
+interface PainelResumo { abertos: number; atrasados: number; concluidos: number; cancelados: number; tempoMedioConclusaoDias: number | null }
+interface PainelSetor { setorId: number | null; setor: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
 export interface PainelEtapa { fluxo: string; etapa: string; prazoDias: number | null; passagens: number; mediaHoras: number; foraDoPrazo: number }
-export interface PainelFuncionario { usuarioId: number; nome: string; setor: string | null; abertos: number; atrasados: number; concluidos: number }
+interface PainelFuncionario { usuarioId: number; nome: string; setor: string | null; abertos: number; atrasados: number; concluidos: number }
 export interface Painel {
   escopo: string; todosOsSetores: boolean; periodoDias: number; geradoEm: string
   resumo: PainelResumo; setores: PainelSetor[]; etapas: PainelEtapa[]; funcionarios: PainelFuncionario[]

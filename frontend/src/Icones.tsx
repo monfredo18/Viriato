@@ -15,7 +15,6 @@ const desenhos = {
   busca: <><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2" /></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
   mais: <><path d="M12 5v14M5 12h14" /></>,
-  relogio: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>,
   alerta: <><path d="M12 3.5 2.8 19.5h18.4z" /><path d="M12 10v4.5M12 17.2v.1" /></>,
   check: <><circle cx="12" cy="12" r="8.5" /><path d="m8.3 12.3 2.5 2.5 4.9-5.4" /></>,
   ampulheta: <><path d="M7 3h10M7 21h10M8 3c0 5 3 6 4 9-1 3-4 4-4 9M16 3c0 5-3 6-4 9 1 3 4 4 4 9" /></>,

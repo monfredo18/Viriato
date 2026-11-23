@@ -100,7 +100,7 @@ public class ProcessoService {
     public ProcessoDto criar(UsuarioLogado quem, NovoProcesso n) {
         Long tid = quem.tenantId();
         Cliente cliente = cadastros.clienteAtivo(tid, n.clienteId());
-        Long setorEscolhido = quem.papel() == Papel.ADMIN ? n.setorId() : setorDe(quem);
+        Long setorEscolhido = quem.papel() == Papel.ADMIN ? n.setorId() : usuarios.setorDe(quem);
         if (setorEscolhido == null) {
             throw new NegocioException(quem.papel() == Papel.ADMIN ? "Informe o setor"
                     : "Seu usuário não tem setor definido. Peça ao administrador para definir o seu setor.");
@@ -151,7 +151,7 @@ public class ProcessoService {
     public Page<ProcessoDto> listar(UsuarioLogado quem, Filtro f, Pageable page) {
         Long tenantId = quem.tenantId();
         boolean restrito = quem.papel() != Papel.ADMIN;
-        Long meuSetor = restrito ? setorDe(quem) : null;
+        Long meuSetor = restrito ? usuarios.setorDe(quem) : null;
         Specification<Processo> spec = (root, q, cb) -> {
             List<Predicate> ps = new ArrayList<>();
             ps.add(cb.equal(root.get("tenantId"), tenantId));
@@ -339,17 +339,13 @@ public class ProcessoService {
     public Processo buscar(UsuarioLogado quem, Long id) {
         Processo p = processos.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Processo"));
         if (quem.papel() != Papel.ADMIN) {
-            Long meuSetor = setorDe(quem);
+            Long meuSetor = usuarios.setorDe(quem);
             if (meuSetor == null || !meuSetor.equals(p.getSetorId())) throw new NaoEncontradoException("Processo");
             if (quem.papel() == Papel.USUARIO && p.getResponsavelRemovidoNome() != null) throw new NaoEncontradoException("Processo");
         }
         return p;
     }
 
-    /** Setor atual de quem está logado (lido do banco, não do token, para refletir mudanças). */
-    private Long setorDe(UsuarioLogado quem) {
-        return usuarios.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
-    }
 
     /**
      * Passa os processos EM ANDAMENTO (inclusive os atrasados) de um funcionário que será apagado para os

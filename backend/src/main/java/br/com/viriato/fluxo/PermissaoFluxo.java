@@ -27,16 +27,13 @@ public class PermissaoFluxo {
         this.usuarios = usuarios;
     }
 
-    private Long setorDe(UsuarioLogado quem) {
-        return usuarios.findByIdAndTenantId(quem.id(), quem.tenantId()).map(Usuario::getSetorId).orElse(null);
-    }
 
     @Transactional(readOnly = true)
     public boolean visivel(Long fluxoId) {
         UsuarioLogado quem = Contexto.atual();
         if (quem.papel() == Papel.ADMIN) return true;
         List<Entrega> usos = entregas.findByTenantIdAndFluxoIdOrderByNome(quem.tenantId(), fluxoId);
-        Long meu = setorDe(quem);
+        Long meu = usuarios.setorDe(quem);
         return meu != null && usos.stream().anyMatch(e -> meu.equals(e.getSetorDonoId()));
     }
 
@@ -47,7 +44,7 @@ public class PermissaoFluxo {
         if (quem.papel() == Papel.ADMIN) return true;
         if (quem.papel() != Papel.GESTOR) return false;
         List<Entrega> usos = entregas.findByTenantIdAndFluxoIdOrderByNome(quem.tenantId(), fluxoId);
-        Long meu = setorDe(quem);
+        Long meu = usuarios.setorDe(quem);
         return meu != null && !usos.isEmpty() && usos.stream().allMatch(e -> meu.equals(e.getSetorDonoId()));
     }
 }

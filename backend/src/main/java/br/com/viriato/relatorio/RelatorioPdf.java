@@ -23,7 +23,6 @@ import com.lowagie.text.pdf.PdfWriter;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.format.DateTimeFormatter;
 
 /** Gera o PDF do relatório de processos (A4 paisagem), na identidade visual do sistema. */
 public final class RelatorioPdf {
@@ -37,8 +36,6 @@ public final class RelatorioPdf {
     private static final Color LINHA = new Color(0xD3, 0xD9, 0xE4);
     private static final Color ZEBRA = new Color(0xF3, 0xF5, 0xFA);
 
-    private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DateTimeFormatter DATA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private RelatorioPdf() {}
 
@@ -93,7 +90,7 @@ public final class RelatorioPdf {
         meta.setWidthPercentage(100);
         meta.setSpacingAfter(4);
         linhaMeta(meta, "Empresa", d.nomeDoSistema(), "Gerado por", d.geradoPor());
-        linhaMeta(meta, "Abrangência", d.abrangencia(), "Gerado em", d.geradoEm().atZone(Datas.ZONA).format(DATA_HORA));
+        linhaMeta(meta, "Abrangência", d.abrangencia(), "Gerado em", d.geradoEm().atZone(Datas.ZONA).format(Datas.DATA_HORA));
         doc.add(meta);
 
         String filtros = d.filtros().isEmpty() ? "Nenhum (todos os processos da abrangência)" : String.join("  |  ", d.filtros());
@@ -176,8 +173,8 @@ public final class RelatorioPdf {
             t.addCell(corpo(l.setor(), f(8.5f, Font.NORMAL, TEXTO), fundo));
             t.addCell(corpo(l.entrega(), f(8.5f, Font.NORMAL, TEXTO), fundo));
             t.addCell(corpo(l.responsavel(), f(8.5f, Font.NORMAL, TEXTO), fundo));
-            t.addCell(corpo(l.abertura().format(DATA), f(8.5f, Font.NORMAL, TEXTO), fundo));
-            t.addCell(corpo(l.encerramento() == null ? "—" : l.encerramento().format(DATA), f(8.5f, Font.NORMAL, TEXTO), fundo));
+            t.addCell(corpo(l.abertura().format(Datas.DATA), f(8.5f, Font.NORMAL, TEXTO), fundo));
+            t.addCell(corpo(l.encerramento() == null ? "—" : l.encerramento().format(Datas.DATA), f(8.5f, Font.NORMAL, TEXTO), fundo));
             t.addCell(corpo(l.situacao().toUpperCase(), f(7.5f, Font.BOLD, corDaSituacao(l)), fundo));
             zebra = !zebra;
         }
@@ -244,7 +241,7 @@ public final class RelatorioPdf {
             cb.setColorFill(SUAVE);
             cb.setTextMatrix(esquerda, 24);
             cb.showText("Grupo Viriato — Relatório de processos — " + dados.nomeDoSistema() + " — "
-                    + dados.geradoEm().atZone(Datas.ZONA).format(DATA_HORA));
+                    + dados.geradoEm().atZone(Datas.ZONA).format(Datas.DATA_HORA));
             String pagina = "Página " + writer.getPageNumber() + " de ";
             float largura = base.getWidthPoint(pagina, 8);
             float x = direita - largura - 14;

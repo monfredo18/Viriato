@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, type Cliente, type Entrega, type Fluxo, type Pagina, type Processo, type Setor, type Status, type Usuario } from '../api'
 import { useAuth } from '../auth'
+import { fmtData, hojeIso } from '../formato'
 
-const fmtData = (d: string | null) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—')
 
 export function Selo({ p }: { p: Processo }) {
   if (p.status !== 'ABERTO') return <span className={`selo ${p.status.toLowerCase()}`}>{p.status === 'CONCLUIDO' ? 'Concluído' : 'Cancelado'}</span>
@@ -128,7 +128,6 @@ export default function Processos() {
  * responsável são os dele). O servidor aplica as mesmas regras, o formulário apenas não pede o que não vale.
  */
 /** Hoje em aaaa-mm-dd (fuso do navegador), para o mínimo do campo de data. */
-const hojeIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 
 export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: () => void }) {
   const { usuario } = useAuth()
@@ -160,7 +159,7 @@ export function NovoProcesso({ fechar, criado }: { fechar: () => void; criado: (
   const candidatos = (usuarios ?? []).filter((u) => u.papel === 'ADMIN' || (setorDoProcesso !== null && u.setorId === setorDoProcesso))
   // prazo padrão da entrega: dias da etapa de conclusão do fluxo dela
   const dias = fluxos.find((x) => x.id === entrega?.fluxoId)?.etapas.find((et) => et.finalEtapa)?.prazoDias ?? null
-  const padrao = entrega?.prazoPadrao && entrega.prazoPadrao >= hojeIso() ? new Date(entrega.prazoPadrao + 'T00:00:00').toLocaleDateString('pt-BR') : dias !== null ? `${dias} dia(s) a partir de hoje` : null
+  const padrao = entrega?.prazoPadrao && entrega.prazoPadrao >= hojeIso() ? fmtData(entrega.prazoPadrao) : dias !== null ? `${dias} dia(s) a partir de hoje` : null
   const semSetor = !escolheSetor && usuarios !== null && meuSetorId === null
 
   const enviar = async (e: FormEvent) => {

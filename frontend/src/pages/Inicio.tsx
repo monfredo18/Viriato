@@ -5,9 +5,8 @@ import { useAuth } from '../auth'
 import Icone, { type NomeIcone } from '../Icones'
 import { BarraCarga } from './Painel'
 import { NovoProcesso, Selo } from './Processos'
+import { dec, fmtData } from '../formato'
 
-const dec = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-const fmtData = (d: string | null) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—')
 
 /** Diferença em dias entre o prazo (data sem hora) e hoje: negativa = atrasado. */
 function diasAte(prazo: string): number {
