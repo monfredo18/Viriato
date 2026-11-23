@@ -500,6 +500,7 @@ button {
   box-shadow: 0 1px 2px rgba(12, 21, 48, .06); transition: background .15s, border-color .15s, color .15s, box-shadow .15s, transform .08s;
 }
 button:hover:not(:disabled) { box-shadow: 0 4px 12px -6px rgba(12, 21, 48, .3); }
+button.link, button.perfil, .btn-x, .abas button, .lateral button { box-shadow: none; }
 button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
 button.primario {
   background: linear-gradient(180deg, #78a0ff 0%, #6b97ff 55%, #5f8af2 100%); border-color: #5a85ec; color: var(--azul-fg);
@@ -920,12 +921,13 @@ td .selo + .selo, td .selo + label { margin-left: .4rem; }
 /* ==========================================================================
    Visual compacto: fonte Arial, tamanhos menores, quase nada arredondado e menu lateral em lista simples
    ========================================================================== */
-:root { --raio: 2px; --raio-grande: 3px; --menu-larg: 220px; }
+:root { --raio: 6px; --raio-grande: 10px; --menu-larg: 220px; }
 body { font: 13px/1.45 var(--sans); font-feature-settings: normal; }
 input, select, textarea, button { font-family: inherit; }
 
 /* cantos: retos, com 2 px; só foto de perfil e bolinhas de estado continuam redondas */
-*, *::before, *::after { border-radius: 2px !important; }
+*, *::before, *::after { border-radius: var(--raio) !important; }
+.cartao, .modal, .tabela-wrap, .indicador, .kpis > div, .resumo-caixas > div, .menu-notif, .chat { border-radius: var(--raio-grande) !important; }
 .avatar, img.avatar, .ponto-online, .prazos li::before, .historico li::before { border-radius: 50% !important; }
 input[type=radio] { border-radius: 50% !important; }
 
@@ -1004,7 +1006,7 @@ button.sair { height: 38px; padding: 0 1rem; border-radius: 999px !important; }
 .selo { border-radius: 999px !important; padding: 3px 11px 3px 9px; font-size: 12px; }
 .selo::before { border-radius: 50% !important; }
 .badge { border-radius: 999px !important; }
-.legenda i { border-radius: 2px !important; }
+.legenda i { border-radius: 3px !important; }
 
 /* ==========================================================================
    Tema claro: paleta revisada
@@ -1049,3 +1051,60 @@ button.sair { height: 38px; padding: 0 1rem; border-radius: 999px !important; }
 .chat-topo:active { cursor: grabbing; }
 .chat-topo button { cursor: pointer; }
 @media (max-width: 560px) { .chat-topo { cursor: default; } }
+
+/* ==========================================================================
+   Acabamento atual
+   Superfícies claras com borda fina e sombra em duas camadas, cantos de 6 px (10 px nos painéis), números
+   tabulares, foco visível em todo controle, transições curtas e janelas sobre fundo desfocado.
+   Arial e a paleta marinho/azul/dourado continuam; muda o acabamento, não a identidade.
+   ========================================================================== */
+:root {
+  --sombra-1: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .04);
+  --sombra-2: 0 4px 8px -2px rgba(16, 24, 40, .08), 0 2px 4px -2px rgba(16, 24, 40, .05);
+  --sombra-3: 0 20px 40px -12px rgba(16, 24, 40, .28);
+  --tempo: .14s ease;
+}
+:root[data-tema='escuro'] { --sombra-1: 0 0 0 1px rgba(255, 255, 255, .02); --sombra-2: 0 4px 12px rgba(0, 0, 0, .35); --sombra-3: 0 24px 48px -12px rgba(0, 0, 0, .7); }
+body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+h1, h2, h3 { letter-spacing: -.012em; }
+td, th, .indicador b, .kpis b, .resumo-caixas b, .contador, .badge { font-variant-numeric: tabular-nums; }
+::selection { background: color-mix(in srgb, var(--azul) 28%, transparent); }
+:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; }
+
+/* painéis */
+.cartao, .tabela-wrap, .indicador, .kpis > div, .resumo-caixas > div { box-shadow: var(--sombra-1) !important; }
+.indicador { transition: box-shadow var(--tempo), border-color var(--tempo), transform var(--tempo); }
+.indicador:hover { box-shadow: var(--sombra-2) !important; border-color: var(--borda-forte); }
+.cartao .tabela-wrap { box-shadow: none !important; }
+.fundo { background: rgba(10, 16, 34, .46); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.modal, .chat, .menu-notif { box-shadow: var(--sombra-3); border: 1px solid var(--borda); }
+
+/* tabelas */
+thead th { text-transform: none; letter-spacing: 0; font-weight: 600; background: color-mix(in srgb, var(--bg) 70%, var(--card)); border-bottom: 1px solid var(--borda); }
+tbody td { border-bottom: 1px solid color-mix(in srgb, var(--borda) 70%, transparent); }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr { transition: background var(--tempo); }
+
+/* botões e campos */
+button, input, select, textarea { transition: background var(--tempo), border-color var(--tempo), box-shadow var(--tempo), color var(--tempo); }
+button { font-weight: 600; box-shadow: 0 1px 1px rgba(16, 24, 40, .05); }
+button.primario { box-shadow: 0 1px 2px rgba(16, 24, 40, .18), inset 0 1px 0 rgba(255, 255, 255, .16); }
+button:active:not(:disabled) { transform: translateY(.5px); }
+button:disabled { opacity: .55; }
+input, select, textarea { background: var(--card); }
+input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--suave) 70%, transparent); }
+input:hover:not(:focus):not(:disabled), select:hover:not(:focus):not(:disabled), textarea:hover:not(:focus):not(:disabled) { border-color: var(--suave); }
+input:focus, select:focus, textarea:focus { border-color: var(--azul); box-shadow: 0 0 0 3px var(--anel); }
+
+/* menu lateral: item ativo com barra e fundo suaves */
+.lateral nav a { transition: background var(--tempo), color var(--tempo); }
+.lateral nav a.ativo { background: linear-gradient(90deg, rgba(127, 163, 255, .18), rgba(127, 163, 255, .04)); }
+
+/* barra superior: vidro leve e filete fino */
+.topo { background: color-mix(in srgb, var(--card) 88%, transparent); backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--borda); position: sticky; top: 0; z-index: 20; }
+
+/* barras de rolagem discretas */
+* { scrollbar-width: thin; scrollbar-color: var(--borda-forte) transparent; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
