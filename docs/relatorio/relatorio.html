@@ -365,6 +365,12 @@
 
 <!-- ============================ 4 ============================ -->
 <section>
+  <h2>3.17 Aparência e acabamento visual</h2>
+  <p>A interface usa a fonte Arial em tamanho compacto, tema claro e tema escuro (botão na barra superior) e a paleta marinho, azul e dourado da marca. O acabamento atual traz painéis com borda fina e sombra suave, cantos de 6 px nos controles e 10 px nos painéis, foco de teclado visível em todo controle, barra superior translúcida, janelas sobre fundo desfocado, números tabulares nas tabelas e respeito à opção "reduzir movimento" do sistema. O menu lateral é uma lista simples com ícones e barra azul no item ativo. A logo do Grupo Viriato aparece no acesso, no menu e em todos os PDFs.</p>
+
+  <h2>3.18 Manutenção do código</h2>
+  <p>Formatadores de data do backend centralizados em <code>Datas</code>, busca do setor de quem está logado em um só método do <code>UsuarioRepository</code>, leitor de token JWT criado uma vez, setores carregados em lotes (sem consulta por setor) e helpers de data do frontend em <code>formato.ts</code>.</p>
+
   <h1>4. Papéis e permissões</h1>
   <p>Os <strong>processos são separados por setor</strong>: gestor e usuário enxergam apenas os processos (e documentos e histórico) do próprio setor; <strong>só o administrador vê os de todos os setores</strong>. Processo de outro setor responde “não encontrado”, inclusive no endereço direto, nos documentos e nos filtros. Cadastros, fluxos e a equipe (com papel e setor) continuam visíveis a todos. O que muda, além disso, é quem pode <strong>alterar</strong>.</p>
   <table>
@@ -615,7 +621,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>121 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>135 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>
