@@ -7,9 +7,10 @@ import {
 import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 import { fmtData } from '../formato'
+import { Ged, NotasXml } from './EmpresaGed'
 
-type Aba = 'dados' | 'socios' | 'contatos' | 'certificados' | 'procuracoes' | 'obrigacoes' | 'checklist'
-const ABAS: [Aba, string][] = [['dados', 'Dados fiscais'], ['socios', 'Sócios'], ['contatos', 'Contatos'], ['certificados', 'Certificados'], ['procuracoes', 'Procurações'], ['obrigacoes', 'Obrigações'], ['checklist', 'Checklist']]
+type Aba = 'dados' | 'socios' | 'contatos' | 'certificados' | 'procuracoes' | 'obrigacoes' | 'ged' | 'xml' | 'checklist'
+const ABAS: [Aba, string][] = [['dados', 'Dados fiscais'], ['socios', 'Sócios'], ['contatos', 'Contatos'], ['certificados', 'Certificados'], ['procuracoes', 'Procurações'], ['obrigacoes', 'Obrigações'], ['ged', 'Documentos (GED)'], ['xml', 'Notas fiscais'], ['checklist', 'Checklist']]
 const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
 
 /** Do nome completo do certificado (CN=..., O=...) fica só o CN. */
@@ -52,6 +53,8 @@ export default function EmpresaFicha() {
           {aba === 'certificados' && <Certificados ficha={ficha} base={base} agir={agir} />}
           {aba === 'procuracoes' && <Procuracoes ficha={ficha} base={base} agir={agir} />}
           {aba === 'obrigacoes' && <ObrigacoesDaEmpresa base={base} />}
+          {aba === 'ged' && <Ged clienteId={ficha.id} />}
+          {aba === 'xml' && <NotasXml clienteId={ficha.id} />}
           {aba === 'checklist' && <Checklist ficha={ficha} base={base} agir={agir} />}
         </>
       )}

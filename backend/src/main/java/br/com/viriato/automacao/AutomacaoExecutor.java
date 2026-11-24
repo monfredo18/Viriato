@@ -62,6 +62,7 @@ public class AutomacaoExecutor {
     private final ObjectMapper json;
     private final PlatformTransactionManager tm;
     private final Executor executor;
+    private final br.com.viriato.ged.ArvoreArquivistica arvore;
     private final int maxTentativas;
     private final long baseSegundos;
     private final java.time.Duration travadaApos;
@@ -73,7 +74,9 @@ public class AutomacaoExecutor {
                              PlatformTransactionManager tm, @Qualifier("automacaoTaskExecutor") Executor executor,
                              @Value("${viriato.automacao.retry.tentativas:3}") int maxTentativas,
                              @Value("${viriato.automacao.retry.base-segundos:60}") long baseSegundos,
-                             @Value("${viriato.automacao.retry.travada-minutos:10}") long travadaMinutos) {
+                             @Value("${viriato.automacao.retry.travada-minutos:10}") long travadaMinutos,
+                             br.com.viriato.ged.ArvoreArquivistica arvore) {
+        this.arvore = arvore;
         this.maxTentativas = Math.max(1, maxTentativas);
         this.baseSegundos = Math.max(0, baseSegundos);
         this.travadaApos = java.time.Duration.ofMinutes(travadaMinutos);
@@ -294,7 +297,10 @@ public class AutomacaoExecutor {
     }
 
     private void guardar(Contexto c, String nome, byte[] pdf) {
-        String chave = "tenant-%d/processo-%d/%s-%s".formatted(c.tenantId(), c.processoId(), UUID.randomUUID(), nome);
+        var hoje = Datas.hoje();
+        var proc = processos.findById(c.processoId()).orElse(null);
+        String chave = arvore.chave(c.tenantId(), c.clienteId(), proc != null && proc.getCompetenciaAno() != null ? proc.getCompetenciaAno() : hoje.getYear(),
+                proc != null && proc.getCompetenciaMes() != null ? proc.getCompetenciaMes() : hoje.getMonthValue(), proc == null ? null : proc.getSetorId(), c.processoId(), nome);
         storage.salvar(chave, new ByteArrayInputStream(pdf), pdf.length, "application/pdf");
         Documento d = new Documento();
         d.setTenantId(c.tenantId());
@@ -305,6 +311,11 @@ public class AutomacaoExecutor {
         d.setTamanho(pdf.length);
         d.setEnviadoPor(null);
         d.setAutomatico(true);
+        d.setClienteId(c.clienteId());
+        d.setSetorId(proc == null ? null : proc.getSetorId());
+        d.setAno(proc != null && proc.getCompetenciaAno() != null ? proc.getCompetenciaAno() : hoje.getYear());
+        d.setMes(proc != null && proc.getCompetenciaMes() != null ? proc.getCompetenciaMes() : hoje.getMonthValue());
+        d.setCategoria("FICHA");
         try {
             novaTransacao(() -> documentos.save(d));
         } catch (RuntimeException ex) {

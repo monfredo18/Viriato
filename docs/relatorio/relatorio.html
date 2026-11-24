@@ -404,6 +404,15 @@
     <li><strong>Fluxos não lineares, Kanban, Calendário e campos extras:</strong> editor de ordem e de transições (ramificações e retornos), visões Kanban (arrastar) e Calendário em Processos, e campos tipados por entrega (texto, número, data, moeda, seleção), com obrigatoriedade na conclusão.</li>
   </ul>
 
+  <h2>3.22 GED contábil, XMLs fiscais e SEFAZ</h2>
+  <ul>
+    <li><strong>Árvore arquivística:</strong> arquivos novos guardados por empresa, ano, mês e setor; aba <em>Documentos (GED)</em> na ficha da empresa, com explorador, busca e categorias.</li>
+    <li><strong>Guarda legal:</strong> guias, recibos, extratos e XMLs nascem em guarda de 5 anos ou mais; não se excluem, só se arquivam, com registro na auditoria.</li>
+    <li><strong>Importação de XMLs:</strong> NF-e, NFC-e, CT-e e NFS-e (nacional e ABRASF), soltos ou em .zip, com leitura segura do XML, chave única por empresa do sistema, ligação pela empresa (CNPJ) e inferência de entrada ou saída.</li>
+    <li><strong>SEFAZ (DF-e):</strong> conector com o certificado A1 do cofre, controle de NSU e espera de 1 hora; desligado por padrão e não exercitado contra a SEFAZ real.</li>
+    <li><strong>Conferência do anexo:</strong> CNPJ e período do documento contra a empresa e a competência do processo, com aviso antes de confirmar o envio.</li>
+  </ul>
+
   <h1>4. Papéis e permissões</h1>
   <p>Os <strong>processos são separados por setor</strong>: gestor e usuário enxergam apenas os processos (e documentos e histórico) do próprio setor; <strong>só o administrador vê os de todos os setores</strong>. Processo de outro setor responde “não encontrado”, inclusive no endereço direto, nos documentos e nos filtros. Cadastros, fluxos e a equipe (com papel e setor) continuam visíveis a todos. O que muda, além disso, é quem pode <strong>alterar</strong>.</p>
   <table>
@@ -696,7 +705,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>185 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>205 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>

@@ -30,13 +30,22 @@ public class DocumentoService {
     private final RequisitoService requisitos;
     private final EtapaRequisitoRepository requisitosRepo;
     private final ValidadorDeArquivo validador;
+    private final br.com.viriato.ged.ArvoreArquivistica arvore;
+    private final br.com.viriato.ged.ValidacaoDocumento conferencia;
+    private final br.com.viriato.usuario.UsuarioRepository usuarios;
+    private final br.com.viriato.auditoria.AuditoriaService auditoria;
     private final AntivirusScanner antivirus;
     private final boolean falharFechado;
 
     public DocumentoService(DocumentoRepository repo, ArmazenamentoArquivos storage, ProcessoService processos,
                             RequisitoService requisitos, EtapaRequisitoRepository requisitosRepo,
-                            ValidadorDeArquivo validador, AntivirusScanner antivirus,
+                            ValidadorDeArquivo validador, AntivirusScanner antivirus, br.com.viriato.ged.ArvoreArquivistica arvore, br.com.viriato.ged.ValidacaoDocumento conferencia,
+                            br.com.viriato.usuario.UsuarioRepository usuarios, br.com.viriato.auditoria.AuditoriaService auditoria,
                             @org.springframework.beans.factory.annotation.Value("${viriato.antivirus.falhar-fechado:true}") boolean falharFechado) {
+        this.arvore = arvore;
+        this.conferencia = conferencia;
+        this.usuarios = usuarios;
+        this.auditoria = auditoria;
         this.validador = validador;
         this.antivirus = antivirus;
         this.falharFechado = falharFechado;
@@ -49,10 +58,10 @@ public class DocumentoService {
 
     /** {@code requisito}: descrição do requisito de etapa que este documento cumpre, se houver. */
     public record DocumentoDto(Long id, String nome, String contentType, long tamanho, Long enviadoPor, Instant criadoEm,
-                               Long requisitoId, String requisito, boolean automatico) {
+                               Long requisitoId, String requisito, boolean automatico, String categoria, boolean guardaLegal, boolean arquivado, Integer ano, Integer mes) {
         static DocumentoDto de(Documento d, String requisito) {
             return new DocumentoDto(d.getId(), d.getNomeOriginal(), d.getContentType(), d.getTamanho(),
-                    d.getEnviadoPor(), d.getCriadoEm(), d.getRequisitoId(), requisito, d.isAutomatico());
+                    d.getEnviadoPor(), d.getCriadoEm(), d.getRequisitoId(), requisito, d.isAutomatico(), d.getCategoria(), d.isGuardaLegal(), d.isArquivado(), d.getAno(), d.getMes());
         }
     }
 
@@ -60,6 +69,11 @@ public class DocumentoService {
 
     @Transactional
     public DocumentoDto enviar(UsuarioLogado quem, Long processoId, MultipartFile arquivo, Long requisitoId) throws IOException {
+        return enviar(quem, processoId, arquivo, requisitoId, false, null);
+    }
+
+    @Transactional
+    public DocumentoDto enviar(UsuarioLogado quem, Long processoId, MultipartFile arquivo, Long requisitoId, boolean guardaLegal, String categoria) throws IOException {
         Processo processo = processos.buscar(quem, processoId); // garante que o processo é do tenant
         processos.exigirPodeMexer(quem, processo);
         if (arquivo == null || arquivo.isEmpty()) throw new NegocioException("Arquivo vazio");
@@ -71,7 +85,10 @@ public class DocumentoService {
 
         String nome = limparNome(arquivo.getOriginalFilename());
         String tipo = validarConteudo(nome, arquivo);
-        String chave = "tenant-%d/processo-%d/%s-%s".formatted(quem.tenantId(), processoId, UUID.randomUUID(), nome);
+        var hoje = br.com.viriato.comum.Datas.hoje();
+        int ano = processo.getCompetenciaAno() != null ? processo.getCompetenciaAno() : hoje.getYear();
+        int mes = processo.getCompetenciaMes() != null ? processo.getCompetenciaMes() : hoje.getMonthValue();
+        String chave = arvore.chave(quem.tenantId(), processo.getClienteId(), ano, mes, processo.getSetorId(), processoId, nome);
 
         try (InputStream in = arquivo.getInputStream()) {
             storage.salvar(chave, in, arquivo.getSize(), tipo);
@@ -85,6 +102,12 @@ public class DocumentoService {
         d.setTamanho(arquivo.getSize());
         d.setEnviadoPor(quem.id());
         d.setRequisitoId(requisito == null ? null : requisito.getId());
+        d.setClienteId(processo.getClienteId());
+        d.setSetorId(processo.getSetorId());
+        d.setAno(ano);
+        d.setMes(mes);
+        d.setCategoria(categoria);
+        d.setGuardaLegal(guardaLegal);
         try {
             return DocumentoDto.de(repo.save(d), requisito == null ? null : requisito.getDescricao());
         } catch (RuntimeException e) {
@@ -109,6 +132,20 @@ public class DocumentoService {
         return tipo;
     }
 
+    /** Mesma conferência (extensão, conteúdo e antivírus) para bytes que não vieram de um upload direto, como as notas dentro de um .zip. */
+    public String validarBytes(String nome, byte[] bytes) {
+        String tipo = validador.validar(nome, java.util.Arrays.copyOf(bytes, Math.min(bytes.length, ValidadorDeArquivo.CABECALHO)));
+        String ameaca;
+        try {
+            ameaca = antivirus.examinar(nome, new java.io.ByteArrayInputStream(bytes));
+        } catch (IOException e) {
+            if (falharFechado) throw new NegocioException("Não foi possível verificar o arquivo com o antivírus agora. Tente novamente em instantes.");
+            ameaca = null;
+        }
+        if (ameaca != null) throw new NegocioException("Arquivo recusado: o antivírus encontrou uma ameaça (" + ameaca + ").");
+        return tipo;
+    }
+
     @Transactional(readOnly = true)
     public List<DocumentoDto> listar(UsuarioLogado quem, Long processoId) {
         processos.buscar(quem, processoId);   // também garante que o processo é do setor de quem pede
@@ -121,16 +158,61 @@ public class DocumentoService {
     @Transactional(readOnly = true)
     public Arquivo baixar(UsuarioLogado quem, Long id) {
         Documento d = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Documento"));
-        processos.buscar(quem, d.getProcessoId());
+        exigirAcesso(quem, d, false);
         return new Arquivo(d, storage.abrir(d.getChaveS3()));
     }
 
     @Transactional
     public void remover(UsuarioLogado quem, Long id) {
         Documento d = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Documento"));
-        processos.exigirPodeMexer(quem, processos.buscar(quem, d.getProcessoId()));
+        exigirAcesso(quem, d, true);
+        if (d.isGuardaLegal()) {
+            boolean venceuRetencao = d.getCriadoEm() != null && d.getCriadoEm().isBefore(java.time.Instant.now().minus(java.time.Duration.ofDays(5 * 365L)));
+            if (quem.papel() != br.com.viriato.usuario.Papel.ADMIN || !venceuRetencao) {
+                throw new NegocioException("Este documento está em guarda legal (mínimo de 5 anos) e não pode ser excluído. Arquive-o: ele sai da lista, mas fica guardado e o arquivamento é registrado na auditoria.");
+            }
+        }
+        auditoria.registrar(quem.tenantId(), quem.id(), "DOCUMENTO_EXCLUIDO", d.getNomeOriginal() + (d.isGuardaLegal() ? " (guarda legal vencida)" : ""));
         repo.delete(d);
         storage.remover(d.getChaveS3());
+    }
+
+    /**
+     * Confere o arquivo ANTES de gravar: extensão, conteúdo e antivírus (recusa com 422) e, se o processo tem empresa e competência,
+     * o CNPJ e o período citados no documento (avisos, não bloqueiam). Nada é gravado.
+     */
+    @Transactional(readOnly = true)
+    public List<br.com.viriato.ged.ValidacaoDocumento.Alerta> verificar(UsuarioLogado quem, Long processoId, MultipartFile arquivo) throws IOException {
+        Processo processo = processos.buscar(quem, processoId);
+        processos.exigirPodeMexer(quem, processo);
+        if (arquivo == null || arquivo.isEmpty()) throw new NegocioException("Arquivo vazio");
+        String nome = limparNome(arquivo.getOriginalFilename());
+        validarConteudo(nome, arquivo);
+        return conferencia.analisar(nome, arquivo.getBytes(), quem.tenantId(), processo.getClienteId(), processo.getCompetenciaAno(), processo.getCompetenciaMes());
+    }
+
+    /** Arquiva: mantém o arquivo guardado, marca o documento e registra quem arquivou. Serve a qualquer documento, o único caminho dos de guarda legal. */
+    @Transactional
+    public DocumentoDto arquivar(UsuarioLogado quem, Long id, boolean arquivar) {
+        Documento d = repo.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Documento"));
+        exigirAcesso(quem, d, true);
+        d.setArquivado(arquivar);
+        d.setArquivadoEm(arquivar ? java.time.Instant.now() : null);
+        d.setArquivadoPor(arquivar ? quem.id() : null);
+        repo.save(d);
+        auditoria.registrar(quem.tenantId(), quem.id(), arquivar ? "DOCUMENTO_ARQUIVADO" : "DOCUMENTO_DESARQUIVADO", d.getNomeOriginal());
+        return DocumentoDto.de(d, null);
+    }
+
+    /** Documento de processo segue as regras do processo; documento só do GED (sem processo) é de administrador e gestor (este, só do próprio setor). */
+    public void exigirAcesso(UsuarioLogado quem, Documento d, boolean alterar) {
+        if (d.getProcessoId() != null) {
+            Processo p = processos.buscar(quem, d.getProcessoId());
+            if (alterar) processos.exigirPodeMexer(quem, p);
+            return;
+        }
+        if (quem.papel() == br.com.viriato.usuario.Papel.USUARIO) throw new NaoEncontradoException("Documento");
+        if (quem.papel() == br.com.viriato.usuario.Papel.GESTOR && d.getSetorId() != null && !d.getSetorId().equals(usuarios.setorDe(quem))) throw new NaoEncontradoException("Documento");
     }
 
     /** Remove caminhos e caracteres perigosos do nome enviado pelo cliente. */

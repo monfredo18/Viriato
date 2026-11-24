@@ -89,6 +89,15 @@ viriato:
       base-segundos: ${AUTOMACAO_RETRY_BASE_SEGUNDOS:60}
       travada-minutos: ${AUTOMACAO_TRAVADA_MINUTOS:10}
       cron: ${AUTOMACAO_RETRY_CRON:*/30 * * * * *}
+  # Consulta à SEFAZ (Distribuição DF-e) com o certificado A1 do cofre. Desligada por padrão; a cadeia ICP-Brasil costuma exigir um truststore próprio.
+  sefaz:
+    habilitado: ${VIRIATO_SEFAZ_HABILITADO:false}
+    ambiente: ${VIRIATO_SEFAZ_AMBIENTE:producao}
+    url: ${VIRIATO_SEFAZ_URL:}
+    truststore: ${VIRIATO_SEFAZ_TRUSTSTORE:}
+    truststore-senha: ${VIRIATO_SEFAZ_TRUSTSTORE_SENHA:}
+    timeout-segundos: ${VIRIATO_SEFAZ_TIMEOUT:30}
+    cron: ${VIRIATO_SEFAZ_CRON:-}
   # Geração mensal das obrigações (dia 1º, para a competência do mês anterior) e alertas de vencimento de certificados e procurações.
   obrigacoes:
     cron: ${OBRIGACOES_CRON:0 0 5 1 * *}

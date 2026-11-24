@@ -22,6 +22,17 @@ public class Documento {
     private boolean automatico;
     /** Requisito de etapa que este documento cumpre (opcional). */
     @Column(name = "requisito_id") private Long requisitoId;
+    /** GED: empresa, setor e período da pasta (ano, mês), categoria, guarda legal e arquivamento. */
+    @Column(name = "cliente_id") private Long clienteId;
+    @Column(name = "setor_id") private Long setorId;
+    private Integer ano;
+    private Integer mes;
+    private String categoria;
+    /** Guarda legal (mínimo de 5 anos): não se exclui, só se arquiva, com trilha na auditoria. */
+    @Column(name = "guarda_legal") private boolean guardaLegal;
+    private boolean arquivado;
+    @Column(name = "arquivado_em") private Instant arquivadoEm;
+    @Column(name = "arquivado_por") private Long arquivadoPor;
     @Column(name = "criado_em") private Instant criadoEm;
 
     @PrePersist void antesDeInserir() { criadoEm = Instant.now(); }

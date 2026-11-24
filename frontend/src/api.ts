@@ -135,7 +135,7 @@ export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historic
 export const NIVEL_PAPEL: Record<Papel, number> = { ADMIN: 2, GESTOR: 1, USUARIO: 0 }
 export const ROTULO_QUEM_MOVE: Record<Papel, string> = { USUARIO: 'Qualquer responsável', GESTOR: 'Somente gestor ou administrador', ADMIN: 'Somente administrador' }
 export interface Pagina<T> { content: T[]; totalPages: number; number: number; totalElements: number }
-export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string; requisitoId: number | null; requisito: string | null; automatico: boolean }
+export interface Documento { id: number; nome: string; contentType: string; tamanho: number; criadoEm: string; requisitoId: number | null; requisito: string | null; automatico: boolean; categoria?: string | null; guardaLegal?: boolean; arquivado?: boolean }
 interface PainelResumo { abertos: number; atrasados: number; concluidos: number; cancelados: number; tempoMedioConclusaoDias: number | null }
 interface PainelSetor { setorId: number | null; setor: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
 export interface PainelEtapa { fluxo: string; etapa: string; prazoDias: number | null; passagens: number; mediaHoras: number; foraDoPrazo: number }
@@ -180,3 +180,17 @@ export interface Dependencia { id: number; predecessorId: number; numero: string
 export type TipoCampo = 'TEXTO' | 'NUMERO' | 'DATA' | 'MOEDA' | 'SELECAO'
 export const ROTULO_TIPO_CAMPO: Record<TipoCampo, string> = { TEXTO: 'Texto', NUMERO: 'Número', DATA: 'Data', MOEDA: 'Valor em reais', SELECAO: 'Seleção' }
 export interface CampoExtra { id: number; chave: string; rotulo: string; tipo: TipoCampo; obrigatorio: boolean; opcoes: string[]; ordem: number }
+
+// ---- Fase 4: GED, notas fiscais em XML e consulta à SEFAZ ----
+export const CATEGORIAS_GED = ['GUIA', 'RECIBO', 'EXTRATO', 'XML', 'CONTRATO', 'FICHA', 'OUTRO'] as const
+export interface PastaGed { ano: number | null; mes: number | null; setorId: number | null; setorNome: string; quantidade: number; bytes: number }
+export interface DocumentoGed { id: number; nome: string; categoria: string | null; tamanho: number; ano: number | null; mes: number | null; setorId: number | null; setorNome: string | null; processoId: number | null; guardaLegal: boolean; arquivado: boolean; criadoEm: string; automatico: boolean }
+export interface NotaXml {
+  id: number; chaveAcesso: string; modelo: string; numeroNota: string | null; serie: string | null; dataEmissao: string | null; competenciaAno: number | null; competenciaMes: number | null
+  cnpjEmitente: string | null; nomeEmitente: string | null; cnpjDestinatario: string | null; nomeDestinatario: string | null; tipoOperacao: 'ENTRADA' | 'SAIDA'
+  valorTotal: number; valorIcms: number; valorIpi: number; valorPis: number; valorCofins: number; valorIss: number; cfops: string[]; ncms: string[]; origem: string; documentoId: number | null
+}
+export interface ResultadoImportacao { lidos: number; importados: number; duplicados: number; rejeitados: { arquivo: string; motivo: string }[]; notas: NotaXml[] }
+export interface AlertaDocumento { nivel: 'INFO' | 'ALERTA'; mensagem: string }
+export interface EstadoSefaz { habilitado: boolean; ultimoNsu: string; ultimaConsulta: string | null; proximaConsulta: string | null; status: string | null; mensagem: string | null }
+export interface ResultadoSefaz { status: string; mensagem: string | null; importadas: number; duplicadas: number; resumosIgnorados: number; ultimoNsu: string }

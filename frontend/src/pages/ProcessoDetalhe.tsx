@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, NIVEL_PAPEL, ROTULO_AUTOMACAO, type Detalhe, type Documento, type ExecucaoAutomacao, type Papel, type Usuario } from '../api'
+import { api, NIVEL_PAPEL, type AlertaDocumento, ROTULO_AUTOMACAO, type Detalhe, type Documento, type ExecucaoAutomacao, type Papel, type Usuario } from '../api'
 import { useAuth } from '../auth'
 import { Selo } from './Processos'
 import { CamposExtras, Dependencias } from './ProcessoExtras'
@@ -19,6 +19,7 @@ export default function ProcessoDetalhe() {
   const [execucoes, setExecucoes] = useState<ExecucaoAutomacao[]>([])
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [comentario, setComentario] = useState('')
+  const [avisoDoc, setAvisoDoc] = useState('')
   const [erro, setErro] = useState('')
   const input = useRef<HTMLInputElement>(null)
   const requisitoAlvo = useRef<number | null>(null)   // requisito que o arquivo escolhido vai cumprir (se houver)
@@ -230,15 +231,23 @@ export default function ProcessoDetalhe() {
 
         <section className="cartao">
           <h3>Documentos</h3>
-          <input ref={input} type="file" hidden onChange={(e) => {
+          <input ref={input} type="file" hidden onChange={async (e) => {
             const f = e.target.files?.[0]
+            e.target.value = ''
             if (!f) return
             const form = new FormData()
             form.append('arquivo', f)
             const alvo = requisitoAlvo.current
             requisitoAlvo.current = null
+            setErro(''); setAvisoDoc('')
+            try {
+              // confere antes de gravar: tipo e conteúdo (o servidor recusa) e CNPJ e período do documento (avisos)
+              const alertas = await api.upload<AlertaDocumento[]>(`/processos/${p.id}/documentos/verificar`, form)
+              const graves = alertas.filter((a) => a.nivel === 'ALERTA')
+              if (graves.length > 0 && !confirm(`Conferência do arquivo "${f.name}":\n\n${graves.map((a) => '• ' + a.mensagem).join('\n')}\n\nEnviar mesmo assim?`)) return
+              setAvisoDoc(alertas.filter((a) => a.nivel === 'INFO').map((a) => a.mensagem).join(' '))
+            } catch (err) { setErro((err as Error).message); return }
             acao(() => api.upload(`/processos/${p.id}/documentos${alvo ? `?requisitoId=${alvo}` : ''}`, form))
-            e.target.value = ''
           }} />
           {podeMexer && (
             <button onClick={() => input.current?.click()}>
@@ -248,6 +257,7 @@ export default function ProcessoDetalhe() {
               Enviar arquivo
             </button>
           )}
+          {avisoDoc && <p className="sub">{avisoDoc}</p>}
           <ul className="docs">
             {docs.map((x) => (
               <li key={x.id}>

@@ -1169,3 +1169,12 @@ td.corta { max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-sp
 .matriz tbody th { text-align: left; }
 .campo-linha { display: grid; grid-template-columns: 1.6fr 1fr 1.6fr auto auto; gap: .5rem; align-items: center; margin-bottom: .5rem; }
 @media (max-width: 720px) { .campo-linha { grid-template-columns: 1fr; } }
+
+/* GED: explorador de pastas */
+.ged { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 1rem; align-items: start; }
+.ged-arvore details { margin-left: .8rem; } .ged-arvore summary { cursor: pointer; margin: .2rem 0; }
+.ged-arvore ul { list-style: none; margin: 0 0 .3rem .8rem; padding: 0; }
+.ged-arvore .ativa { font-weight: 700; text-decoration: underline; }
+.ged-conteudo { display: grid; gap: 1rem; min-width: 0; }
+tr.arquivado td { opacity: .6; }
+@media (max-width: 900px) { .ged { grid-template-columns: 1fr; } }

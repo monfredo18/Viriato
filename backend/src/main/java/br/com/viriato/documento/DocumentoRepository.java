@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DocumentoRepository extends JpaRepository<Documento, Long> {
     List<Documento> findByProcessoIdAndTenantIdOrderByIdDesc(Long processoId, Long tenantId);
+    List<Documento> findByClienteIdAndTenantIdOrderByAnoDescMesDescIdDesc(Long clienteId, Long tenantId);
     Optional<Documento> findByIdAndTenantId(Long id, Long tenantId);
     List<Documento> findByProcessoIdAndTenantIdAndRequisitoIdNotNullOrderByIdDesc(Long processoId, Long tenantId);
 }

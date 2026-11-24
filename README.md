@@ -124,6 +124,14 @@ Menu lateral (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relat�
 - **Kanban e Calendário fiscal** em *Processos*, ao lado da Lista: o Kanban tem uma coluna por etapa e aceita arrastar (o servidor aplica transições, requisitos, aprovações e dependências); o Calendário mostra os vencimentos do mês por cor (no prazo, até 3 dias, atrasado) e os dias sem expediente.
 - **Campos extras por entrega** (texto, número, data, valor em reais e seleção), definidos em *Entregas → Campos extras* e preenchidos no detalhe do processo; os obrigatórios travam a conclusão.
 
+### GED contábil, XMLs fiscais e SEFAZ
+
+- **Árvore arquivística:** todo arquivo novo (anexos de processos, fichas, uploads do GED e XMLs) é guardado em `tenant_{id}/cliente_{número}_{cnpj}/{ano}/{mês}/{setor}/{processo|geral}/{uuid}_{nome}`. A ficha da empresa tem a aba **Documentos (GED)** com o explorador Ano > Mês > Setor, busca, categorias (guia, recibo, extrato, XML, contrato, ficha, outro) e envio direto à pasta da empresa. Gestor vê só o próprio setor.
+- **Guarda legal (5 anos ou mais):** documentos fiscais e comprovantes nascem marcados; **não se excluem** (nem o administrador, antes de 5 anos): arquiva-se, e o arquivamento fica na auditoria. O arquivado sai da lista, mas continua guardado.
+- **Importação de XMLs** (aba **Notas fiscais**, ou `POST /api/xml/importar`): NF-e (55), NFC-e (65), CT-e (57) e NFS-e (padrão nacional e ABRASF), em arquivos soltos ou `.zip` (limites de 1000 arquivos, 5 MB por XML e 100 MB descompactado). O leitor usa o DOM do Java sem DTD nem entidades externas. Extrai chave de acesso (única por empresa do sistema), número, série, emissão, competência, emitente, destinatário, valores de ICMS, IPI, PIS, COFINS e ISS, CFOPs e NCMs, e infere **entrada ou saída** comparando o CNPJ da empresa atendida. Repetida é contada, não duplicada; nota sem empresa correspondente é recusada com o motivo.
+- **Consulta à SEFAZ (DF-e):** a interface `SefazDfeConnector` e uma implementação SOAP com TLS mútuo usando o **certificado A1 do cofre** (cada uso fica na auditoria), com controle do último NSU e a espera de 1 hora que a SEFAZ exige. Desligada por padrão (`VIRIATO_SEFAZ_HABILITADO`); o agendador (`VIRIATO_SEFAZ_CRON`) e o botão *Consultar agora* só funcionam com ela ligada. A cadeia ICP-Brasil normalmente exige um truststore próprio (`VIRIATO_SEFAZ_TRUSTSTORE`). Não foi exercitada contra a SEFAZ real: só com respostas simuladas.
+- **Conferência do anexo antes de confirmar:** ao enviar um arquivo num processo, o sistema lê o texto (PDF, OFX, XML, CSV), confere o CNPJ e o período (MM/AAAA) citados com a empresa e a competência do processo e pergunta "Enviar mesmo assim?" se houver divergência. A leitura de PDF é básica (sem biblioteca): PDF escaneado ou com fonte de codificação própria não é lido, e o sistema avisa em vez de bloquear.
+
 ### Relatórios (PDF)
 A aba **Relatórios** gera um PDF dos processos, com filtros por setor, responsável, empresa, período (abertura ou encerramento) e situação (em andamento, concluídos, cancelados). A abrangência depende do papel e é imposta pelo servidor:
 
@@ -174,6 +182,7 @@ Ver `.env.example` e `backend/src/main/resources/application.yml`. Obrigatórias
 | `VIRIATO_LIMITE_IP_MAXIMO`, `VIRIATO_LIMITE_IP_JANELA` | Tentativas por endereço (padrão 20) na janela em segundos (padrão 60) |
 | `VIRIATO_UPLOAD_EXTENSOES` | Extensões aceitas no envio de arquivos |
 | `VIRIATO_CLAMAV_HABILITADO`, `VIRIATO_CLAMAV_HOST`, `VIRIATO_CLAMAV_PORTA` | Antivírus ClamAV (clamd). Padrão: desligado |
+| `VIRIATO_SEFAZ_HABILITADO`, `VIRIATO_SEFAZ_AMBIENTE`, `VIRIATO_SEFAZ_CRON`, `VIRIATO_SEFAZ_TRUSTSTORE` | Consulta à SEFAZ (DF-e) com o certificado A1: liga, ambiente (`producao` ou `homologacao`), agendamento e cadeia de confiança |
 | `AUTOMACAO_TENTATIVAS`, `AUTOMACAO_RETRY_BASE_SEGUNDOS` | Tentativas das automações (padrão 3) e espera base entre elas (padrão 60 s, dobrando) |
 
 ## Produção (sugestão AWS)
