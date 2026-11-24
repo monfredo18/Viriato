@@ -17,6 +17,9 @@
   .suave { color: var(--suave); }
   section { break-before: page; }
   section.sem-quebra { break-before: auto; }
+  table.longa { break-inside: auto; }
+  table.longa tr { break-inside: avoid; }
+  table.longa thead { display: table-header-group; }
   table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.3pt; break-inside: avoid; }
   th, td { text-align: left; padding: 1.3mm 2.2mm; border-bottom: .3mm solid var(--borda); vertical-align: top; }
   th { background: var(--fundo); font-size: 8.3pt; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); }
@@ -163,10 +166,10 @@
   <p>Esta seção percorre a jornada de uso, da primeira tela até o encerramento de um processo.</p>
 
   <h2>3.1 Primeiro acesso e senhas</h2>
-  <p>Entra-se com <strong>nome e senha</strong>; não há campo de e-mail e <em>não existe cadastro aberto de empresas</em>. O primeiro administrador nasce da configuração do ambiente (<code>ADMIN_NOME</code>, <code>ADMIN_SENHA</code> e <code>ADMIN_EMPRESA</code>) na primeira vez em que o sistema sobe com o banco vazio; nesse momento o sistema também cria o setor <strong>Geral</strong>, a entrega <strong>Atendimento geral</strong> e um <strong>fluxo padrão</strong>. As empresas atendidas são cadastradas depois pelo administrador ou pelo gestor.</p>
+  <p>Entra-se com <strong>nome e senha</strong> (o e-mail do funcionário é obrigatório no cadastro, mas não é usado para entrar) e <em>não existe cadastro aberto de empresas</em>. O primeiro administrador nasce da configuração do ambiente (<code>ADMIN_NOME</code>, <code>ADMIN_SENHA</code> e <code>ADMIN_EMPRESA</code>) na primeira vez em que o sistema sobe com o banco vazio; nesse momento o sistema também cria o setor <strong>Geral</strong>, a entrega <strong>Atendimento geral</strong> e um <strong>fluxo padrão</strong>. As empresas atendidas são cadastradas depois pelo administrador ou pelo gestor.</p>
   <figure><img src="img/login.png" alt="Tela de login"><figcaption>Figura 2 — Tela de login: apenas Nome e Senha.</figcaption></figure>
   <p>A <strong>senha inicial é provisória</strong>. Isso vale para o administrador criado pela configuração, para quem é cadastrado por administrador ou gestor e para quem teve a senha zerada. Ao entrar com uma senha provisória, a pessoa vê somente a tela <em>Crie a sua senha</em> (duas digitações iguais, mínimo de 8 caracteres e diferente da senha inicial); o <strong>servidor</strong> também bloqueia todo o resto da API até a troca ser feita, então não dá para contornar pela tela. Depois disso a senha inicial deixa de valer.</p>
-  <p>O <strong>nome</strong> é a identificação de acesso: não diferencia maiúsculas de minúsculas, é único na empresa e não aceita <code>@</code>. Se duas contas ativas tiverem o mesmo nome e a mesma senha, o acesso é recusado até o administrador diferenciar os nomes. Contas criadas antes desta versão ainda podem entrar com o e-mail; o e-mail não é mais pedido, exibido nem exposto pela API.</p>
+  <p>O <strong>nome</strong> é a identificação de acesso: não diferencia maiúsculas de minúsculas, é único na empresa e não aceita <code>@</code>. Se duas contas ativas tiverem o mesmo nome e a mesma senha, o acesso é recusado até o administrador diferenciar os nomes. O e-mail é obrigatório no cadastro e editável por administrador e gestor (dentro do alcance de cada um), é único no sistema e aparece na lista de usuários; contas antigas ainda podem entrar digitando o e-mail no lugar do nome.</p>
   <p><strong>Zerar senha:</strong> somente o administrador, e vale para funcionário, gestor ou outro administrador (não para a própria conta). Ao zerar, ele informa na hora a nova senha (provisória); a senha antiga deixa de valer, <strong>as sessões abertas da pessoa são encerradas</strong> e, no próximo acesso, ela cria uma senha própria.</p>
 
   <h2>3.2 Login e sessão</h2>
@@ -308,7 +311,7 @@
   <figure><img src="img/painel.png" alt="Painel de indicadores"><figcaption>Figura 15 — Painel do administrador: atrasados por setor, tempo médio por etapa e carga por funcionário.</figcaption></figure>
 
   <h2>3.13 Automações</h2>
-  <p>Em <em>Fluxos → Configurar</em> (etapa) e <em>Ao cancelar</em> (fluxo), administrador e gestor definem regras que o sistema executa sozinho <strong>depois que o processo entra na etapa</strong> (inclusive a inicial, na criação) ou é <strong>cancelado</strong>:</p>
+  <p>Em <em>Entregas → Configurar</em> (etapa) e <em>Ao cancelar</em> (fluxo), administrador e gestor definem regras que o sistema executa sozinho <strong>depois que o processo entra na etapa</strong> (inclusive a inicial, na criação) ou é <strong>cancelado</strong>:</p>
   <table>
     <tr><th style="width:44mm">Regra</th><th>O que faz</th></tr>
     <tr><td>Gerar a ficha do processo</td><td>Cria um PDF com os dados e o histórico do processo e o anexa a ele, marcado como <em>gerado automaticamente</em>. Uma por etapa.</td></tr>
@@ -477,59 +480,105 @@
 <!-- ============================ 6 ============================ -->
 <section>
   <h1>6. Referência da API</h1>
-  <p>Todas as rotas começam com <code>/api</code>. Fora as de autenticação, exigem o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. A documentação interativa fica em <code>/swagger-ui.html</code> (42 rotas).</p>
-  <table>
-    <tr><th style="width:17mm">Método</th><th style="width:56mm">Rota</th><th>Função</th><th style="width:40mm">Quem</th></tr>
-    <tr><td>POST</td><td><code>/auth/login</code></td><td>Autentica por nome e senha e devolve o token</td><td>público</td></tr>
-    <tr><td>POST</td><td><code>/auth/registrar-empresa</code></td><td>Cadastro aberto de empresa; desligado por padrão (responde 404) e só ligado por <code>CADASTRO_EMPRESA_ABERTO=true</code></td><td>público, quando ligado</td></tr>
-    <tr><td>PUT</td><td><code>/me/senha</code></td><td>Primeiro acesso: troca a senha provisória pela própria (<code>novaSenha</code>)</td><td>quem está com senha provisória</td></tr>
-    <tr><td>PUT</td><td><code>/usuarios/{id}/senha</code></td><td>Zera a senha de outra conta, informando a nova (<code>senha</code>); encerra as sessões abertas dela</td><td>Admin</td></tr>
-    <tr><td>GET</td><td><code>/me</code></td><td>Dados do usuário logado</td><td>todos</td></tr>
-    <tr><td>GET</td><td><code>/usuarios</code></td><td>Lista usuários da empresa</td><td>todos</td></tr>
-    <tr><td>POST</td><td><code>/usuarios</code></td><td>Adiciona funcionário com nome, e-mail (obrigatório), senha inicial (provisória) e papel; setor só para o administrador (o gestor cria sempre no próprio setor); e-mail opcional. Nome único na empresa</td><td>Admin (qualquer papel); Gestor (só Usuário)</td></tr>
-    <tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Altera papel, ativo ou setor</td><td>Admin (tudo); Gestor (só <code>ativo</code>, e só de quem é Usuário)</td></tr>
-    <tr><td>GET</td><td><code>/clientes</code>, <code>/setores</code>, <code>/entregas</code></td><td>Listas de empresas atendidas, setores (com suas entregas) e entregas (com o fluxo)</td><td>todos</td></tr>
-    <tr><td>POST, PATCH</td><td><code>/clientes</code>, <code>/clientes/{id}</code></td><td>Cria e altera empresa atendida (<code>numero</code> obrigatório, só dígitos, único; <code>nome</code>; ativo). Mudar o número atualiza o dos processos da empresa</td><td>Admin, Gestor</td></tr>
-    <tr><td>GET</td><td><code>/relatorios/escopo</code></td><td>O que o usuário pode abranger (todos os setores ou o próprio setor)</td><td>todos</td></tr>
-    <tr><td>GET</td><td><code>/relatorios/processos/resumo</code></td><td>Totais dos processos que entrariam no relatório. Filtros: <code>usuarioId</code>, <code>setorId</code>, <code>clienteId</code>, <code>de</code>, <code>ate</code>, <code>referencia</code> (ABERTURA ou ENCERRAMENTO), <code>situacoes</code></td><td>todos, dentro do papel</td></tr>
-    <tr><td>GET</td><td><code>/relatorios/processos/pdf</code></td><td>Gera o PDF do relatório, com os mesmos filtros</td><td>todos, dentro do papel</td></tr>
-    <tr><td>DELETE</td><td><code>/clientes/{id}</code>, <code>/setores/{id}</code>, <code>/entregas/{id}</code></td><td>Apaga o cadastro (recusa se houver processo em andamento ligado)</td><td>Admin, Gestor</td></tr>
-    <tr><td>DELETE</td><td><code>/fluxos/{id}</code></td><td>Apaga o fluxo, com etapas e transições (recusa se uma entrega o usa ou se há processo em andamento nele)</td><td>Admin, Gestor</td></tr>
-    <tr><td>GET</td><td><code>/usuarios/{id}/pendencias</code></td><td>Quantos processos o funcionário tem (em andamento, atrasados, concluídos, cancelados), para o aviso antes de apagar</td><td>Admin; Gestor (só Usuário do seu setor)</td></tr>
-    <tr><td>POST</td><td><code>/usuarios/{id}/apagar</code></td><td>Apaga passando os processos em andamento aos <code>herdeiroIds</code>, com o novo <code>prazo</code></td><td>Admin; Gestor (só Usuário do seu setor)</td></tr>
-    <tr><td>DELETE</td><td><code>/usuarios/{id}</code></td><td>Apaga funcionário sem processos em andamento (recusa se houver ou se for o próprio usuário)</td><td>Admin; Gestor (só Usuário)</td></tr>
-    <tr><td>POST, PATCH</td><td><code>/setores</code>, <code>/setores/{id}</code></td><td>Cria e altera setor (nome, ativo, lista de entregas)</td><td>Admin, Gestor</td></tr>
-    <tr><td>POST, PATCH</td><td><code>/entregas</code>, <code>/entregas/{id}</code></td><td>Cria e altera entrega (nome, fluxo, ativo)</td><td>Admin, Gestor</td></tr>
-    <tr><td>GET</td><td><code>/fluxos</code>, <code>/fluxos/{id}</code></td><td>Lista e detalha fluxos com etapas e transições</td><td>todos</td></tr>
-    <tr><td>POST</td><td><code>/fluxos</code></td><td>Cria fluxo</td><td>Admin, Gestor</td></tr>
-    <tr><td>POST, PATCH, DELETE</td><td><code>/fluxos/{id}/etapas/{etapaId}/requisitos[/{reqId}]</code></td><td>Cria, renomeia e remove requisitos para sair da etapa (<code>tipo</code>, <code>descricao</code>)</td><td>Admin, Gestor</td></tr>
-    <tr><td>PATCH</td><td><code>/fluxos/{id}/etapas/{etapaId}</code></td><td>Define quem pode mover processos para a etapa (<code>papelMinimo</code>: USUARIO, GESTOR ou ADMIN)</td><td>Admin, Gestor</td></tr>
-    <tr><td>GET, POST, PATCH, DELETE</td><td><code>/fluxos/{id}/automacoes[/{regraId}]</code></td><td>Lista e gerencia as regras de automação do fluxo (o segredo nunca volta)</td><td>Admin, Gestor</td></tr>
-    <tr><td>GET</td><td><code>/indicadores</code></td><td>Painel: <code>dias</code> (período) e <code>setorId</code> (só vale para o administrador)</td><td>todos, dentro do papel</td></tr>
-    <tr><td>PATCH</td><td><code>/fluxos/{id}</code></td><td>Ativa ou desativa</td><td>Admin, Gestor</td></tr>
-    <tr><td>GET</td><td><code>/processos</code></td><td>Lista com filtros: <code>status</code>, <code>etapaId</code>, <code>responsavelId</code>, <code>clienteId</code>, <code>setorId</code>, <code>entregaId</code>, <code>busca</code>, <code>atrasados</code>, <code>meus</code>, <code>pagina</code>, <code>tamanho</code></td><td>todos</td></tr>
-    <tr><td>PUT</td><td><code>/processos/{id}/requisitos/{reqId}</code></td><td>Confirma ou desmarca um requisito do tipo confirmação da etapa atual (<code>cumprido</code>)</td><td>quem pode mexer no processo</td></tr>
-    <tr><td>POST</td><td><code>/processos/{id}/documentos?requisitoId=</code></td><td>Anexa arquivo; com <code>requisitoId</code>, cumpre o requisito de documento da etapa atual</td><td>quem pode mexer no processo</td></tr>
-    <tr><td>POST, DELETE</td><td><code>/processos/{id}/aprovacoes[/{aprovacaoId}]</code></td><td>Solicita aprovação (<code>etapaId</code>, <code>comentario</code>) ou retira o pedido</td><td>quem pode mexer; gestor e admin retiram</td></tr>
-    <tr><td>POST</td><td><code>/processos/{id}/aprovacoes/{aprovacaoId}/aprovar</code>, <code>/recusar</code></td><td>Aprova (e move o processo) ou recusa com <code>motivo</code></td><td>quem tem o papel exigido pela etapa</td></tr>
-    <tr><td>GET</td><td><code>/processos/{id}/automacoes</code></td><td>O que as automações já fizeram no processo</td><td>quem enxerga o processo</td></tr>
-    <tr><td>POST</td><td><code>/processos</code></td><td>Cria processo: <code>clienteId</code>, <code>setorId</code>, <code>entregaId</code> e <code>responsavelId</code> obrigatórios</td><td>todos</td></tr>
-    <tr><td>GET</td><td><code>/processos/{id}</code></td><td>Detalhe, próximas etapas possíveis e histórico</td><td>todos</td></tr>
-    <tr><td>POST</td><td><code>/processos/{id}/avancar</code></td><td>Move para outra etapa</td><td>Admin, Gestor; Usuário só se for o responsável</td></tr>
-    <tr><td>POST</td><td><code>/processos/{id}/comentarios</code></td><td>Adiciona comentário</td><td>todos</td></tr>
-    <tr><td>PUT</td><td><code>/processos/{id}/responsavel</code></td><td>Atribui ou remove responsável</td><td>Admin, Gestor; Usuário só se for o responsável</td></tr>
-    <tr><td>POST</td><td><code>/processos/{id}/cancelar</code></td><td>Cancela com motivo</td><td>Admin, Gestor</td></tr>
-    <tr><td>GET, POST</td><td><code>/processos/{id}/documentos</code></td><td>Lista e envia arquivo (multipart, campo <code>arquivo</code>)</td><td>todos</td></tr>
-    <tr><td>GET</td><td><code>/documentos/{id}/download</code></td><td>Baixa o arquivo</td><td>todos</td></tr>
-    <tr><td>DELETE</td><td><code>/documentos/{id}</code></td><td>Remove documento</td><td>Admin, Gestor; Usuário só se for o responsável</td></tr>
-    <tr><td>GET</td><td><code>/notificacoes</code>, <code>/notificacoes/nao-lidas</code></td><td>Últimas 50 e contador de não lidas</td><td>do próprio usuário</td></tr>
-    <tr><td>POST</td><td><code>/notificacoes/{id}/ler</code>, <code>/notificacoes/ler-todas</code></td><td>Marca como lida</td><td>do próprio usuário</td></tr>
-  </table>
-  <p>Erros seguem sempre o formato <code>{"status": 422, "erro": "mensagem"}</code>; falhas inesperadas devolvem uma mensagem genérica e o detalhe fica só no log do servidor.</p>
-</section>
+<p>Todas as rotas começam por <code>/api</code> e, exceto as marcadas como públicas, exigem o token JWT no cabeçalho <code>Authorization: Bearer …</code>. Em <em>Todos os papéis*</em>, o asterisco indica que o resultado é filtrado pelo servidor conforme o papel, o setor e a empresa de quem pede (outra empresa ou outro setor responde 404). Recusa por papel devolve 403; por regra de negócio, 422 com mensagem em português; conta bloqueada, 423. A documentação interativa (Swagger) fica desligada por padrão e só liga com <code>SWAGGER_ATIVO</code>.</p>
+<h2>Acesso, sessão e conta própria</h2><table class="longa"><thead><tr><th style="width:9%">Método</th><th style="width:34%">Rota</th><th style="width:19%">Quem pode</th><th>O que faz</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/auth/saude</code></td><td>Público</td><td>Verifica se o sistema está no ar (sem login).</td></tr>
+<tr><td>POST</td><td><code>/auth/login</code></td><td>Público</td><td>Entra com nome, senha e, se ativa, o código de duas etapas. Devolve o token (12 h). Conta bloqueada responde 423.</td></tr>
+<tr><td>POST</td><td><code>/auth/registrar-empresa</code></td><td>Público (desligado por padrão)</td><td>Cria uma empresa nova com o primeiro administrador. Só funciona com CADASTRO_EMPRESA_ABERTO=true (uso em testes).</td></tr>
+<tr><td>GET</td><td><code>/me</code></td><td>Todos os papéis*</td><td>Dados de quem está logado: nome, e-mail, papel, setor, versão da foto, se tem duas etapas e se precisa trocar a senha.</td></tr>
+<tr><td>PUT</td><td><code>/me/senha</code></td><td>Quem tem senha provisória</td><td>Primeiro acesso: define a senha própria no lugar da provisória.</td></tr>
+<tr><td>POST</td><td><code>/me/alterar-senha</code></td><td>Administrador e gestor</td><td>Troca a própria senha informando a atual (administrador e gestor; quem é Usuário recebe 403).</td></tr>
+<tr><td>POST</td><td><code>/me/sair</code></td><td>Todos os papéis*</td><td>Encerra a sessão e revoga o token usado.</td></tr>
+<tr><td>POST</td><td><code>/me/2fa/iniciar</code></td><td>Todos os papéis*</td><td>Começa a verificação em duas etapas: gera a chave para o aplicativo autenticador.</td></tr>
+<tr><td>POST</td><td><code>/me/2fa/ativar</code></td><td>Todos os papéis*</td><td>Confirma com um código de 6 dígitos e liga a verificação.</td></tr>
+<tr><td>POST</td><td><code>/me/2fa/desativar</code></td><td>Todos os papéis*</td><td>Desliga a própria verificação, confirmando com a senha.</td></tr>
+<tr><td>POST</td><td><code>/me/foto</code></td><td>Todos os papéis*</td><td>Envia ou troca a foto de perfil (JPEG, PNG ou WebP, até 2 MB).</td></tr>
+<tr><td>DELETE</td><td><code>/me/foto</code></td><td>Todos os papéis*</td><td>Remove a própria foto.</td></tr>
+<tr><td>GET</td><td><code>/usuarios/{id}/foto</code></td><td>Todos os papéis*</td><td>Baixa a foto de uma pessoa da mesma empresa.</td></tr>
+</tbody></table>
+<h2>Funcionários</h2><table class="longa"><thead><tr><th style="width:9%">Método</th><th style="width:34%">Rota</th><th style="width:19%">Quem pode</th><th>O que faz</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/usuarios</code></td><td>Todos os papéis*</td><td>Lista a equipe. Administrador vê todos; gestor e usuário veem só o próprio setor, sem administradores.</td></tr>
+<tr><td>POST</td><td><code>/usuarios</code></td><td>Administrador e gestor</td><td>Cadastra funcionário (nome, e-mail obrigatório, senha provisória, papel, setor). Gestor só cria papel Usuário no próprio setor.</td></tr>
+<tr><td>PATCH</td><td><code>/usuarios/{id}</code></td><td>Administrador e gestor</td><td>Altera e-mail, situação (ativo), papel ou setor, conforme o papel de quem pede.</td></tr>
+<tr><td>PUT</td><td><code>/usuarios/{id}/senha</code></td><td>Administrador</td><td>Zera a senha de outra conta com uma senha provisória; encerra as sessões dela e desbloqueia.</td></tr>
+<tr><td>POST</td><td><code>/usuarios/{id}/desbloquear</code></td><td>Administrador e gestor</td><td>Desbloqueia conta travada por tentativas (gestor: só Usuário do próprio setor).</td></tr>
+<tr><td>DELETE</td><td><code>/usuarios/{id}/2fa</code></td><td>Administrador</td><td>Desliga a verificação em duas etapas de outra pessoa (perdeu o celular).</td></tr>
+<tr><td>DELETE</td><td><code>/usuarios/{id}/foto</code></td><td>Administrador</td><td>Remove a foto de outra pessoa.</td></tr>
+<tr><td>GET</td><td><code>/usuarios/{id}/pendencias</code></td><td>Administrador e gestor</td><td>Conta os processos ligados ao funcionário antes de apagar (em andamento, atrasados, concluídos, cancelados).</td></tr>
+<tr><td>DELETE</td><td><code>/usuarios/{id}</code></td><td>Administrador e gestor</td><td>Apaga funcionário sem processos em andamento.</td></tr>
+<tr><td>POST</td><td><code>/usuarios/{id}/apagar</code></td><td>Administrador e gestor</td><td>Apaga funcionário passando os processos em andamento a herdeiros, com novo prazo.</td></tr>
+</tbody></table>
+<h2>Cadastros: empresas, setores e entregas</h2><table class="longa"><thead><tr><th style="width:9%">Método</th><th style="width:34%">Rota</th><th style="width:19%">Quem pode</th><th>O que faz</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/clientes</code></td><td>Todos os papéis*</td><td>Lista as empresas atendidas.</td></tr>
+<tr><td>POST</td><td><code>/clientes</code></td><td>Administrador e gestor</td><td>Cadastra empresa atendida (número de 1 a 10 dígitos, único, e nome).</td></tr>
+<tr><td>PATCH</td><td><code>/clientes/{id}</code></td><td>Administrador e gestor</td><td>Altera nome, número ou situação.</td></tr>
+<tr><td>DELETE</td><td><code>/clientes/{id}</code></td><td>Administrador e gestor</td><td>Apaga empresa sem processo em andamento.</td></tr>
+<tr><td>GET</td><td><code>/setores</code></td><td>Todos os papéis*</td><td>Lista os setores (com as entregas de cada um).</td></tr>
+<tr><td>POST</td><td><code>/setores</code></td><td>Administrador</td><td>Cria setor.</td></tr>
+<tr><td>PATCH</td><td><code>/setores/{id}</code></td><td>Administrador</td><td>Renomeia ou desativa setor.</td></tr>
+<tr><td>DELETE</td><td><code>/setores/{id}</code></td><td>Administrador</td><td>Apaga setor sem processo em andamento (as entregas dele saem junto).</td></tr>
+<tr><td>GET</td><td><code>/entregas</code></td><td>Todos os papéis*</td><td>Lista as entregas visíveis (administrador: todas; demais: as do próprio setor).</td></tr>
+<tr><td>POST</td><td><code>/entregas</code></td><td>Administrador e gestor</td><td>Cria entrega e o fluxo dela de uma vez (nome, etapas, prazo padrão opcional; setor só para administrador).</td></tr>
+<tr><td>PATCH</td><td><code>/entregas/{id}</code></td><td>Administrador e gestor</td><td>Altera nome, situação ou prazo padrão para concluir (data).</td></tr>
+<tr><td>GET</td><td><code>/entregas/{id}/pendencias</code></td><td>Administrador e gestor</td><td>Conta os processos ligados à entrega antes de apagar.</td></tr>
+<tr><td>POST</td><td><code>/entregas/{id}/apagar</code></td><td>Administrador e gestor</td><td>Apaga entrega com processos em andamento, transferindo-os para a entrega substituta.</td></tr>
+<tr><td>DELETE</td><td><code>/entregas/{id}</code></td><td>Administrador e gestor</td><td>Apaga entrega sem processo em andamento (o fluxo vai junto).</td></tr>
+</tbody></table>
+<h2>Fluxos, etapas, requisitos e automações</h2><table class="longa"><thead><tr><th style="width:9%">Método</th><th style="width:34%">Rota</th><th style="width:19%">Quem pode</th><th>O que faz</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/fluxos</code></td><td>Todos os papéis*</td><td>Lista os fluxos visíveis, com etapas, transições e requisitos.</td></tr>
+<tr><td>GET</td><td><code>/fluxos/{id}</code></td><td>Todos os papéis*</td><td>Detalha um fluxo.</td></tr>
+<tr><td>POST</td><td><code>/fluxos</code></td><td>Administrador</td><td>Cria fluxo avulso (atalho do administrador; o normal é criar junto com a entrega).</td></tr>
+<tr><td>PATCH</td><td><code>/fluxos/{id}</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Altera nome ou situação do fluxo.</td></tr>
+<tr><td>DELETE</td><td><code>/fluxos/{id}</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Apaga fluxo sem entrega vinculada nem processo em andamento.</td></tr>
+<tr><td>POST</td><td><code>/fluxos/{fluxoId}/etapas</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Adiciona etapa antes da conclusão (religa as etapas em sequência).</td></tr>
+<tr><td>PATCH</td><td><code>/fluxos/{fluxoId}/etapas/{etapaId}/dados</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Renomeia a etapa e/ou ajusta o prazo em dias da etapa final (legado).</td></tr>
+<tr><td>PATCH</td><td><code>/fluxos/{fluxoId}/etapas/{etapaId}</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Define quem pode mover o processo para a etapa (qualquer responsável, gestor ou administrador, só administrador).</td></tr>
+<tr><td>DELETE</td><td><code>/fluxos/{fluxoId}/etapas/{etapaId}</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Remove etapa intermediária sem processo em andamento.</td></tr>
+<tr><td>POST</td><td><code>/fluxos/{fluxoId}/etapas/{etapaId}/requisitos</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Cria requisito para sair da etapa (anexar documento ou confirmação).</td></tr>
+<tr><td>PATCH</td><td><code>/fluxos/{fluxoId}/etapas/{etapaId}/requisitos/{id}</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Altera o requisito.</td></tr>
+<tr><td>DELETE</td><td><code>/fluxos/{fluxoId}/etapas/{etapaId}/requisitos/{id}</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Remove o requisito.</td></tr>
+<tr><td>GET</td><td><code>/fluxos/{fluxoId}/automacoes</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Lista as automações do fluxo.</td></tr>
+<tr><td>POST</td><td><code>/fluxos/{fluxoId}/automacoes</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Cria automação (gerar ficha ou webhook) para entrar numa etapa ou ao cancelar.</td></tr>
+<tr><td>PATCH</td><td><code>/fluxos/{fluxoId}/automacoes/{id}</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Altera ou liga/desliga a automação.</td></tr>
+<tr><td>DELETE</td><td><code>/fluxos/{fluxoId}/automacoes/{id}</code></td><td>Administrador e gestor (fluxo do próprio setor)</td><td>Remove a automação.</td></tr>
+</tbody></table>
+<h2>Processos</h2><table class="longa"><thead><tr><th style="width:9%">Método</th><th style="width:34%">Rota</th><th style="width:19%">Quem pode</th><th>O que faz</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/processos</code></td><td>Todos os papéis*</td><td>Lista com busca, filtros (situação, empresa, setor, meus, atrasados) e paginação.</td></tr>
+<tr><td>POST</td><td><code>/processos</code></td><td>Todos os papéis*</td><td>Abre processo (empresa, entrega, prazo opcional; setor e responsável conforme o papel).</td></tr>
+<tr><td>GET</td><td><code>/processos/{id}</code></td><td>Todos os papéis*</td><td>Detalhe: dados, etapa atual, próximas etapas, requisitos, aprovações e histórico.</td></tr>
+<tr><td>POST</td><td><code>/processos/{id}/avancar</code></td><td>Todos os papéis*</td><td>Move o processo para outra etapa permitida pelo fluxo, com comentário opcional.</td></tr>
+<tr><td>POST</td><td><code>/processos/{id}/comentarios</code></td><td>Todos os papéis*</td><td>Registra um comentário no histórico.</td></tr>
+<tr><td>PUT</td><td><code>/processos/{id}/responsavel</code></td><td>Todos os papéis*</td><td>Troca o responsável.</td></tr>
+<tr><td>POST</td><td><code>/processos/{id}/cancelar</code></td><td>Administrador e gestor</td><td>Cancela o processo (administrador e gestor).</td></tr>
+<tr><td>PUT</td><td><code>/processos/{id}/requisitos/{requisitoId}</code></td><td>Todos os papéis*</td><td>Marca ou desmarca a confirmação de um requisito.</td></tr>
+<tr><td>POST</td><td><code>/processos/{id}/aprovacoes</code></td><td>Todos os papéis*</td><td>Pede aprovação para mover o processo a uma etapa restrita.</td></tr>
+<tr><td>POST</td><td><code>/processos/{id}/aprovacoes/{aprovacaoId}/aprovar</code></td><td>Quem tem o papel que a etapa exige</td><td>Aprova o pedido; o processo avança em nome de quem aprovou.</td></tr>
+<tr><td>POST</td><td><code>/processos/{id}/aprovacoes/{aprovacaoId}/recusar</code></td><td>Quem tem o papel que a etapa exige</td><td>Recusa o pedido com motivo.</td></tr>
+<tr><td>DELETE</td><td><code>/processos/{id}/aprovacoes/{aprovacaoId}</code></td><td>Todos os papéis*</td><td>Retira o pedido pendente.</td></tr>
+<tr><td>GET</td><td><code>/processos/{id}/automacoes</code></td><td>Todos os papéis*</td><td>Mostra as execuções de automação do processo (Feito ou Falhou).</td></tr>
+<tr><td>GET</td><td><code>/processos/{processoId}/documentos</code></td><td>Todos os papéis*</td><td>Lista os anexos do processo.</td></tr>
+<tr><td>POST</td><td><code>/processos/{processoId}/documentos</code></td><td>Todos os papéis*</td><td>Anexa arquivo (até 25 MB), opcionalmente ligado a um requisito.</td></tr>
+<tr><td>GET</td><td><code>/documentos/{id}/download</code></td><td>Todos os papéis*</td><td>Baixa o anexo (passa pelo servidor; confere empresa e setor).</td></tr>
+<tr><td>DELETE</td><td><code>/documentos/{id}</code></td><td>Todos os papéis*</td><td>Remove o anexo.</td></tr>
+</tbody></table>
+<h2>Relatórios, indicadores, notificações, ajuda e auditoria</h2><table class="longa"><thead><tr><th style="width:9%">Método</th><th style="width:34%">Rota</th><th style="width:19%">Quem pode</th><th>O que faz</th></tr></thead><tbody>
+<tr><td>GET</td><td><code>/relatorios/escopo</code></td><td>Todos os papéis*</td><td>Informa o que a pessoa pode abranger (setores e responsáveis permitidos).</td></tr>
+<tr><td>GET</td><td><code>/relatorios/processos/resumo</code></td><td>Todos os papéis*</td><td>Prévia com os totais para os filtros escolhidos.</td></tr>
+<tr><td>GET</td><td><code>/relatorios/processos/pdf</code></td><td>Todos os papéis*</td><td>Gera o PDF de processos (A4 paisagem, com a logo).</td></tr>
+<tr><td>GET</td><td><code>/indicadores</code></td><td>Todos os papéis*</td><td>Números do painel e do início para 30, 90, 180 ou 365 dias.</td></tr>
+<tr><td>GET</td><td><code>/notificacoes</code></td><td>Todos os papéis*</td><td>Lista as notificações de quem está logado.</td></tr>
+<tr><td>GET</td><td><code>/notificacoes/nao-lidas</code></td><td>Todos os papéis*</td><td>Conta as não lidas (o sininho consulta a cada 30 s).</td></tr>
+<tr><td>POST</td><td><code>/notificacoes/{id}/ler</code></td><td>Todos os papéis*</td><td>Marca uma como lida.</td></tr>
+<tr><td>POST</td><td><code>/notificacoes/ler-todas</code></td><td>Todos os papéis*</td><td>Marca todas como lidas.</td></tr>
+<tr><td>GET</td><td><code>/ajuda/minha</code></td><td>Gestor e usuário</td><td>Conversa de ajuda de quem está logado (últimas 200 mensagens).</td></tr>
+<tr><td>POST</td><td><code>/ajuda/minha</code></td><td>Gestor e usuário</td><td>Envia mensagem à administração (até 2.000 caracteres; 20 por 10 minutos).</td></tr>
+<tr><td>GET</td><td><code>/ajuda/nao-lidas</code></td><td>Todos os papéis*</td><td>Conta mensagens de ajuda não vistas (aviso no botão).</td></tr>
+<tr><td>GET</td><td><code>/ajuda/conversas</code></td><td>Administrador</td><td>Administrador: lista as conversas da empresa.</td></tr>
+<tr><td>GET</td><td><code>/ajuda/conversas/{id}</code></td><td>Administrador</td><td>Administrador: abre uma conversa.</td></tr>
+<tr><td>POST</td><td><code>/ajuda/conversas/{id}/mensagens</code></td><td>Administrador</td><td>Administrador: responde.</td></tr>
+<tr><td>GET</td><td><code>/auditoria</code></td><td>Administrador</td><td>Administrador: registro de eventos de segurança e de cadastro.</td></tr>
+</tbody></table>
 
-<!-- ============================ 7 ============================ -->
-<section>
   <h1>7. Segurança</h1>
   <h2>O que já está implementado</h2>
   <ul>
@@ -717,6 +766,102 @@
     <li>Testes automáticos do frontend e testes de ponta a ponta.</li>
     <li>Paginação nas listagens restantes e numeração de processo por empresa.</li>
   </ol>
+
+  <h1>11. Catálogo completo de funcionalidades</h1>
+<p>Este capítulo reúne, em um só lugar, tudo o que o sistema permite fazer hoje, por área, indicando quem pode. As regras detalhadas estão nos capítulos 3 e 4; as rotas, no capítulo 6. Legenda: <strong>A</strong> = administrador, <strong>G</strong> = gestor, <strong>U</strong> = usuário (papel Usuário).</p>
+
+<h2>11.1 Acesso e conta</h2>
+<ul>
+<li>Entrar com nome e senha (A, G, U); a identificação não diferencia maiúsculas e minúsculas e é única na empresa.</li>
+<li>Primeiro acesso com senha provisória: a pessoa só vê a tela de criar a própria senha (mínimo de 8 caracteres, diferente da inicial) até concluir.</li>
+<li>Sessão de 12 horas, conferida no banco a cada requisição; sair invalida o token no servidor.</li>
+<li>Bloqueio da conta após 5 erros de senha (ou de código), com aviso para falar com o suporte; entrar com sucesso zera a contagem.</li>
+<li>Desbloquear conta: A em qualquer pessoa; G em funcionários (papel Usuário) do próprio setor. O botão só aparece para quem está bloqueado.</li>
+<li>Zerar a senha de outra conta (A): informa uma senha provisória, encerra as sessões da pessoa e desbloqueia.</li>
+<li>Trocar a própria senha em Meu perfil (A e G). U não troca a própria senha: pede ao administrador.</li>
+<li>Verificação em duas etapas opcional (aplicativo autenticador, TOTP) com ativar e desativar em Meu perfil; o administrador desliga a de outra pessoa que perdeu o celular.</li>
+<li>Foto de perfil: escolher, trocar e remover a própria (todos); remover a de outra pessoa (A). Sem foto, aparecem as iniciais.</li>
+<li>Tema claro e escuro, lembrado no navegador; indicador "Sistema online" que de fato consulta o servidor.</li>
+</ul>
+
+<h2>11.2 Início e navegação</h2>
+<ul>
+<li>Tela inicial com saudação, data, quatro indicadores (em andamento, atrasados, concluídos nos últimos 30 dias e tempo médio), carga por setor, atalhos (novo processo, consultar, minhas tarefas, relatório, cadastros), processos recentes e prazos próximos.</li>
+<li>Menu lateral: Início, Processos, Painel, Cadastros, Entregas, Usuários, Relatórios, Auditoria (só A) e Minhas tarefas (com contador dos processos sob sua responsabilidade).</li>
+<li>Pesquisa global na barra superior: leva à lista de processos já filtrada por empresa, entrega ou número.</li>
+<li>Sininho de notificações (atualiza a cada 30 s) e botão Ajuda com aviso de mensagem nova.</li>
+<li>Layout adaptado para celular, com menu que abre e fecha.</li>
+</ul>
+
+<h2>11.3 Processos</h2>
+<ul>
+<li>Abrir processo (A, G, U): empresa, entrega, prazo para concluir em dd/mm/aaaa (opcional) e observações. O setor e o responsável são definidos pelo papel de quem abre; A escolhe setor e responsável, G escolhe o responsável do próprio setor, U fica como responsável.</li>
+<li>Número do processo igual ao número da empresa atendida; título gerado pelo sistema.</li>
+<li>Lista com busca, filtros por situação, empresa e setor, "Meus" e "Atrasados", paginação e destaque em vermelho para atrasados.</li>
+<li>Detalhe com dados, etapa atual, prazo, responsável, requisitos, aprovações, documentos, automações executadas e histórico completo.</li>
+<li>Mover para outra etapa permitida pelo fluxo, com comentário opcional (A e G em qualquer processo do alcance; U só nos seus).</li>
+<li>Comentar, reatribuir o responsável (com a regra de setor) e cancelar (A e G).</li>
+<li>Prazo único para concluir por processo, definido na abertura e que não reinicia ao mover de etapa; sem prazo, o processo não atrasa.</li>
+<li>Requisitos por etapa (anexar documento ou confirmação do responsável): bloqueiam o avanço para todos os papéis, valem só na passagem atual e ficam no histórico.</li>
+<li>Pedido de aprovação para etapas restritas: pedir, aprovar, recusar com motivo e retirar; pedidos pendentes caem sozinhos se o processo seguir por outro caminho.</li>
+<li>Documentos: enviar (até 25 MB), baixar e remover, com armazenamento cifrado e download sempre pelo servidor.</li>
+<li>Isolamento por setor: G e U só veem processos do próprio setor; outro setor responde "não encontrado", inclusive em endereço direto.</li>
+</ul>
+
+<h2>11.4 Cadastros, entregas e fluxos</h2>
+<ul>
+<li>Empresas atendidas (A e G): cadastrar com número e nome, alterar, desativar e apagar (se não houver processo em andamento).</li>
+<li>Setores (só A): criar, renomear, desativar e apagar (as entregas dele saem junto; os funcionários ficam sem setor).</li>
+<li>Entregas por setor: cada setor tem as suas; A cria escolhendo o setor (sub-abas por setor na tela), G cria já no próprio setor. Nome único na empresa.</li>
+<li>Criar a entrega já com o fluxo: etapas escolhidas na hora, com "Abertura" e "Concluído" fixas.</li>
+<li>Etapas editáveis: adicionar antes da conclusão, renomear e remover etapas intermediárias sem processo em andamento; as etapas ficam religadas em sequência.</li>
+<li>Prazo padrão para concluir da entrega (data dd/mm/aaaa), alterável depois; usado quando o processo é aberto sem prazo próprio e a data ainda é futura.</li>
+<li>Quem pode mover para cada etapa: qualquer responsável, gestor ou administrador, ou só administrador.</li>
+<li>Requisitos por etapa: até 10, dos tipos documento e confirmação; editar e remover.</li>
+<li>Automações por etapa ou ao cancelar (até 10 por etapa): gerar a ficha do processo em PDF e chamar um sistema externo por webhook assinado; ligar, desligar e apagar. Falha nunca desfaz a movimentação e fica registrada.</li>
+<li>Desativar e reativar entregas; apagar entrega sem processos em andamento (o fluxo vai junto) ou com processos, transferindo-os para uma entrega substituta do mesmo setor (cada um vai para a etapa de mesmo nome ou a inicial).</li>
+</ul>
+
+<h2>11.5 Equipe</h2>
+<ul>
+<li>Cadastrar funcionário com nome, e-mail (obrigatório e único), senha provisória, papel e setor: A com qualquer papel e setor; G só papel Usuário, no próprio setor.</li>
+<li>Editar o e-mail (A e G, dentro do alcance), ativar e desativar (G só Usuário), alterar papel e setor (só A) e remover o setor.</li>
+<li>Lista de usuários: A vê todos; G e U veem só o próprio setor, sem administradores.</li>
+<li>Apagar funcionário: aviso com a quantidade de processos por situação; processos em andamento são divididos entre os herdeiros escolhidos, com novo prazo (não anterior a hoje).</li>
+<li>Proteções: ninguém apaga, desativa ou rebaixa a si mesmo; gestor não mexe em administrador nem em outro gestor.</li>
+</ul>
+
+<h2>11.6 Relatórios, painel e PDFs</h2>
+<ul>
+<li>Relatório de processos em PDF (A, G, U): filtros por setor, responsável, empresa, período (abertura ou encerramento) e situação; prévia com totais; abrangência decidida pelo servidor (A todos os setores; G e U só o próprio).</li>
+<li>PDF com a logo do Grupo Viriato, faixa marinho e dourada, cabeçalho repetido em cada página e rodapé "Página X de Y"; até 10.000 processos por relatório.</li>
+<li>Ficha do processo em PDF, gerada automaticamente por automação e anexada ao processo (dados, histórico, "Prazo para concluir").</li>
+<li>Painel de indicadores (30, 90, 180 ou 365 dias): em andamento, atrasados, concluídos, cancelados, tempo médio, atrasados por setor, tempo médio por etapa contra o prazo previsto e carga por funcionário. A vê todos os setores; G e U, o próprio.</li>
+</ul>
+
+<h2>11.7 Notificações e ajuda</h2>
+<ul>
+<li>Notificações no sistema, só para o gestor do setor: processo aberto, movido, concluído, comentado, reatribuído, cancelado, pedido de aprovação (para os administradores quando a etapa é só deles) e alertas de prazo, com quem fez, empresa, entrega, data e hora. Marcar uma como lida e marcar todas.</li>
+<li>Alertas diários de prazo (08:00, horário de Brasília): processo que vence em até 1 dia ou já venceu, um alerta por processo.</li>
+<li>Chat de ajuda com os administradores: G e U conversam; A vê a lista de conversas, responde e acompanha as não lidas. Resposta automática "Entendo sua necessidade, por favor abra um chamado para continuarmos" no máximo a cada 5 minutos. Janela arrastável para qualquer posição, com a posição lembrada.</li>
+<li>O sistema não envia e-mail: todos os avisos ficam dentro do sistema.</li>
+</ul>
+
+<h2>11.8 Auditoria e segurança</h2>
+<ul>
+<li>Auditoria (só A): entradas, bloqueios e desbloqueios, senhas zeradas e trocadas, usuários criados, alterados e apagados, duas etapas ligadas e desligadas, remoção de foto pelo administrador.</li>
+<li>Isolamento por empresa (tenant) em todas as consultas, vindo do token; senhas com BCrypt; segredos de duas etapas cifrados (AES-256-GCM); cabeçalhos de segurança no nginx e na API; webhook só para endereços públicos https; o sistema recusa subir com a chave JWT de exemplo.</li>
+</ul>
+
+<h2>11.9 O que o sistema ainda não faz</h2>
+<ul>
+<li>Não envia e-mail nem SMS; não tem aplicativo de celular nativo (a tela se adapta ao celular).</li>
+<li>Não reordena etapas pela tela (só adiciona antes da conclusão, renomeia e remove); a API já aceita transições arbitrárias, mas a tela liga as etapas em sequência.</li>
+<li>Não há recuperação de senha por e-mail: a senha é zerada pelo administrador (ou pelo próprio fluxo de primeiro acesso).</li>
+<li>Não exporta relatórios em planilha, só em PDF; não há comentários com menção de pessoas nem anexos no chat.</li>
+<li>O token fica no armazenamento local do navegador; bloqueio de tentativas é por conta, não por endereço de origem.</li>
+<li>Entregas compartilhadas por mais de um setor em versões antigas ficaram com o primeiro setor na migração.</li>
+</ul>
 
   <h2>Apêndice — como acessar</h2>
   <p>Depois de subir o sistema, entre com o administrador inicial: no ambiente Docker local o nome é <code>Administrador</code> e a senha <code>trocar-12345</code> (configuráveis por <code>ADMIN_NOME</code> e <code>ADMIN_SENHA</code>); o sistema pede que ele crie a própria senha no primeiro acesso. Para abrir o primeiro processo, cadastre antes ao menos uma empresa atendida em <em>Cadastros → Empresas</em>; o setor Geral e a entrega Atendimento geral já vêm prontos. Os usuários e as empresas mostradas nas capturas deste relatório foram dados de demonstração criados num ambiente temporário e não fazem parte do código.</p>
