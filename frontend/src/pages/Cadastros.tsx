@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { api, type Cliente, type Setor } from '../api'
+import { Link } from 'react-router-dom'
+import { api, ROTULO_REGIME, ROTULO_STATUS, type Cliente, type Setor } from '../api'
+import SaudeCadastral from '../SaudeCadastral'
 import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 
@@ -102,23 +104,28 @@ function Empresas({ pode }: { pode: boolean }) {
   }
 
   return (
+    <>
+    <SaudeCadastral />
     <div className="grade">
       <section className="cartao">
         <h3>Empresas atendidas</h3>
         <Aviso pode={pode} quem="administrador e gestor" />
         {erro && <p className="erro">{erro}</p>}
         <table>
-          <thead><tr><th>Número</th><th>Nome</th><th>Situação</th>{pode && <th></th>}</tr></thead>
+          <thead><tr><th>Número</th><th>Nome</th><th>CNPJ</th><th>Regime</th><th>Contrato</th><th>Situação</th>{pode && <th></th>}</tr></thead>
           <tbody>
             {lista.map((c) => (
               <tr key={c.id}>
                 <td className="num">{c.numero}</td>
                 <td><EmpresaEditavel c={c} pode={pode} salvar={(n, nm) => agir(() => api.patch(`/clientes/${c.id}`, { numero: n, nome: nm }))} /></td>
+                <td>{c.cnpjFormatado ?? <span className="sub">—</span>}</td>
+                <td>{c.regimeTributario ? ROTULO_REGIME[c.regimeTributario] : <span className="sub">—</span>}</td>
+                <td><span className={`selo ${c.statusContratual === 'ATIVO' ? 'concluido' : c.statusContratual === 'ENCERRADO' || c.statusContratual === 'SUSPENSO' ? 'cancelado' : 'aberto'}`}>{ROTULO_STATUS[c.statusContratual]}</span></td>
                 <td><Situacao ativo={c.ativo} pode={pode} alternar={() => agir(() => api.patch(`/clientes/${c.id}`, { ativo: !c.ativo }))} /></td>
-                {pode && <td><BotaoApagar nome={c.nome} aviso="Processos já concluídos ou cancelados dela continuam existindo, sem o vínculo com a empresa." apagar={() => { setErro(''); agir(() => api.del(`/clientes/${c.id}`)) }} /></td>}
+                {pode && <td className="acoes-linha"><Link to={`/cadastros/empresas/${c.id}`}>Ficha</Link> <BotaoApagar nome={c.nome} aviso="Processos já concluídos ou cancelados dela continuam existindo, sem o vínculo com a empresa." apagar={() => { setErro(''); agir(() => api.del(`/clientes/${c.id}`)) }} /></td>}
               </tr>
             ))}
-            {lista.length === 0 && <tr><td colSpan={pode ? 4 : 3} className="vazio">Nenhuma empresa cadastrada.</td></tr>}
+            {lista.length === 0 && <tr><td colSpan={pode ? 7 : 6} className="vazio">Nenhuma empresa cadastrada.</td></tr>}
           </tbody>
         </table>
       </section>
@@ -129,9 +136,11 @@ function Empresas({ pode }: { pode: boolean }) {
           <small>Código interno: de 1 a 10 dígitos, diferente do de outras empresas. É o número que identifica os processos da empresa.</small>
           <label>Nome<input required maxLength={150} value={nome} onChange={(e) => setNome(e.target.value)} /></label>
           <button className="primario">Adicionar empresa</button>
+          <small>Depois de criar, abra a <b>Ficha</b> para cadastrar CNPJ, regime, sócios, certificado digital e procurações.</small>
         </form>
       )}
     </div>
+    </>
   )
 }
 
@@ -178,7 +187,7 @@ function Setores({ pode }: { pode: boolean }) {
                 {pode && <td><BotaoApagar nome={s.nome} aviso="As entregas deste setor também são apagadas e os funcionários dele ficam sem setor. Processos já concluídos ou cancelados continuam existindo, sem o vínculo com o setor. Não apaga se houver processo em andamento." apagar={() => { setErro(''); agir(() => api.del(`/setores/${s.id}`)) }} /></td>}
               </tr>
             ))}
-            {lista.length === 0 && <tr><td colSpan={pode ? 4 : 3} className="vazio">Nenhum setor cadastrado.</td></tr>}
+            {lista.length === 0 && <tr><td colSpan={pode ? 7 : 6} className="vazio">Nenhum setor cadastrado.</td></tr>}
           </tbody>
         </table>
       </section>

@@ -105,6 +105,15 @@ Menu lateral (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relat�
 - **PDFs** com a fonte IBM Plex Sans embutida em UTF-8 (qualquer acento sai certo). Listas de usuários, fluxos e notificações aceitam `pagina` e `tamanho` (total nos cabeçalhos `X-Total-Count` e `X-Total-Pages`).
 - Limitações: sem recuperação de senha por e-mail (o suporte zera); o limite por endereço fica em memória (cada instância conta a sua).
 
+### CRM contábil (ficha da empresa atendida)
+
+- **Ficha fiscal e societária** (Cadastros → empresa → *Ficha*, só administrador e gestor): CNPJ (dígitos verificadores conferidos, único por empresa do sistema), razão social, nome fantasia, inscrições estadual e municipal, CNAE principal e secundários, regime tributário (MEI, Simples Nacional, Lucro Presumido, Lucro Real, Imune/Isenta), UF, código IBGE do município, data de abertura e situação contratual (Onboarding, Ativa, Suspensa, Offboarding, Encerrada).
+- **Sócios** (CPF validado, guardado cifrado e exibido só mascarado; soma da participação limitada a 100%) e **contatos por área** (Fiscal, Contábil, DP, Financeiro, com marca de quem recebe guias e cobranças).
+- **Onboarding e offboarding automáticos:** empresa nova nasce em Onboarding com um checklist de entrada; mudar a situação para Offboarding gera o de encerramento. Concluir todos os itens ativa (ou encerra) a empresa.
+- **Cofre de certificados digitais:** o A1 (`.pfx`/`.p12`) é aberto na hora com `KeyStore` (senha conferida; titular, emissora, série e validade lidos do arquivo; recusa vencido ou de outro CNPJ). O arquivo é guardado cifrado (AES-256-GCM) e a senha também; nenhum dos dois sai pela API. Cada uso fica na Auditoria (`CERTIFICADO_USADO`). O A3 é só informativo (titular, emissora, validade).
+- **Procurações eletrônicas** (e-CAC, SEFAZ, Prefeitura, FGTS/Conectividade, Outra) com outorga, vencimento, poderes e comprovante em PDF.
+- **Alertas de vencimento:** todo dia às 07:30 (Brasília) o sistema confere certificados e procurações e avisa administradores e gestores (sininho) em 30, 15 e 5 dias e quando vence, uma vez por marco. O painel **Saúde cadastral e certificados** aparece em Cadastros e no Início.
+
 ### Relatórios (PDF)
 A aba **Relatórios** gera um PDF dos processos, com filtros por setor, responsável, empresa, período (abertura ou encerramento) e situação (em andamento, concluídos, cancelados). A abrangência depende do papel e é imposta pelo servidor:
 

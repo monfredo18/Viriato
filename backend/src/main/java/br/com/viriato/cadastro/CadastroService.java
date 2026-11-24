@@ -24,6 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 /** Cadastros do catálogo da empresa: empresas atendidas, setores e entregas. */
 @Service
 public class CadastroService {
+    private final br.com.viriato.crm.FichaFiscalService fichaFiscal;
+    private final br.com.viriato.crm.ChecklistService checklists;
+    private final org.springframework.context.ApplicationEventPublisher eventos;
     private final ClienteRepository clientes;
     private final SetorRepository setores;
     private final EntregaRepository entregas;
@@ -34,7 +37,12 @@ public class CadastroService {
 
     public CadastroService(ClienteRepository clientes, SetorRepository setores,
                            EntregaRepository entregas, FluxoRepository fluxos,
-                           ProcessoRepository processos, UsuarioRepository usuarios, FluxoService fluxoService) {
+                           ProcessoRepository processos, UsuarioRepository usuarios, FluxoService fluxoService,
+                           br.com.viriato.crm.FichaFiscalService fichaFiscal, br.com.viriato.crm.ChecklistService checklists,
+                           org.springframework.context.ApplicationEventPublisher eventos) {
+        this.fichaFiscal = fichaFiscal;
+        this.checklists = checklists;
+        this.eventos = eventos;
         this.fluxoService = fluxoService;
         this.clientes = clientes;
         this.setores = setores;
@@ -45,7 +53,8 @@ public class CadastroService {
     }
 
     // ---------- DTOs ----------
-    public record ClienteDto(Long id, String numero, String nome, boolean ativo) {}
+    public record ClienteDto(Long id, String numero, String nome, boolean ativo, String cnpj, String cnpjFormatado,
+                             br.com.viriato.crm.Enums.RegimeTributario regimeTributario, br.com.viriato.crm.Enums.StatusContratual statusContratual, String uf) {}
     public record EntregaDto(Long id, String nome, Long fluxoId, String fluxoNome, boolean ativo, Long setorDonoId, String setorDonoNome, LocalDate prazoPadrao) {}
     public record EntregaResumo(Long id, String nome, boolean ativo) {}
     public record SetorDto(Long id, String nome, boolean ativo, List<EntregaResumo> entregas) {}
@@ -57,7 +66,7 @@ public class CadastroService {
     }
 
     @Transactional
-    public ClienteDto criarCliente(Long tid, String numero, String nome) {
+    public ClienteDto criarCliente(Long tid, String numero, String nome, br.com.viriato.crm.DadosFiscais fiscal) {
         String n = nome.trim();
         String num = numero.trim();
         if (clientes.existsByTenantIdAndNomeIgnoreCase(tid, n)) throw new NegocioException("Já existe uma empresa com esse nome");
@@ -66,11 +75,15 @@ public class CadastroService {
         c.setTenantId(tid);
         c.setNumero(num);
         c.setNome(n);
-        return dto(clientes.save(c));
+        c.setStatusContratual(br.com.viriato.crm.Enums.StatusContratual.ONBOARDING);   // empresa nova entra em onboarding (com o checklist)
+        fichaFiscal.aplicar(c, fiscal);
+        c = clientes.save(c);
+        checklists.aoMudarStatus(c, null);
+        return dto(c);
     }
 
     @Transactional
-    public ClienteDto atualizarCliente(Long tid, Long id, String numero, String nome, Boolean ativo) {
+    public ClienteDto atualizarCliente(Long tid, Long id, String numero, String nome, Boolean ativo, br.com.viriato.crm.DadosFiscais fiscal) {
         Cliente c = clientes.findByIdAndTenantId(id, tid).orElseThrow(() -> new NaoEncontradoException("Empresa"));
         if (nome != null && !nome.isBlank() && !nome.trim().equalsIgnoreCase(c.getNome())) {
             if (clientes.existsByTenantIdAndNomeIgnoreCase(tid, nome.trim())) throw new NegocioException("Já existe uma empresa com esse nome");
@@ -85,7 +98,11 @@ public class CadastroService {
             c.setNumero(num);
         }
         if (ativo != null) c.setAtivo(ativo);
-        return dto(clientes.save(c));
+        br.com.viriato.crm.Enums.StatusContratual antes = c.getStatusContratual();
+        fichaFiscal.aplicar(c, fiscal);
+        c = clientes.save(c);
+        checklists.aoMudarStatus(c, antes);
+        return dto(c);
     }
 
     // ---------- entregas ----------
@@ -200,6 +217,7 @@ public class CadastroService {
         exigirSemProcessosEmAndamento(processos.countByTenantIdAndClienteIdAndStatus(tid, id, StatusProcesso.ABERTO),
                 "a empresa \"" + c.getNome() + "\"");
         processos.desvincularCliente(tid, id);
+        eventos.publishEvent(new br.com.viriato.crm.ClienteApagado(tid, id));   // remove os arquivos do cofre e das procurações
         clientes.delete(c);
     }
 
@@ -338,7 +356,10 @@ public class CadastroService {
         return fluxos.findByTenantIdOrderByNome(tid).stream().collect(Collectors.toMap(Fluxo::getId, Fluxo::getNome));
     }
 
-    private ClienteDto dto(Cliente c) { return new ClienteDto(c.getId(), c.getNumero(), c.getNome(), c.isAtivo()); }
+    private ClienteDto dto(Cliente c) {
+        return new ClienteDto(c.getId(), c.getNumero(), c.getNome(), c.isAtivo(), c.getCnpj(), br.com.viriato.crm.Documentos.formatarCnpj(c.getCnpj()),
+                c.getRegimeTributario(), c.getStatusContratual(), c.getUf());
+    }
 
     private EntregaDto dto(Entrega e, Map<Long, String> nomesFluxo, Map<Long, String> nomesSetor) {
         return new EntregaDto(e.getId(), e.getNome(), e.getFluxoId(), nomesFluxo.get(e.getFluxoId()), e.isAtivo(),

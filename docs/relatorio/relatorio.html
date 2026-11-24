@@ -385,6 +385,16 @@
     <li><strong>PDFs</strong> com IBM Plex Sans embutida (UTF-8) e <strong>paginação</strong> nas listas de usuários, fluxos e notificações.</li>
   </ul>
 
+  <h2>3.20 CRM contábil: ficha da empresa, certificados e procurações</h2>
+  <ul>
+    <li><strong>Ficha fiscal e societária</strong> (Cadastros → <em>Ficha</em>; só administrador e gestor): CNPJ com dígitos verificadores e unicidade por empresa do sistema, razão social, nome fantasia, inscrições, CNAEs, regime tributário, UF, código IBGE, data de abertura e situação contratual.</li>
+    <li><strong>Sócios e contatos:</strong> CPF validado, cifrado e exibido mascarado; participação somando até 100%; contatos por área (Fiscal, Contábil, DP, Financeiro) com marca de guias e cobranças.</li>
+    <li><strong>Onboarding e offboarding:</strong> checklist de entrada gerado ao cadastrar a empresa e de encerramento ao iniciar o offboarding; concluir todos os itens ativa ou encerra a empresa.</li>
+    <li><strong>Cofre de certificados:</strong> A1 aberto com <code>KeyStore</code> (senha, titular, emissora, série e validade extraídos), arquivo e senha cifrados com AES-256-GCM, nunca devolvidos; uso registrado na Auditoria. A3 informativo.</li>
+    <li><strong>Procurações:</strong> e-CAC, SEFAZ, Prefeitura, FGTS (Conectividade) e outras, com vencimento e comprovante em PDF.</li>
+    <li><strong>Alertas e painel:</strong> aviso diário em 30, 15 e 5 dias e no vencimento (um por marco) para administradores e gestores; painel "Saúde cadastral e certificados" em Cadastros e no Início.</li>
+  </ul>
+
   <h1>4. Papéis e permissões</h1>
   <p>Os <strong>processos são separados por setor</strong>: gestor e usuário enxergam apenas os processos (e documentos e histórico) do próprio setor; <strong>só o administrador vê os de todos os setores</strong>. Processo de outro setor responde “não encontrado”, inclusive no endereço direto, nos documentos e nos filtros. Cadastros, fluxos e a equipe (com papel e setor) continuam visíveis a todos. O que muda, além disso, é quem pode <strong>alterar</strong>.</p>
   <table>
@@ -680,7 +690,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>150 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>168 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>

@@ -13,6 +13,7 @@ import Login from './pages/Login'
 import Processos from './pages/Processos'
 import ProcessoDetalhe from './pages/ProcessoDetalhe'
 import Cadastros from './pages/Cadastros'
+import EmpresaFicha from './pages/EmpresaFicha'
 import Entregas from './pages/Entregas'
 import Usuarios from './pages/Usuarios'
 import Relatorios from './pages/Relatorios'
@@ -147,6 +148,7 @@ function Layout() {
             <Route path="/processos/:id" element={<ProcessoDetalhe />} />
             <Route path="/painel" element={<Painel />} />
             <Route path="/cadastros" element={<Cadastros />} />
+            <Route path="/cadastros/empresas/:id" element={<EmpresaFicha />} />
             <Route path="/entregas" element={<Entregas />} />
             <Route path="/fluxos" element={<Navigate to="/entregas" replace />} />
             <Route path="/usuarios" element={<Usuarios />} />

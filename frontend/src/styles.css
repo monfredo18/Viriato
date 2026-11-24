@@ -1110,3 +1110,24 @@ input:focus, select:focus, textarea:focus { border-color: var(--azul); box-shado
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 
 .paginacao { display: flex; align-items: center; justify-content: center; gap: .9rem; margin-top: .9rem; color: var(--suave); font-size: 12.5px; }
+
+/* Saúde cadastral e ficha da empresa */
+.saude-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .7rem; margin-bottom: .9rem; }
+.saude-numeros > div { border: 1px solid var(--borda); border-radius: var(--raio); padding: .6rem .8rem; display: flex; flex-direction: column; gap: .15rem; }
+.saude-numeros b { font-size: 1.5rem; line-height: 1.1; }
+.saude-numeros span { color: var(--suave); font-size: 12px; }
+.saude-numeros .ruim { border-color: var(--vermelho); } .saude-numeros .ruim b { color: var(--vermelho); }
+.saude-numeros .atencao { border-color: var(--ouro-borda); } .saude-numeros .atencao b { color: var(--ouro-texto); }
+.saude-itens { list-style: none; margin: 0 0 .5rem; padding: 0; display: grid; gap: .45rem; }
+.saude-itens li { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.saude-desc { color: var(--suave); font-size: 12.5px; }
+.ficha-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .75rem 1rem; align-items: end; }
+.ficha-form .largo { grid-column: 1 / -1; }
+.ficha-topo { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-bottom: .4rem; }
+.ficha-topo h2 { margin: 0; }
+.ficha-lista { list-style: none; padding: 0; margin: 0 0 .8rem; display: grid; gap: .5rem; }
+.ficha-lista li { display: flex; align-items: flex-start; gap: .6rem; }
+.ficha-lista .feito { color: var(--suave); text-decoration: line-through; }
+.linha-acoes { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .8rem; }
+.ficha-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-top: 1rem; }
+td.corta { max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -9,5 +9,6 @@ public final class Datas {
     public static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     public static final DateTimeFormatter DATA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private Datas() {}
+    public static LocalDate paraData(java.util.Date d) { return d.toInstant().atZone(ZONA).toLocalDate(); }
     public static LocalDate hoje() { return LocalDate.now(ZONA); }
 }

@@ -123,7 +123,15 @@ class LgpdTest {
         assertThat(e.get("cadastro").get("nome").asText()).isEqualTo("Construtora " + c.s());
         assertThat(e.get("processos")).hasSize(1);
         assertThat(ler(c.admin(), "/api/lgpd/clientes/" + c.clienteId() + "/exportacao.pdf").andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray()).isNotEmpty();
+        enviar(c.admin(), "/api/clientes/" + c.clienteId() + "/socios", "{\"nome\":\"Maria Souza\",\"cpf\":\"529.982.247-25\",\"email\":\"maria@x.com\"}").andExpect(status().isCreated());
+        enviar(c.admin(), "/api/clientes/" + c.clienteId() + "/contatos", "{\"nome\":\"Paulo Fiscal\",\"area\":\"FISCAL\",\"telefone\":\"11 98888-7777\"}").andExpect(status().isCreated());
+        JsonNode antes = corpo(ler(c.admin(), "/api/lgpd/clientes/" + c.clienteId() + "/exportacao").andExpect(status().isOk()));
+        assertThat(antes.get("socios").toString()).contains("Maria Souza").contains("***.982.247-**").doesNotContain("52998224725");
+        assertThat(antes.get("contatos").toString()).contains("Paulo Fiscal");
         enviar(c.admin(), "/api/lgpd/clientes/" + c.clienteId() + "/anonimizar", "{}").andExpect(status().isNoContent());
+        JsonNode depois = corpo(ler(c.admin(), "/api/lgpd/clientes/" + c.clienteId() + "/exportacao").andExpect(status().isOk()));
+        assertThat(depois.get("socios").toString()).doesNotContain("Maria").doesNotContain("maria@x.com").doesNotContain("982.247");
+        assertThat(depois.get("contatos").toString()).doesNotContain("Paulo").doesNotContain("98888");
         assertThat(corpo(ler(c.admin(), "/api/processos/" + c.processo())).toString()).doesNotContain("Construtora " + c.s());
         enviar(c.admin(), "/api/lgpd/clientes/" + c.clienteId() + "/anonimizar", "{}").andExpect(status().isUnprocessableEntity());
     }

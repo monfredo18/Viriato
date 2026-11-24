@@ -43,6 +43,7 @@ export default function Sino() {
     setAberto(false)
     contar()
     if (n.processoId) nav(`/processos/${n.processoId}`)
+    else if (n.clienteId) nav(`/cadastros/empresas/${n.clienteId}`)
   }
 
   const lerTodas = async () => {

@@ -105,6 +105,12 @@ public class LgpdService {
         cadastro.put("anonimizadoEm", c.getAnonimizadoEm());
         Map<String, Object> out = cabecalho("EMPRESA_ATENDIDA", c.getId());
         out.put("cadastro", cadastro);
+        out.put("dadosFiscais", jdbc.queryForList(
+                "select cnpj, razao_social, nome_fantasia, inscricao_estadual, inscricao_municipal, regime_tributario, uf, status_contratual from cliente where tenant_id = ? and id = ?", quem.tenantId(), id));
+        out.put("socios", jdbc.queryForList(
+                "select nome, cpf_mascara as cpf, percentual, responsavel_legal, email, telefone from cliente_socio where tenant_id = ? and cliente_id = ? order by id", quem.tenantId(), id));
+        out.put("contatos", jdbc.queryForList(
+                "select nome, area, email, telefone, recebe_guias, recebe_cobrancas from cliente_contato where tenant_id = ? and cliente_id = ? order by id", quem.tenantId(), id));
         out.put("processos", jdbc.queryForList(
                 "select numero, titulo, status, criado_em as aberto_em from processo where tenant_id = ? and cliente_id = ? order by id desc limit " + LIMITE, quem.tenantId(), id));
         auditoria.registrar(quem.tenantId(), quem.id(), "LGPD_EXPORTACAO", "Exportação dos dados da empresa atendida #" + id);
@@ -173,7 +179,12 @@ public class LgpdService {
         c.setNome(novo);
         c.setAtivo(false);
         c.setAnonimizadoEm(Instant.now());
+        c.setRazaoSocial(null);
+        c.setNomeFantasia(null);
         clientes.save(c);
+        // sócios e contatos são pessoas: ficam só como registro, sem nome, CPF, e-mail e telefone (o CNPJ fica, é identidade fiscal)
+        jdbc.update("update cliente_socio set nome = 'Sócio anonimizado', cpf_cifrado = null, cpf_mascara = null, email = null, telefone = null where tenant_id = ? and cliente_id = ?", t, id);
+        jdbc.update("update cliente_contato set nome = 'Contato anonimizado', email = null, telefone = null where tenant_id = ? and cliente_id = ?", t, id);
         jdbc.update("update processo set titulo = replace(titulo, ?, ?) where tenant_id = ? and cliente_id = ?", antigo, novo, t, id);
         jdbc.update("update notificacao set empresa_nome = ?, titulo = replace(titulo, ?, ?), mensagem = replace(mensagem, ?, ?) where tenant_id = ? and empresa_nome = ?",
                 novo, antigo, novo, antigo, novo, t, antigo);

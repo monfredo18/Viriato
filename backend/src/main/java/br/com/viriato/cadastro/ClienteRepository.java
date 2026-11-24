@@ -8,5 +8,6 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     List<Cliente> findByTenantIdOrderByNome(Long tenantId);
     Optional<Cliente> findByIdAndTenantId(Long id, Long tenantId);
     boolean existsByTenantIdAndNomeIgnoreCase(Long tenantId, String nome);
+    Optional<Cliente> findByTenantIdAndCnpj(Long tenantId, String cnpj);
     boolean existsByTenantIdAndNumero(Long tenantId, String numero);
 }

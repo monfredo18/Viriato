@@ -1,3 +1,4 @@
+import SaudeCadastral from '../SaudeCadastral'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, type Pagina, type Painel as PainelDados, type Processo } from '../api'
@@ -71,6 +72,8 @@ export default function Inicio() {
         <Indicador icone="check" cor="verde" valor={r ? String(r.concluidos) : '—'} rotulo="Concluídos" nota="nos últimos 30 dias" />
         <Indicador icone="ampulheta" cor="ouro" valor={r ? (r.tempoMedioConclusaoDias === null ? '—' : `${dec(r.tempoMedioConclusaoDias)} d`) : '—'} rotulo="Tempo médio" nota="até concluir (30 dias)" />
       </div>
+
+      <SaudeCadastral limite={4} />
 
       <div className="grade-inicio">
         <section className="cartao">

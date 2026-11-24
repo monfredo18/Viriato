@@ -83,7 +83,26 @@ export type Status = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO'
 export interface PendenciasUsuario { nome: string; abertos: number; atrasados: number; concluidos: number; cancelados: number }
 export interface Usuario { id: number; nome: string; papel: Papel; ativo: boolean; setorId: number | null; setorNome: string | null; deveTrocarSenha: boolean; fotoVersao: number | null; bloqueado: boolean; doisFatores: boolean; email: string | null; deveAtivarDoisFatores: boolean }
 export const ROTULO_PAPEL: Record<Papel, string> = { ADMIN: 'Administrador', GESTOR: 'Gestor', USUARIO: 'Usuário' }
-export interface Cliente { id: number; numero: string; nome: string; ativo: boolean }
+export type Regime = 'MEI' | 'SIMPLES_NACIONAL' | 'LUCRO_PRESUMIDO' | 'LUCRO_REAL' | 'IMUNE_ISENTA'
+export type StatusContratual = 'ONBOARDING' | 'ATIVO' | 'SUSPENSO' | 'OFFBOARDING' | 'ENCERRADO'
+export const ROTULO_REGIME: Record<Regime, string> = { MEI: 'MEI', SIMPLES_NACIONAL: 'Simples Nacional', LUCRO_PRESUMIDO: 'Lucro Presumido', LUCRO_REAL: 'Lucro Real', IMUNE_ISENTA: 'Imune ou isenta' }
+export const ROTULO_STATUS: Record<StatusContratual, string> = { ONBOARDING: 'Onboarding', ATIVO: 'Ativa', SUSPENSO: 'Suspensa', OFFBOARDING: 'Offboarding', ENCERRADO: 'Encerrada' }
+export interface Cliente { id: number; numero: string; nome: string; ativo: boolean; cnpj: string | null; cnpjFormatado: string | null; regimeTributario: Regime | null; statusContratual: StatusContratual; uf: string | null }
+export interface Cnae { codigo: string; descricao: string | null }
+export interface FichaFiscal { cnpj: string | null; cnpjFormatado: string | null; razaoSocial: string | null; nomeFantasia: string | null; inscricaoEstadual: string | null; inscricaoMunicipal: string | null; cnaePrincipal: string | null; cnaePrincipalDescricao: string | null; cnaesSecundarios: Cnae[]; regimeTributario: Regime | null; uf: string | null; codigoMunicipioIbge: string | null; dataAberturaEmpresa: string | null; statusContratual: StatusContratual }
+export type AreaContato = 'FISCAL' | 'CONTABIL' | 'DP' | 'FINANCEIRO'
+export const ROTULO_AREA: Record<AreaContato, string> = { FISCAL: 'Fiscal', CONTABIL: 'Contábil', DP: 'DP / Folha', FINANCEIRO: 'Financeiro' }
+export interface Socio { id: number; nome: string; cpf: string | null; percentual: number | null; responsavelLegal: boolean; email: string | null; telefone: string | null }
+export interface ContatoCliente { id: number; nome: string; area: AreaContato; email: string | null; telefone: string | null; recebeGuias: boolean; recebeCobrancas: boolean }
+export type SituacaoVencimento = 'VALIDO' | 'VENCENDO' | 'VENCIDO' | 'SEM_VALIDADE'
+export interface Certificado { id: number; tipo: 'A1' | 'A3'; titular: string | null; cnpjCertificado: string | null; emissora: string | null; numeroSerie: string | null; validoDe: string | null; validoAte: string | null; situacao: SituacaoVencimento; diasParaVencer: number | null; ativo: boolean; observacao: string | null }
+export type TipoProcuracao = 'ECAC' | 'SEFAZ' | 'PREFEITURA' | 'FGTS_CONECTIVIDADE' | 'OUTRO'
+export const ROTULO_PROCURACAO: Record<TipoProcuracao, string> = { ECAC: 'e-CAC', SEFAZ: 'SEFAZ', PREFEITURA: 'Prefeitura', FGTS_CONECTIVIDADE: 'FGTS (Conectividade)', OUTRO: 'Outra' }
+export interface Procuracao { id: number; tipo: TipoProcuracao; dataOutorga: string; dataVencimento: string | null; poderes: string | null; temComprovante: boolean; comprovanteNome: string | null; situacao: 'VIGENTE' | 'VENCENDO' | 'VENCIDA' | 'SEM_VENCIMENTO'; diasParaVencer: number | null; ativa: boolean }
+export interface ItemChecklist { id: number; tipo: 'ONBOARDING' | 'OFFBOARDING'; ordem: number; descricao: string; concluido: boolean; concluidoPor: number | null; concluidoEm: string | null }
+export interface Ficha { id: number; numero: string; nome: string; ativo: boolean; fiscal: FichaFiscal; socios: Socio[]; contatos: ContatoCliente[]; certificados: Certificado[]; procuracoes: Procuracao[]; checklist: ItemChecklist[] }
+export interface ItemSaude { tipo: 'CERTIFICADO' | 'PROCURACAO'; itemId: number; empresaId: number; empresaNome: string; descricao: string; vencimento: string; dias: number; gravidade: 'CRITICA' | 'ALERTA' }
+export interface Saude { resumo: { certificadosVencidos: number; certificadosAVencer: number; procuracoesVencidas: number; procuracoesAVencer: number; empresasSemCnpj: number; empresasSemRegime: number; empresasSemCertificado: number; onboardingEmAndamento: number; offboardingEmAndamento: number }; itens: ItemSaude[] }
 interface EntregaResumo { id: number; nome: string; ativo: boolean }
 export interface Setor { id: number; nome: string; ativo: boolean; entregas: EntregaResumo[] }
 /** {@code setorDonoId} vazio = entrega geral (do administrador); com valor = exclusiva desse setor. */
@@ -134,7 +153,7 @@ export interface ExecucaoAutomacao { id: number; tipo: TipoAutomacao; evento: Ev
 export const ROTULO_AUTOMACAO: Record<TipoAutomacao, string> = {
   GERAR_DOCUMENTO: 'Gerar a ficha do processo (PDF)', WEBHOOK: 'Chamar outro sistema (webhook)',
 }
-export interface Notificacao { id: number; titulo: string; mensagem: string | null; empresaNome: string | null; entregaNome: string | null; autorNome: string | null; processoId: number | null; lida: boolean; criadoEm: string }
+export interface Notificacao { id: number; titulo: string; mensagem: string | null; empresaNome: string | null; entregaNome: string | null; autorNome: string | null; processoId: number | null; clienteId: number | null; lida: boolean; criadoEm: string }
 export interface MensagemAjuda { id: number; autorNome: string; deAdmin: boolean; texto: string; criadoEm: string }
 export interface ConversaAjuda { id: number; usuarioId: number; fotoVersao: number | null; pessoa: string; setor: string | null; ultimaTexto: string | null; ultimaDeAdmin: boolean; atualizadoEm: string; naoLidas: number }
 export interface ConversaAjudaAberta { id: number; usuarioId: number; fotoVersao: number | null; pessoa: string; setor: string | null; mensagens: MensagemAjuda[] }

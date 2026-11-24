@@ -30,9 +30,11 @@ public class CadastroController {
 
     /** Número da empresa: código interno, só dígitos (até 10), único entre as empresas atendidas. */
     public record NovoCliente(@NotBlank @Pattern(regexp = "\\d{1,10}", message = "deve ter de 1 a 10 dígitos") String numero,
-                              @NotBlank @Size(max = 150) String nome) {}
+                              @NotBlank @Size(max = 150) String nome,
+                              br.com.viriato.crm.DadosFiscais fiscal) {}
     public record AtualizaCliente(@Pattern(regexp = "\\d{1,10}", message = "deve ter de 1 a 10 dígitos") String numero,
-                                  @Size(max = 150) String nome, Boolean ativo) {}
+                                  @Size(max = 150) String nome, Boolean ativo,
+                                  br.com.viriato.crm.DadosFiscais fiscal) {}
     /** Sem {@code fluxoId}, a entrega ganha um fluxo só dela, criado com as {@code etapas} informadas (ou as etapas padrão). */
     public record NovaEntrega(@NotBlank @Size(max = 150) String nome, Long fluxoId, List<br.com.viriato.fluxo.FluxoService.EtapaReq> etapas, Long setorId,
                               java.time.LocalDate prazoPadrao) {}
@@ -49,13 +51,13 @@ public class CadastroController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public ClienteDto criarCliente(@Valid @RequestBody NovoCliente r) {
-        return service.criarCliente(Contexto.tenantId(), r.numero(), r.nome());
+        return service.criarCliente(Contexto.tenantId(), r.numero(), r.nome(), r.fiscal());
     }
 
     @PatchMapping("/clientes/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
     public ClienteDto atualizarCliente(@PathVariable Long id, @Valid @RequestBody AtualizaCliente r) {
-        return service.atualizarCliente(Contexto.tenantId(), id, r.numero(), r.nome(), r.ativo());
+        return service.atualizarCliente(Contexto.tenantId(), id, r.numero(), r.nome(), r.ativo(), r.fiscal());
     }
 
     @DeleteMapping("/clientes/{id}")

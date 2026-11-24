@@ -19,6 +19,8 @@ public class Notificacao {
     @Column(name = "entrega_nome") private String entregaNome;
     @Column(name = "autor_nome") private String autorNome;
     @Column(name = "processo_id") private Long processoId;
+    /** Avisos que não são de processo (ex.: vencimento de certificado) apontam para a empresa. */
+    @Column(name = "cliente_id") private Long clienteId;
     private boolean lida;
     @Column(name = "criado_em", insertable = false, updatable = false)
     private Instant criadoEm;

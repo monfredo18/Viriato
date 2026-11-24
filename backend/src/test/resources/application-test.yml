@@ -19,5 +19,7 @@ viriato:
     retry:
       tentativas: 1            # os testes antigos esperam o resultado final na hora; o teste da fila usa mais tentativas
       cron: "-"
+  alertas:
+    cron: "-"
   prazos:
     cron: "-"

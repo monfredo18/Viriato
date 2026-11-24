@@ -72,4 +72,20 @@ public class NotificacaoService {
 
         }
     }
+
+    /** Aviso do sistema para a gestão (administradores e gestores ativos) sobre uma empresa atendida, fora de qualquer processo. */
+    @Transactional
+    public void avisarGestao(Long tenantId, Long clienteId, String empresaNome, String titulo, String mensagem) {
+        for (Usuario u : usuarios.findByTenantIdAndPapelInAndAtivoTrue(tenantId, List.of(Papel.ADMIN, Papel.GESTOR))) {
+            Notificacao n = new Notificacao();
+            n.setTenantId(tenantId);
+            n.setUsuarioId(u.getId());
+            n.setTitulo(titulo.length() > 200 ? titulo.substring(0, 200) : titulo);
+            n.setMensagem(mensagem);
+            n.setEmpresaNome(empresaNome);
+            n.setAutorNome("Sistema");
+            n.setClienteId(clienteId);
+            repo.save(n);
+        }
+    }
 }

@@ -17,10 +17,10 @@ public class NotificacaoController {
     public NotificacaoController(NotificacaoRepository repo) { this.repo = repo; }
 
     public record NotificacaoDto(Long id, String titulo, String mensagem, String empresaNome, String entregaNome, String autorNome,
-                                 Long processoId, boolean lida, Instant criadoEm) {
+                                 Long processoId, Long clienteId, boolean lida, Instant criadoEm) {
         static NotificacaoDto de(Notificacao n) {
             return new NotificacaoDto(n.getId(), n.getTitulo(), n.getMensagem(), n.getEmpresaNome(), n.getEntregaNome(), n.getAutorNome(),
-                    n.getProcessoId(), n.isLida(), n.getCriadoEm());
+                    n.getProcessoId(), n.getClienteId(), n.isLida(), n.getCriadoEm());
         }
     }
 
