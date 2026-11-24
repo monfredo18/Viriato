@@ -15,4 +15,6 @@ public class Cliente {
     private String numero;
     private String nome;
     private boolean ativo = true;
+    /** LGPD: quando os dados pessoais foram anonimizados. */
+    @Column(name = "anonimizado_em") private java.time.Instant anonimizadoEm;
 }

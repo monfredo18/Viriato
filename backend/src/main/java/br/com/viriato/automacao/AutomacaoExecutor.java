@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -35,9 +38,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Executa as regras de automação depois que o movimento do processo foi confirmado no banco. Cada regra é
- * independente: a falha de uma (ou de todas) NUNCA desfaz nem trava o movimento do processo, só fica registrada.
- * Ordem: gerar documento, depois webhook.
+ * Executa as regras de automação por uma fila persistida no banco (outbox). Cada regra é independente: a falha de uma
+ * (ou de todas) NUNCA desfaz nem trava o movimento do processo, só fica registrada. Ordem: gerar documento, depois webhook.
+ * Falhas que podem se resolver são repetidas até {@code viriato.automacao.retry.tentativas} vezes, com espera crescente;
+ * reiniciar o servidor não perde nada. O envio é "pelo menos uma vez": um webhook pode chegar repetido se a resposta se perder.
  */
 @Component
 public class AutomacaoExecutor {
@@ -58,12 +62,21 @@ public class AutomacaoExecutor {
     private final ObjectMapper json;
     private final PlatformTransactionManager tm;
     private final Executor executor;
+    private final int maxTentativas;
+    private final long baseSegundos;
+    private final java.time.Duration travadaApos;
 
     public AutomacaoExecutor(AutomacaoRegraRepository regras, AutomacaoExecucaoRepository execucoes, ProcessoRepository processos,
                              ProcessoHistoricoRepository historicos, ClienteRepository clientes, EntregaRepository entregas,
                              SetorRepository setores, UsuarioRepository usuarios, EtapaRepository etapas, DocumentoRepository documentos,
                              ArmazenamentoArquivos storage, WebhookClient webhook, ObjectMapper json,
-                             PlatformTransactionManager tm, @Qualifier("automacaoTaskExecutor") Executor executor) {
+                             PlatformTransactionManager tm, @Qualifier("automacaoTaskExecutor") Executor executor,
+                             @Value("${viriato.automacao.retry.tentativas:3}") int maxTentativas,
+                             @Value("${viriato.automacao.retry.base-segundos:60}") long baseSegundos,
+                             @Value("${viriato.automacao.retry.travada-minutos:10}") long travadaMinutos) {
+        this.maxTentativas = Math.max(1, maxTentativas);
+        this.baseSegundos = Math.max(0, baseSegundos);
+        this.travadaApos = java.time.Duration.ofMinutes(travadaMinutos);
         this.regras = regras;
         this.execucoes = execucoes;
         this.processos = processos;
@@ -81,64 +94,164 @@ public class AutomacaoExecutor {
         this.executor = executor;
     }
 
+    /**
+     * Fila persistida (outbox): na MESMA transação que moveu o processo, cada regra aplicável vira uma linha PENDENTE.
+     * Se o servidor cair depois do commit, nada se perde: a fila continua no banco e o agendador a retoma.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void enfileirar(AutomacaoEvento e) {
+        try {
+            Processo p = processos.findById(e.processoId()).filter(x -> x.getTenantId().equals(e.tenantId())).orElse(null);
+            if (p == null || p.getFluxoId() == null) return;
+            List<AutomacaoRegra> rs = regras.ativas(e.tenantId(), p.getFluxoId(), e.evento(), e.evento() == EventoAutomacao.ENTRAR_ETAPA ? e.etapaId() : null);
+            rs = rs.stream().sorted(Comparator.comparingInt((AutomacaoRegra r) -> r.getTipo().ordinal()).thenComparing(AutomacaoRegra::getId)).toList();
+            for (AutomacaoRegra r : rs) {
+                AutomacaoExecucao x = new AutomacaoExecucao();
+                x.setTenantId(e.tenantId());
+                x.setProcessoId(e.processoId());
+                x.setRegraId(r.getId());
+                x.setTipo(r.getTipo());
+                x.setEvento(e.evento());
+                x.setEtapaId(e.etapaId());
+                x.setUsuarioId(e.usuarioId());
+                x.setStatus(StatusExecucao.PENDENTE);
+                x.setProximaTentativa(Instant.now());
+                execucoes.save(x);
+            }
+        } catch (RuntimeException ex) {
+            log.error("Não foi possível enfileirar as automações do processo {}", e.processoId(), ex);   // nunca trava o movimento
+        }
+    }
+
+    /** Depois do commit, já tenta rodar o que acabou de entrar na fila (o agendador cobre o que ficar para trás). */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void aoEvento(AutomacaoEvento e) {
+    public void aoConfirmar(AutomacaoEvento e) {
         executor.execute(() -> {
             try {
-                executar(e);
+                processarPendentes();
             } catch (Exception ex) {
                 log.error("Falha inesperada nas automações do processo {}", e.processoId(), ex);
             }
         });
     }
 
-    /** Tudo o que as regras precisam, lido de uma vez para não segurar transação durante o webhook. */
-    private record Contexto(Long processoId, Long tenantId, String numero, Long clienteId, String etapaNome,
-                            Map<String, String> variaveis, List<AutomacaoRegra> regras, List<FichaProcessoPdf.Linha> historico) {}
-
-    public void executar(AutomacaoEvento e) {
-        TransactionTemplate tx = new TransactionTemplate(tm);
-        tx.setReadOnly(true);
-        tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        Contexto c = tx.execute(s -> carregar(e));
-        if (c == null) return;
-
-        for (AutomacaoRegra r : c.regras()) {
-            StatusExecucao status;
-            String msg;
-            try {
-                switch (r.getTipo()) {
-                    case GERAR_DOCUMENTO -> {
-                        String nomeFicha = nomeFicha(c);
-                        byte[] ficha = FichaProcessoPdf.gerar(c.variaveis(), Datas.DATA_HORA.format(Instant.now().atZone(Datas.ZONA)), c.historico());
-                        guardar(c, nomeFicha, ficha);
-                        status = StatusExecucao.OK;
-                        msg = "Documento \"" + nomeFicha + "\" anexado ao processo";
-                    }
-                    case WEBHOOK -> {
-                        int codigo = webhook.enviar(r.getUrl(), r.getSegredo(), nomeEvento(e.evento()), corpoWebhook(c, e));
-                        boolean ok = codigo >= 200 && codigo < 300;
-                        status = ok ? StatusExecucao.OK : StatusExecucao.FALHA;
-                        msg = "Resposta HTTP " + codigo;
-                    }
-                    default -> throw new IllegalStateException("Tipo desconhecido");
-                }
-            } catch (Exception ex) {
-                status = StatusExecucao.FALHA;
-                msg = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
-                log.warn("Automação {} do processo {} falhou: {}", r.getId(), c.processoId(), msg);
-            }
-            registrar(c, r, e.evento(), status, msg);
+    /** Retoma a fila: execuções vencidas para tentar (novas ou em nova tentativa) e as que travaram por queda do servidor. */
+    @Scheduled(cron = "${viriato.automacao.retry.cron:*/30 * * * * *}")
+    public void agendado() {
+        try {
+            processarPendentes();
+        } catch (Exception ex) {
+            log.error("Falha ao processar a fila de automações", ex);
         }
     }
 
-    private Contexto carregar(AutomacaoEvento e) {
+    public int processarPendentes() {
+        Instant agora = Instant.now();
+        novaTransacao(() -> execucoes.devolverTravadas(agora, agora.minus(travadaApos)));
+        int feitas = 0;
+        for (AutomacaoExecucao x : execucoes.prontas(agora, PageRequest.of(0, 50))) {
+            int reservou = new TransactionTemplate(tm, requiresNew()).execute(st -> execucoes.reservar(x.getId(), Instant.now()));
+            if (reservou == 1) {
+                processar(x.getId());
+                feitas++;
+            }
+        }
+        return feitas;
+    }
+
+    private static TransactionDefinition requiresNew() {
+        org.springframework.transaction.support.DefaultTransactionDefinition d = new org.springframework.transaction.support.DefaultTransactionDefinition();
+        d.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return d;
+    }
+
+    /** Tudo o que a regra precisa, lido de uma vez para não segurar transação durante o webhook. */
+    private record Contexto(Long processoId, Long tenantId, String numero, Long clienteId, String etapaNome,
+                            Map<String, String> variaveis, AutomacaoRegra regra, List<FichaProcessoPdf.Linha> historico) {}
+
+    /** Resultado de uma tentativa: {@code definitiva} = repetir não adianta (ex.: o outro lado respondeu 4xx). */
+    private record Resultado(boolean ok, boolean definitiva, String mensagem) {}
+
+    private void processar(Long id) {
+        TransactionTemplate leitura = new TransactionTemplate(tm, requiresNew());
+        leitura.setReadOnly(true);
+        AutomacaoExecucao x = leitura.execute(s -> execucoes.findById(id).orElse(null));
+        if (x == null) return;
+        AutomacaoEvento e = new AutomacaoEvento(x.getTenantId(), x.getProcessoId(), x.getEvento(), x.getEtapaId(), x.getUsuarioId());
+        AutomacaoRegra regra = x.getRegraId() == null ? null : leitura.execute(s -> regras.findById(x.getRegraId()).filter(r -> r.isAtivo() && r.getTenantId().equals(x.getTenantId())).orElse(null));
+        if (regra == null) {
+            concluir(id, new Resultado(false, true, "A regra foi removida ou desligada antes de rodar"), null);
+            return;
+        }
+        Contexto c = leitura.execute(s -> carregar(e, regra));
+        if (c == null) {
+            concluir(id, new Resultado(false, true, "O processo não foi encontrado"), null);
+            return;
+        }
+        Resultado r;
+        try {
+            r = executarRegra(c, regra, e);
+        } catch (IllegalArgumentException | br.com.viriato.comum.NegocioException ex) {   // endereço recusado, por exemplo: tentar de novo dá no mesmo
+            r = new Resultado(false, true, mensagemDe(ex));
+        } catch (Exception ex) {
+            r = new Resultado(false, false, mensagemDe(ex));
+        }
+        if (!r.ok()) log.warn("Automação {} do processo {} falhou: {}", regra.getId(), c.processoId(), r.mensagem());
+        concluir(id, r, c.etapaNome());
+    }
+
+    private static String mensagemDe(Exception ex) { return ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage(); }
+
+    private Resultado executarRegra(Contexto c, AutomacaoRegra r, AutomacaoEvento e) throws Exception {
+        switch (r.getTipo()) {
+            case GERAR_DOCUMENTO -> {
+                String nomeFicha = nomeFicha(c);
+                byte[] ficha = FichaProcessoPdf.gerar(c.variaveis(), Datas.DATA_HORA.format(Instant.now().atZone(Datas.ZONA)), c.historico());
+                guardar(c, nomeFicha, ficha);
+                return new Resultado(true, false, "Documento \"" + nomeFicha + "\" anexado ao processo");
+            }
+            case WEBHOOK -> {
+                int codigo = webhook.enviar(r.getUrl(), r.getSegredo(), nomeEvento(e.evento()), corpoWebhook(c, e));
+                boolean ok = codigo >= 200 && codigo < 300;
+                boolean definitiva = !ok && codigo >= 400 && codigo < 500 && codigo != 408 && codigo != 429;
+                return new Resultado(ok, definitiva, "Resposta HTTP " + codigo);
+            }
+            default -> throw new IllegalStateException("Tipo desconhecido");
+        }
+    }
+
+    /**
+     * Grava o resultado. Falha que ainda pode dar certo volta para a fila com espera crescente (base, 2×base, 4×base…);
+     * ao esgotar as tentativas (ou se repetir não adianta), fica FALHA.
+     */
+    private void concluir(Long id, Resultado r, String etapaNome) {
+        novaTransacao(() -> {
+            AutomacaoExecucao x = execucoes.findById(id).orElseThrow();
+            int tentativa = x.getTentativas() + 1;
+            x.setTentativas(tentativa);
+            if (etapaNome != null) x.setEtapaNome(etapaNome);
+            String msg = r.mensagem();
+            if (r.ok()) {
+                x.setStatus(StatusExecucao.OK);
+                x.setExecutadoEm(Instant.now());
+            } else if (r.definitiva() || tentativa >= maxTentativas) {
+                x.setStatus(StatusExecucao.FALHA);
+                x.setExecutadoEm(Instant.now());
+                if (tentativa > 1) msg = msg + " (após " + tentativa + " tentativas)";
+            } else {
+                long espera = baseSegundos * (1L << (tentativa - 1));
+                x.setStatus(StatusExecucao.PENDENTE);
+                x.setProximaTentativa(Instant.now().plusSeconds(espera));
+                msg = "Tentativa " + tentativa + " de " + maxTentativas + " falhou: " + msg + ". Nova tentativa automática em " + espera + " s";
+            }
+            x.setMensagem(msg == null ? null : msg.length() > 500 ? msg.substring(0, 500) : msg);
+            execucoes.save(x);
+        });
+    }
+
+    private Contexto carregar(AutomacaoEvento e, AutomacaoRegra regra) {
         Processo p = processos.findById(e.processoId()).filter(x -> x.getTenantId().equals(e.tenantId())).orElse(null);
         if (p == null || p.getFluxoId() == null) return null;
-        List<AutomacaoRegra> rs = regras.ativas(e.tenantId(), p.getFluxoId(), e.evento(), e.evento() == EventoAutomacao.ENTRAR_ETAPA ? e.etapaId() : null);
-        if (rs.isEmpty()) return null;
-        rs = rs.stream().sorted(Comparator.comparingInt((AutomacaoRegra r) -> r.getTipo().ordinal()).thenComparing(AutomacaoRegra::getId)).toList();
-
         Long tid = e.tenantId();
         Cliente cli = p.getClienteId() == null ? null : clientes.findByIdAndTenantId(p.getClienteId(), tid).orElse(null);
         String entrega = p.getEntregaId() == null ? null : entregas.findByIdAndTenantId(p.getEntregaId(), tid).map(Entrega::getNome).orElse(null);
@@ -158,7 +271,7 @@ public class AutomacaoExecutor {
         v.put("situacao", switch (p.getStatus()) { case ABERTO -> "Em andamento"; case CONCLUIDO -> "Concluído"; case CANCELADO -> "Cancelado"; });
 
         List<FichaProcessoPdf.Linha> linhas = List.of();
-        if (rs.stream().anyMatch(r -> r.getTipo() == TipoAutomacao.GERAR_DOCUMENTO)) {
+        if (regra.getTipo() == TipoAutomacao.GERAR_DOCUMENTO) {
             List<ProcessoHistorico> hs = new ArrayList<>(historicos.findByProcessoIdAndTenantIdOrderByIdDesc(p.getId(), tid));
             if (hs.size() > 100) hs = hs.subList(0, 100);
             Collections.reverse(hs);
@@ -169,7 +282,7 @@ public class AutomacaoExecutor {
                     h.getUsuarioId() == null ? null : nomes.getOrDefault(h.getUsuarioId(), "usuário removido"))).toList();
         }
         return new Contexto(p.getId(), tid, p.getNumero(), cli == null ? null : cli.getId(),
-                etapa, v, rs, linhas);
+                etapa, v, regra, linhas);
     }
 
     private static String nomeEvento(EventoAutomacao e) { return e == EventoAutomacao.CANCELADO ? "CANCELADO" : "ENTROU_NA_ETAPA"; }
@@ -218,19 +331,6 @@ public class AutomacaoExecutor {
         corpo.put("disparadoEm", Instant.now().toString());
         corpo.put("processo", processo);
         return json.writeValueAsString(corpo);
-    }
-
-    private void registrar(Contexto c, AutomacaoRegra r, EventoAutomacao evento, StatusExecucao status, String mensagem) {
-        AutomacaoExecucao x = new AutomacaoExecucao();
-        x.setTenantId(c.tenantId());
-        x.setProcessoId(c.processoId());
-        x.setRegraId(r.getId());
-        x.setTipo(r.getTipo());
-        x.setEvento(evento);
-        x.setEtapaNome(c.etapaNome());
-        x.setStatus(status);
-        x.setMensagem(mensagem == null ? null : mensagem.length() > 500 ? mensagem.substring(0, 500) : mensagem);
-        novaTransacao(() -> execucoes.save(x));
     }
 
     /**

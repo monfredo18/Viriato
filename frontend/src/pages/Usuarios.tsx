@@ -19,9 +19,11 @@ export default function Usuarios() {
   const [f, setF] = useState({ nome: '', email: '', senha: '', papel: 'USUARIO' as Papel, setorId: '' })
   const [erro, setErro] = useState('')
 
-  const carregar = () => api.get<Usuario[]>('/usuarios').then(setLista)
+  const [pagina, setPagina] = useState(0)
+  const [paginas, setPaginas] = useState(1)
+  const carregar = (n: number = pagina) => api.pagina<Usuario>('/usuarios', n, 50).then((r) => { setLista(r.itens); setPaginas(Math.max(r.paginas, 1)) })
+  useEffect(() => { carregar(pagina) }, [pagina])   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    carregar()
     api.get<Setor[]>('/setores').then(setSetores)
   }, [])
 
@@ -32,27 +34,28 @@ export default function Usuarios() {
       // gestor não escolhe setor: o servidor usa o do gestor
       await api.post('/usuarios', { ...f, setorId: ehAdmin && f.setorId ? Number(f.setorId) : null })
       setF({ nome: '', email: '', senha: '', papel: 'USUARIO', setorId: '' })
-      carregar()
+      carregar(pagina)
     } catch (err) {
       setErro((err as Error).message)
     }
   }
 
-  const patch = (id: number, data: object) => api.patch(`/usuarios/${id}`, data).then(carregar).catch((e) => setErro(e.message))
+  const patch = (id: number, data: object) => api.patch(`/usuarios/${id}`, data).then(() => carregar()).catch((e) => setErro(e.message))
   const editarEmail = (u: Usuario) => {
     const novo = prompt(`E-mail de ${u.nome}:`, u.email ?? '')
     if (novo === null || novo.trim() === '' || novo.trim() === u.email) return
     setErro('')
-    api.patch(`/usuarios/${u.id}`, { email: novo.trim() }).then(carregar).catch((e) => setErro(e.message))
+    api.patch(`/usuarios/${u.id}`, { email: novo.trim() }).then(() => carregar()).catch((e) => setErro(e.message))
   }
-  const desbloquear = (u: Usuario) => api.post(`/usuarios/${u.id}/desbloquear`).then(carregar).catch((e) => setErro(e.message))
+  const desbloquear = (u: Usuario) => api.post(`/usuarios/${u.id}/desbloquear`).then(() => carregar()).catch((e) => setErro(e.message))
   const removerDoisFatores = (u: Usuario) => {
     if (!confirm(`Desligar a verificação em duas etapas de "${u.nome}"? Use quando a pessoa perdeu o celular.`)) return
-    api.del(`/usuarios/${u.id}/2fa`).then(carregar).catch((e) => setErro(e.message))
+    api.del(`/usuarios/${u.id}/2fa`).then(() => carregar()).catch((e) => setErro(e.message))
   }
   const setoresAtivos = setores.filter((s) => s.ativo)
 
   const meuSetorId = lista.find((u) => u.id === eu?.id)?.setorId ?? null
+  const [lgpd, setLgpd] = useState<Usuario | null>(null)
   const [apagando, setApagando] = useState<{ u: Usuario; p: PendenciasUsuario } | null>(null)
   const [zerando, setZerando] = useState<Usuario | null>(null)
   const meuSetorNome = lista.find((u) => u.id === eu?.id)?.setorNome ?? null
@@ -137,6 +140,9 @@ export default function Usuarios() {
                       {ehAdmin && u.id !== eu?.id && (
                         <button type="button" className="perigo-txt" onClick={() => setZerando(u)}>Zerar senha</button>
                       )}
+                      {ehAdmin && (
+                        <button type="button" title="Direitos do titular (LGPD): exportar ou anonimizar os dados pessoais" onClick={() => setLgpd(u)}>Dados (LGPD)</button>
+                      )}
                       {u.id !== eu?.id && (ehAdmin || (u.papel === 'USUARIO' && meuSetorId !== null && u.setorId === meuSetorId)) && (
                         <BotaoApagar nome={u.nome} semConfirmar apagar={() => apagar(u)} />
                       )}
@@ -147,6 +153,13 @@ export default function Usuarios() {
             </tbody>
           </table>
         </section>
+        {paginas > 1 && (
+          <div className="paginacao">
+            <button type="button" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
+            <span>Página {pagina + 1} de {paginas}</span>
+            <button type="button" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Próxima</button>
+          </div>
+        )}
 
         {podeGerenciar && (
           <form className="cartao" onSubmit={criar}>
@@ -177,6 +190,7 @@ export default function Usuarios() {
       </div>
 
       {zerando && <ZerarSenha alvo={zerando} fechar={() => setZerando(null)} />}
+      {lgpd && <DadosLgpd alvo={lgpd} souEu={lgpd.id === eu?.id} fechar={() => setLgpd(null)} anonimizado={() => { setLgpd(null); carregar() }} />}
 
       {apagando && (
         <ApagarFuncionario
@@ -192,6 +206,36 @@ export default function Usuarios() {
 }
 
 /** O administrador zera a senha de outra conta e já informa a nova (provisória): a pessoa a troca no próximo acesso. */
+/** Direitos do titular (LGPD), só para administrador: exportar os dados pessoais (PDF ou JSON) e anonimizar a pessoa. */
+function DadosLgpd({ alvo, souEu, fechar, anonimizado }: { alvo: Usuario; souEu: boolean; fechar: () => void; anonimizado: () => void }) {
+  const [erro, setErro] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+  const rodar = async (fn: () => Promise<void>) => {
+    setErro('')
+    setOcupado(true)
+    try { await fn() } catch (e) { setErro((e as Error).message) } finally { setOcupado(false) }
+  }
+  const anonimizar = () => {
+    if (!confirm(`Anonimizar ${alvo.nome}?\n\nO nome e o e-mail são substituídos por valores neutros, a conta é inativada e a foto, o chat de ajuda e as notificações da pessoa são apagados. Os processos e o histórico continuam, com o nome neutro. Esta ação não pode ser desfeita.`)) return
+    rodar(async () => { await api.post(`/lgpd/usuarios/${alvo.id}/anonimizar`); anonimizado() })
+  }
+  return (
+    <div className="fundo" onClick={fechar}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h3>Dados pessoais de {alvo.nome}</h3>
+        <p className="sub">Direitos do titular (LGPD): a exportação reúne cadastro, processos, atividades, documentos, notificações, chat de ajuda e acessos da pessoa.</p>
+        {erro && <p className="erro">{erro}</p>}
+        <div className="acoes">
+          <button type="button" disabled={ocupado} onClick={() => rodar(() => api.download(`/lgpd/usuarios/${alvo.id}/exportacao.pdf`, `dados-funcionario-${alvo.id}.pdf`))}>Exportar PDF</button>
+          <button type="button" disabled={ocupado} onClick={() => rodar(() => api.download(`/lgpd/usuarios/${alvo.id}/exportacao`, `dados-funcionario-${alvo.id}.json`))}>Exportar JSON</button>
+          <button type="button" className="perigo" disabled={ocupado || souEu} title={souEu ? 'Você não pode anonimizar a própria conta' : undefined} onClick={anonimizar}>Anonimizar</button>
+          <button type="button" onClick={fechar}>Fechar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ZerarSenha({ alvo, fechar }: { alvo: Usuario; fechar: () => void }) {
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')

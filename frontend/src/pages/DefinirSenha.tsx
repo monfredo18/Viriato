@@ -48,7 +48,7 @@ export default function DefinirSenha() {
           <small>Mínimo de 8 caracteres e diferente da senha inicial.</small>
           {erro && <p className="erro">{erro}</p>}
           <button className="primario" disabled={enviando}>Salvar senha e entrar</button>
-          <button type="button" className="link" onClick={sair}>Sair</button>
+          <button type="button" className="link" onClick={async () => { try { await api.post('/me/sair') } catch { /* sem conexão */ } sair() }}>Sair</button>
         </form>
       </div>
     </div>

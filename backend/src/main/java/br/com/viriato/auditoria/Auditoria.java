@@ -18,5 +18,7 @@ public class Auditoria {
     @Column(name = "usuario_nome") private String usuarioNome;
     private String acao;
     private String detalhe;
+    private String ip;
+    @Column(name = "user_agent") private String userAgent;
     @Column(name = "criado_em") private Instant criadoEm = Instant.now();
 }

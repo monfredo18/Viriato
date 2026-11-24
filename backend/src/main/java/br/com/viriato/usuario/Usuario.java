@@ -33,6 +33,8 @@ public class Usuario {
     @Column(name = "foto_chave") private String fotoChave;
     @Column(name = "foto_tipo") private String fotoTipo;
     @Column(name = "foto_versao") private Long fotoVersao;
+    /** LGPD: quando os dados pessoais foram anonimizados (a conta fica inativa e sem como entrar). */
+    @Column(name = "anonimizado_em") private Instant anonimizadoEm;
     @Column(name = "criado_em", insertable = false, updatable = false)
     private Instant criadoEm;
 }

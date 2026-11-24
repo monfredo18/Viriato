@@ -172,7 +172,7 @@ class ProcessoFormularioTest {
         consultar(c.usuario(), "/api/processos/" + doAdmin);
 
         // no processo de outra pessoa: nada de movimentar, comentar, anexar nem remover anexo
-        var arq = new MockMultipartFile("arquivo", "x.pdf", "application/pdf", "x".getBytes());
+        var arq = new MockMultipartFile("arquivo", "x.pdf", "application/pdf", "%PDF-1.4 x".getBytes());
         long docDoAdmin = corpo(mvc.perform(multipart("/api/processos/" + doAdmin + "/documentos").file(arq)
                 .header("Authorization", "Bearer " + c.admin())).andExpect(status().isCreated())).get("id").asLong();
         long proxima = consultar(c.usuario(), "/api/processos/" + doAdmin).get("proximasEtapas").get(0).get("id").asLong();
@@ -255,7 +255,7 @@ class ProcessoFormularioTest {
                 + "@t.com\",\"senha\":\"senha12345\",\"papel\":\"USUARIO\",\"setorId\":" + outroSetor + "}").andExpect(status().isCreated())).get("id").asLong();
         long doOutro = corpo(enviar(c.admin(), "/api/processos", "{\"clienteId\":" + c.clienteId() + ",\"entregaId\":" + TestesAuth.entregaDoSetor(mvc, json, c.admin(), outroSetor, "Entrega do Outro")
                 + ",\"setorId\":" + outroSetor + ",\"responsavelId\":" + fora + "}").andExpect(status().isCreated())).get("id").asLong();
-        var arq = new MockMultipartFile("arquivo", "x.pdf", "application/pdf", "x".getBytes());
+        var arq = new MockMultipartFile("arquivo", "x.pdf", "application/pdf", "%PDF-1.4 x".getBytes());
         long doc = corpo(mvc.perform(multipart("/api/processos/" + doOutro + "/documentos").file(arq)
                 .header("Authorization", "Bearer " + c.admin())).andExpect(status().isCreated())).get("id").asLong();
 

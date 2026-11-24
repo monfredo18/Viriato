@@ -39,8 +39,9 @@ public class FluxoController {
     public record DadosEtapa(@Size(max = 100) String nome, Integer prazoDias, boolean mudarPrazo) {}
 
     @GetMapping
-    public List<FluxoService.FluxoDto> listar() {
-        return service.listar(Contexto.tenantId()).stream().filter(f -> permissao.visivel(f.id())).toList();   // cada um vê os fluxos das entregas que enxerga
+    public org.springframework.http.ResponseEntity<List<FluxoService.FluxoDto>> listar(@RequestParam(required = false) Integer pagina, @RequestParam(required = false) Integer tamanho) {
+        List<FluxoService.FluxoDto> visiveis = service.listar(Contexto.tenantId()).stream().filter(f -> permissao.visivel(f.id())).toList();   // cada um vê os fluxos das entregas que enxerga
+        return br.com.viriato.comum.Paginacao.recortar(visiveis, pagina, tamanho, 100, 200);
     }
 
     @GetMapping("/{id}")

@@ -185,7 +185,7 @@ class FluxoCompletoTest {
         Empresa b = novaEmpresa();
         long idP = criarProcesso(a, "Com anexo").get("id").asLong();
 
-        var arq = new MockMultipartFile("arquivo", "../../etc/passwd.pdf", "application/pdf", "conteudo".getBytes());
+        var arq = new MockMultipartFile("arquivo", "../../etc/passwd.pdf", "application/pdf", "%PDF-1.4 conteudo".getBytes());
         var doc = corpo(mvc.perform(multipart("/api/processos/" + idP + "/documentos").file(arq)
                 .header("Authorization", "Bearer " + a.token())).andExpect(status().isCreated()));
         assertThat(doc.get("nome").asText()).doesNotContain("/").doesNotContain("..");
@@ -193,7 +193,7 @@ class FluxoCompletoTest {
         var bytes = mvc.perform(get("/api/documentos/" + doc.get("id").asLong() + "/download")
                 .header("Authorization", "Bearer " + a.token())).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsByteArray();
-        assertThat(new String(bytes)).isEqualTo("conteudo");
+        assertThat(new String(bytes)).isEqualTo("%PDF-1.4 conteudo");
 
         mvc.perform(get("/api/documentos/" + doc.get("id").asLong() + "/download")
                 .header("Authorization", "Bearer " + b.token())).andExpect(status().isNotFound());

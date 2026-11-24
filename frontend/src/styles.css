@@ -1108,3 +1108,5 @@ input:focus, select:focus, textarea:focus { border-color: var(--azul); box-shado
 * { scrollbar-width: thin; scrollbar-color: var(--borda-forte) transparent; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+.paginacao { display: flex; align-items: center; justify-content: center; gap: .9rem; margin-top: .9rem; color: var(--suave); font-size: 12.5px; }

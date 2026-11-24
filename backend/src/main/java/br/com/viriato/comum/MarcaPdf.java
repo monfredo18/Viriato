@@ -1,6 +1,8 @@
 package br.com.viriato.comum;
 
 import com.lowagie.text.BadElementException;
+import com.lowagie.text.Font;
+import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.Image;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfContentByte;
@@ -14,8 +16,39 @@ public final class MarcaPdf {
     public static final Color OURO = new Color(0xC9, 0xA2, 0x27);
 
     private static byte[] logo;
+    private static BaseFont normal;
+    private static BaseFont negrito;
 
     private MarcaPdf() {}
+
+    /**
+     * IBM Plex Sans (licença OFL, em resources/fonts) embutida no PDF em UTF-8 (Identity-H): qualquer letra acentuada ou
+     * símbolo que a fonte tenha sai certo, sem a limitação Latin-1 das fontes padrão do formato.
+     */
+    public static synchronized BaseFont base(boolean emNegrito) {
+        try {
+            if (normal == null) {
+                normal = carregarFonte("/fonts/IBMPlexSans-Regular.ttf", "IBMPlexSans-Regular.ttf");
+                negrito = carregarFonte("/fonts/IBMPlexSans-Bold.ttf", "IBMPlexSans-Bold.ttf");
+            }
+            return emNegrito ? negrito : normal;
+        } catch (IOException | com.lowagie.text.DocumentException e) {
+            throw new IllegalStateException("Falha ao carregar a fonte dos PDFs", e);
+        }
+    }
+
+    private static BaseFont carregarFonte(String recurso, String nome) throws IOException, com.lowagie.text.DocumentException {
+        try (InputStream in = MarcaPdf.class.getResourceAsStream(recurso)) {
+            if (in == null) throw new IllegalStateException("Fonte não encontrada: " + recurso);
+            return BaseFont.createFont(nome, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, true, in.readAllBytes(), null);
+        }
+    }
+
+    /** Fonte do PDF no tamanho, estilo ({@link Font#BOLD} troca para a família em negrito) e cor dados. */
+    public static Font fonte(float tamanho, int estilo, Color cor) {
+        boolean negritoPedido = (estilo & Font.BOLD) != 0;
+        return new Font(base(negritoPedido), tamanho, estilo & ~Font.BOLD, cor);
+    }
 
     /** A logo (imagem sem fundo), encaixada na largura/altura máximas em pontos. */
     public static synchronized Image logo(float larguraMax, float alturaMax) {

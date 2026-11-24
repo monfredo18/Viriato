@@ -96,7 +96,14 @@ Menu lateral (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relat�
 - **Meu perfil** permite a administrador e gestor alterar a própria senha (informando a atual). **Quem tem papel Usuário não troca a própria senha**: pede ao administrador, que a zera (no primeiro acesso a pessoa define a sua, como sempre). **Sair** invalida o token no servidor.
 - **Auditoria** (aba só do administrador): entradas, bloqueios, senhas, criação e alteração de usuários.
 - **Cabeçalhos de segurança** no nginx (CSP, X-Frame-Options, nosniff…) e na API; chat de ajuda com limite de 20 mensagens a cada 10 minutos por pessoa.
-- Limitações: sem recuperação de senha por e-mail (o suporte zera); o bloqueio é por conta, não por endereço de origem; o token fica no `localStorage` do navegador.
+- **Sessão em cookie `HttpOnly`** (`SameSite=Strict`, `Secure` em HTTPS): o token não fica no `localStorage` nem é legível por script. As chamadas que alteram dados exigem também o cabeçalho `X-XSRF-TOKEN` igual ao cookie `XSRF-TOKEN` (proteção CSRF por duplo envio). O cabeçalho `Authorization: Bearer` só vale com `VIRIATO_ACEITAR_BEARER=true` (integrações e testes).
+- **Limite por endereço de origem:** `POST /api/auth/**` aceita no máximo 20 tentativas por minuto por endereço (HTTP 429 com `Retry-After`), além do bloqueio por conta. Atrás do nginx do projeto o endereço real vem do `X-Forwarded-For` (o Tomcat só confia em proxies internos).
+- **Upload:** só as extensões da lista (`VIRIATO_UPLOAD_EXTENSOES`: pdf, xml, ofx, xlsx, xls, csv, pfx, p12, jpg, jpeg, png, webp, zip), e o conteúdo (magic bytes) precisa ser do tipo da extensão; o tipo gravado vem da extensão, não do cliente. Antivírus plugável (`AntivirusScanner`): `NoOpScanner` por padrão e `ClamAvScanner` (clamd por TCP) com `VIRIATO_CLAMAV_HABILITADO=true`; sem resposta do antivírus o arquivo é recusado.
+- **Automações com fila persistida:** cada regra vira uma linha em `automacao_execucao` (PENDENTE → PROCESSANDO → OK ou FALHA) na mesma transação do movimento; falhas temporárias são repetidas até 3 vezes com espera crescente, e reiniciar o servidor não perde nada (o envio é "pelo menos uma vez": um webhook pode chegar repetido).
+- **Auditoria de acesso:** entradas, tentativas recusadas e conta bloqueada, com endereço e navegador. **2FA obrigatório para administradores** com `SEGURANCA_EXIGIR_2FA_ADMIN=true`.
+- **LGPD (administrador):** em Usuários, *Dados (LGPD)* exporta todos os dados pessoais da pessoa (PDF ou JSON) e anonimiza o titular (nome e e-mail neutros, conta inativa, foto, chat e notificações apagados; processos e histórico ficam com o nome neutro). Também há exportação e anonimização de empresa atendida (`/api/lgpd`).
+- **PDFs** com a fonte IBM Plex Sans embutida em UTF-8 (qualquer acento sai certo). Listas de usuários, fluxos e notificações aceitam `pagina` e `tamanho` (total nos cabeçalhos `X-Total-Count` e `X-Total-Pages`).
+- Limitações: sem recuperação de senha por e-mail (o suporte zera); o limite por endereço fica em memória (cada instância conta a sua).
 
 ### Relatórios (PDF)
 A aba **Relatórios** gera um PDF dos processos, com filtros por setor, responsável, empresa, período (abertura ou encerramento) e situação (em andamento, concluídos, cancelados). A abrangência depende do papel e é imposta pelo servidor:
@@ -142,6 +149,13 @@ Ver `.env.example` e `backend/src/main/resources/application.yml`. Obrigatórias
 | `CORS_ORIGINS` | Origens permitidas (não necessário se front e API ficam no mesmo domínio via nginx) |
 | `VIRIATO_JWT_PERMITIR_PADRAO` | **Só em desenvolvimento local:** aceita o `JWT_SECRET` de exemplo. Sem isso, o sistema se recusa a subir com o segredo de exemplo. Rodando `mvn spring-boot:run` sem `JWT_SECRET`, defina `VIRIATO_JWT_PERMITIR_PADRAO=true` |
 | `SWAGGER_ATIVO` | `true` liga a documentação interativa da API (padrão: desligada) |
+| `SEGURANCA_EXIGIR_2FA_ADMIN` | `true`: administradores só usam o sistema depois de ativar a verificação em duas etapas |
+| `VIRIATO_ACEITAR_BEARER` | `true` aceita `Authorization: Bearer` (integrações e testes). Padrão: só cookie `HttpOnly` |
+| `VIRIATO_COOKIE_SECURE` | `auto` (Secure em HTTPS), `true` ou `false` |
+| `VIRIATO_LIMITE_IP_MAXIMO`, `VIRIATO_LIMITE_IP_JANELA` | Tentativas por endereço (padrão 20) na janela em segundos (padrão 60) |
+| `VIRIATO_UPLOAD_EXTENSOES` | Extensões aceitas no envio de arquivos |
+| `VIRIATO_CLAMAV_HABILITADO`, `VIRIATO_CLAMAV_HOST`, `VIRIATO_CLAMAV_PORTA` | Antivírus ClamAV (clamd). Padrão: desligado |
+| `AUTOMACAO_TENTATIVAS`, `AUTOMACAO_RETRY_BASE_SEGUNDOS` | Tentativas das automações (padrão 3) e espera base entre elas (padrão 60 s, dobrando) |
 
 ## Produção (sugestão AWS)
 
@@ -150,8 +164,7 @@ ECS Fargate (backend + frontend) · RDS MySQL · S3 com bloqueio de acesso públ
 ## Roadmap
 
 - [ ] Edição de fluxos existentes e transições não sequenciais na UI (a API já aceita transições arbitrárias)
-- [ ] Recuperação de senha por e-mail e 2FA obrigatório para administradores
+- [ ] Recuperação de senha por e-mail
 - [ ] Campos personalizados por fluxo (hoje: JSON livre via API)
 - [ ] Cobrança/planos e limites por empresa
 - [ ] Feriados e prazos em dias úteis
-- [ ] Limite de tentativas por endereço de origem (hoje o bloqueio é por conta)

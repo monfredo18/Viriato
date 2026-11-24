@@ -83,7 +83,7 @@ public class UsuarioController {
      * administradores). Sem setor definido, a pessoa só enxerga a si mesma.
      */
     @GetMapping
-    public List<UsuarioDto> listar() {
+    public org.springframework.http.ResponseEntity<List<UsuarioDto>> listar(@RequestParam(required = false) Integer pagina, @RequestParam(required = false) Integer tamanho) {
         UsuarioLogado quem = Contexto.atual();
         Long tid = quem.tenantId();
         Map<Long, String> nomesSetor = setores.findByTenantIdOrderByNome(tid).stream()
@@ -96,10 +96,11 @@ public class UsuarioController {
             todos = todos.stream().filter(u -> u.getId().equals(quem.id())
                     || (setorDele != null && u.getPapel() != Papel.ADMIN && setorDele.equals(u.getSetorId()))).toList();
         }
-        return todos.stream()
+        List<UsuarioDto> dtos = todos.stream()
                 .map(u -> UsuarioDto.de(u, u.getSetorId() == null ? null : nomesSetor.get(u.getSetorId()))
                         .comEmail(quem.papel() != Papel.USUARIO || u.getId().equals(quem.id()) ? u.getEmail() : null))
                 .toList();
+        return br.com.viriato.comum.Paginacao.recortar(dtos, pagina, tamanho, 200, 500);
     }
 
     /**

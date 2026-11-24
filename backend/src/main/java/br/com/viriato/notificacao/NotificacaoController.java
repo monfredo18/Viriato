@@ -26,10 +26,12 @@ public class NotificacaoController {
 
     @GetMapping
     @Transactional(readOnly = true)
-    public List<NotificacaoDto> listar() {
+    public org.springframework.http.ResponseEntity<List<NotificacaoDto>> listar(@RequestParam(required = false) Integer pagina, @RequestParam(required = false) Integer tamanho) {
         var u = Contexto.atual();
-        return repo.findByUsuarioIdAndTenantIdOrderByIdDesc(u.id(), u.tenantId(), PageRequest.of(0, 50))
+        int t = br.com.viriato.comum.Paginacao.tamanho(tamanho, 50, 200), p = br.com.viriato.comum.Paginacao.pagina(pagina);
+        List<NotificacaoDto> itens = repo.findByUsuarioIdAndTenantIdOrderByIdDesc(u.id(), u.tenantId(), PageRequest.of(p, t))
                 .stream().map(NotificacaoDto::de).toList();
+        return br.com.viriato.comum.Paginacao.resposta(itens, repo.countByUsuarioIdAndTenantId(u.id(), u.tenantId()), p, t);
     }
 
     @GetMapping("/nao-lidas")

@@ -33,7 +33,7 @@ final class FichaProcessoPdf {
 
     private FichaProcessoPdf() {}
 
-    private static Font f(float tamanho, int estilo, Color cor) { return FontFactory.getFont(FontFactory.HELVETICA, tamanho, estilo, cor); }
+    private static Font f(float tamanho, int estilo, Color cor) { return MarcaPdf.fonte(tamanho, estilo, cor); }
 
     static byte[] gerar(Map<String, String> v, String geradoEm, List<Linha> historico) {
         try {
@@ -112,9 +112,9 @@ final class FichaProcessoPdf {
         @Override
         public void onOpenDocument(PdfWriter writer, Document document) {
             try {
-                base = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, false);
-            } catch (DocumentException | IOException e) {
-                throw new IllegalStateException(e);
+                base = MarcaPdf.base(false);
+            } catch (IllegalStateException e) {
+                throw e;
             }
             total = writer.getDirectContent().createTemplate(30, 12);
         }
@@ -156,7 +156,7 @@ final class FichaProcessoPdf {
     }
 
     private static PdfPCell celula(String texto, Font fonte, boolean cabecalho) {
-        PdfPCell c = new PdfPCell(new Phrase(texto == null ? "—" : texto.replace("→", "›"), fonte));   // a fonte padrão do PDF não tem a seta
+        PdfPCell c = new PdfPCell(new Phrase(texto == null ? "—" : texto, fonte));
         c.setPadding(5);
         c.setBorderColor(BORDA);
         c.setBorderWidth(0.6f);

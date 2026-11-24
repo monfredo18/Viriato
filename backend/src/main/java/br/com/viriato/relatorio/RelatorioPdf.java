@@ -40,7 +40,7 @@ public final class RelatorioPdf {
     private RelatorioPdf() {}
 
     private static Font f(float tamanho, int estilo, Color cor) {
-        return FontFactory.getFont(FontFactory.HELVETICA, tamanho, estilo, cor);
+        return MarcaPdf.fonte(tamanho, estilo, cor);
     }
 
     public static byte[] gerar(Dados d) {
@@ -216,9 +216,9 @@ public final class RelatorioPdf {
         @Override
         public void onOpenDocument(PdfWriter writer, Document document) {
             try {
-                base = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, false);
-            } catch (DocumentException | IOException e) {
-                throw new IllegalStateException(e);
+                base = MarcaPdf.base(false);
+            } catch (IllegalStateException e) {
+                throw e;
             }
             total = writer.getDirectContent().createTemplate(30, 12);
         }

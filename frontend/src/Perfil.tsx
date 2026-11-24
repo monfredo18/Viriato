@@ -52,7 +52,7 @@ function TrocarSenha() {
 }
 
 /** Verificação em duas etapas: o segredo vai para um aplicativo autenticador e, depois, o login pede o código de 6 dígitos. */
-function DoisFatores({ usuario, atualizar }: { usuario: Usuario; atualizar: (u: Usuario) => void }) {
+export function DoisFatores({ usuario, atualizar }: { usuario: Usuario; atualizar: (u: Usuario) => void }) {
   const [config, setConfig] = useState<ConfigDoisFatores | null>(null)
   const [codigo, setCodigo] = useState('')
   const [senha, setSenha] = useState('')

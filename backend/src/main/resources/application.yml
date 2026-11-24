@@ -1,6 +1,7 @@
 server:
   port: 8080
-  forward-headers-strategy: framework
+  # native: o Tomcat confia no X-Forwarded-For/-Proto só de proxies internos (nginx do projeto), então o endereço de origem e o HTTPS são os reais.
+  forward-headers-strategy: native
 
 spring:
   application:
@@ -43,6 +44,17 @@ viriato:
     expiracao-horas: ${JWT_EXPIRACAO_HORAS:12}
     # O sistema se recusa a subir com o segredo de exemplo, a não ser em desenvolvimento local (VIRIATO_JWT_PERMITIR_PADRAO=true).
     permitir-padrao: ${VIRIATO_JWT_PERMITIR_PADRAO:false}
+  seguranca:
+    # O token da sessão vai em cookie HttpOnly. O cabeçalho "Authorization: Bearer" só vale com aceitar-bearer=true
+    # (integrações externas e testes). cookie-secure: auto (Secure quando a conexão é HTTPS), true ou false.
+    aceitar-bearer: ${VIRIATO_ACEITAR_BEARER:false}
+    cookie-secure: ${VIRIATO_COOKIE_SECURE:auto}
+    # Limite por endereço nas rotas públicas (POST /api/auth/**), em janela deslizante.
+    limite-ip:
+      maximo: ${VIRIATO_LIMITE_IP_MAXIMO:20}
+      janela-segundos: ${VIRIATO_LIMITE_IP_JANELA:60}
+    # true: administradores precisam ativar a verificação em duas etapas para usar o sistema.
+    exigir-2fa-admin: ${SEGURANCA_EXIGIR_2FA_ADMIN:false}
   cors:
     origens: ${CORS_ORIGENS:http://localhost:5173,http://localhost:3000}
   # Onde ficam os documentos: "s3" (padrão) ou "local" (disco, só para desenvolvimento).
@@ -56,10 +68,27 @@ viriato:
     endpoint: ${S3_ENDPOINT:}
     access-key: ${S3_ACCESS_KEY:}
     secret-key: ${S3_SECRET_KEY:}
+  # Arquivos enviados: só estas extensões, e o conteúdo precisa ser do tipo da extensão (magic bytes).
+  upload:
+    extensoes: ${VIRIATO_UPLOAD_EXTENSOES:pdf,xml,ofx,xlsx,xls,csv,pfx,p12,jpg,jpeg,png,webp,zip}
+  # Antivírus: NoOp por padrão; ClamAV (clamd por TCP) quando habilitado. falhar-fechado: sem resposta do antivírus, recusa o arquivo.
+  antivirus:
+    falhar-fechado: ${VIRIATO_ANTIVIRUS_FALHAR_FECHADO:true}
+    clamav:
+      habilitado: ${VIRIATO_CLAMAV_HABILITADO:false}
+      host: ${VIRIATO_CLAMAV_HOST:localhost}
+      porta: ${VIRIATO_CLAMAV_PORTA:3310}
+      timeout-ms: ${VIRIATO_CLAMAV_TIMEOUT_MS:15000}
   automacao:
     assincrona: ${AUTOMACAO_ASSINCRONA:true}
     # Só para desenvolvimento: permite webhook em http:// e para endereços da rede interna (localhost etc.).
     permitir-rede-interna: ${AUTOMACAO_PERMITIR_REDE_INTERNA:false}
+    # Fila persistida: tentativas (a 1ª é a imediata), espera da 2ª = base-segundos, depois dobra; cron do agendador da fila.
+    retry:
+      tentativas: ${AUTOMACAO_TENTATIVAS:3}
+      base-segundos: ${AUTOMACAO_RETRY_BASE_SEGUNDOS:60}
+      travada-minutos: ${AUTOMACAO_TRAVADA_MINUTOS:10}
+      cron: ${AUTOMACAO_RETRY_CRON:*/30 * * * * *}
   prazos:
     cron: ${PRAZOS_CRON:0 0 8 * * *}
     antecedencia-dias: ${PRAZOS_ANTECEDENCIA_DIAS:1}

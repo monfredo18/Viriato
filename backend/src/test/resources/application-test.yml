@@ -8,9 +8,16 @@ spring:
 viriato:
   jwt:
     permitir-padrao: true     # os testes usam o segredo de exemplo
+  seguranca:
+    aceitar-bearer: true      # os testes usam "Authorization: Bearer"; o cookie tem testes próprios
+    limite-ip:
+      maximo: 100000          # os testes entram muitas vezes pelo mesmo endereço
   cadastro-empresa-aberto: true   # os testes criam empresas pela API
   automacao:
     assincrona: false          # as regras rodam na hora, para os testes conferirem o resultado
     permitir-rede-interna: true
+    retry:
+      tentativas: 1            # os testes antigos esperam o resultado final na hora; o teste da fila usa mais tentativas
+      cron: "-"
   prazos:
     cron: "-"

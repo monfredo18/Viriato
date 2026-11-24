@@ -101,7 +101,7 @@ class RequisitosTest {
     }
 
     private ResultActions anexar(String t, long processo, Long requisito) throws Exception {
-        var arq = new MockMultipartFile("arquivo", "laudo.pdf", "application/pdf", "conteudo".getBytes());
+        var arq = new MockMultipartFile("arquivo", "laudo.pdf", "application/pdf", "%PDF-1.4 conteudo".getBytes());
         var req = multipart("/api/processos/" + processo + "/documentos").file(arq).header("Authorization", "Bearer " + t);
         if (requisito != null) req.param("requisitoId", String.valueOf(requisito));
         return mvc.perform(req);

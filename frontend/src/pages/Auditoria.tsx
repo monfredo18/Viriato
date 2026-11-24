@@ -3,6 +3,8 @@ import { api, type RegistroAuditoria } from '../api'
 
 const ROTULO: Record<string, string> = {
   LOGIN: 'Entrou no sistema',
+  LOGIN_FALHA: 'Tentativa de entrada recusada',
+  LOGIN_RECUSADO: 'Entrada recusada (conta bloqueada)',
   CONTA_BLOQUEADA: 'Conta bloqueada',
   CONTA_DESBLOQUEADA: 'Conta desbloqueada',
   SENHA_ZERADA: 'Senha zerada',
@@ -15,7 +17,7 @@ const ROTULO: Record<string, string> = {
   '2FA_REMOVIDA_PELO_ADMIN': 'Duas etapas removida pelo administrador',
   FOTO_REMOVIDA_PELO_ADMIN: 'Foto removida pelo administrador',
 }
-const ALERTA = new Set(['CONTA_BLOQUEADA', 'SENHA_ZERADA', 'USUARIO_APAGADO', '2FA_REMOVIDA_PELO_ADMIN'])
+const ALERTA = new Set(['LOGIN_FALHA', 'LOGIN_RECUSADO', 'CONTA_BLOQUEADA', 'SENHA_ZERADA', 'USUARIO_APAGADO', '2FA_REMOVIDA_PELO_ADMIN'])
 
 /** Registro de segurança e de administração da empresa (só o administrador vê; os 300 mais recentes). */
 export default function Auditoria() {
@@ -34,7 +36,7 @@ export default function Auditoria() {
       <p className="sub">Entradas no sistema, bloqueios, trocas de senha e mudanças de usuários. Mostra os 300 registros mais recentes.</p>
       {erro && <p className="erro">{erro}</p>}
       <div className="tabela-wrap"><table>
-        <thead><tr><th>Quando</th><th>Quem</th><th>O que aconteceu</th><th>Detalhe</th></tr></thead>
+        <thead><tr><th>Quando</th><th>Quem</th><th>O que aconteceu</th><th>Detalhe</th><th>Origem</th></tr></thead>
         <tbody>
           {lista?.map((r) => (
             <tr key={r.id}>
@@ -42,9 +44,10 @@ export default function Auditoria() {
               <td>{r.usuario ?? '—'}</td>
               <td><span className={`selo ${ALERTA.has(r.acao) ? 'atrasado' : 'aberto'}`}>{ROTULO[r.acao] ?? r.acao}</span></td>
               <td className="detalhe-auditoria">{r.detalhe ?? ''}</td>
+              <td className="detalhe-auditoria" title={r.userAgent ?? undefined}>{r.ip ?? '—'}</td>
             </tr>
           ))}
-          {lista && lista.length === 0 && <tr><td colSpan={4} className="vazio">Nenhum registro ainda.</td></tr>}
+          {lista && lista.length === 0 && <tr><td colSpan={5} className="vazio">Nenhum registro ainda.</td></tr>}
         </tbody>
       </table></div>
     </>

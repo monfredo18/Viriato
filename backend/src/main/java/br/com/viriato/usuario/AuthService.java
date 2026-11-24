@@ -32,11 +32,14 @@ public class AuthService {
     private final AuditoriaService auditoria;
     private final Cifra cifra;
     private final SessaoRevogadaRepository revogadas;
+    private final boolean exigirDoisFatoresAdmin;
     private final String hashFalso;   // gasta o mesmo tempo quando o nome não existe
 
     public AuthService(UsuarioRepository usuarios, TenantRepository tenants, PasswordEncoder encoder,
                        JwtService jwt, FluxoService fluxos, CadastroService cadastros, ContaSeguranca contas,
-                       AuditoriaService auditoria, Cifra cifra, SessaoRevogadaRepository revogadas) {
+                       AuditoriaService auditoria, Cifra cifra, SessaoRevogadaRepository revogadas,
+                       @org.springframework.beans.factory.annotation.Value("${viriato.seguranca.exigir-2fa-admin:false}") boolean exigirDoisFatoresAdmin) {
+        this.exigirDoisFatoresAdmin = exigirDoisFatoresAdmin;
         this.usuarios = usuarios;
         this.tenants = tenants;
         this.encoder = encoder;
@@ -50,7 +53,14 @@ public class AuthService {
         this.hashFalso = encoder.encode("nao-existe");
     }
 
-    public record Sessao(String token, UsuarioDto usuario, String empresa) {}
+    public record Sessao(String token, UsuarioDto usuario, String empresa) {
+        /** Sem o token no corpo: ele vai só no cookie HttpOnly. */
+        public Sessao semToken() { return new Sessao(null, usuario, empresa); }
+    }
+
+    private Sessao nova(Usuario u, String empresa) {
+        return new Sessao(jwt.gerar(u), UsuarioDto.de(u).comExigenciaDeDoisFatores(exigirDoisFatoresAdmin), empresa);
+    }
 
     /**
      * Entra com nome (ou, em contas antigas, o e-mail) e senha. O nome não diferencia maiúsculas de
@@ -59,7 +69,7 @@ public class AuthService {
      * {@value ContaSeguranca#ERROS_PERMITIDOS} erros a conta bloqueia e só o suporte desbloqueia.
      */
     @Transactional
-    public Sessao login(String identificador, String senha, String codigo) {
+    public Sessao login(String identificador, String senha, String codigo, String ip, String userAgent) {
         String id = identificador.trim();
         List<Usuario> candidatos = id.contains("@")
                 ? usuarios.findByEmailIgnoreCase(id).map(List::of).orElse(List.of())
@@ -76,26 +86,34 @@ public class AuthService {
 
         if (certos.size() == 1) {
             Usuario u = certos.get(0);
-            if (u.isBloqueado()) throw new ContaBloqueadaException();
+            if (u.isBloqueado()) {
+                auditoria.registrar(u.getTenantId(), u.getId(), "LOGIN_RECUSADO", "Conta bloqueada", ip, userAgent);
+                throw new ContaBloqueadaException();
+            }
             if (u.isTotpAtivo()) {
                 if (codigo == null || codigo.isBlank()) throw new CodigoNecessarioException();
                 long passo = Totp.verificar(cifra.abrir(u.getTotpSegredo()), codigo, u.getTotpUltimoPasso());
                 if (passo < 0) {
-                    if (contas.registrarFalha(u.getId())) throw new ContaBloqueadaException();
+                    boolean bloqueou = contas.registrarFalha(u.getId());
+                    auditoria.registrar(u.getTenantId(), u.getId(), "LOGIN_FALHA", "Código de verificação inválido", ip, userAgent);
+                    if (bloqueou) throw new ContaBloqueadaException();
                     throw new NegocioException("Código de verificação inválido");
                 }
                 u.setTotpUltimoPasso(passo);
             }
             u.setTentativasFalhas(0);
-            auditoria.registrar(u.getTenantId(), u.getId(), "LOGIN", null);
+            auditoria.registrar(u.getTenantId(), u.getId(), "LOGIN", null, ip, userAgent);
             String empresa = tenants.findById(u.getTenantId()).orElseThrow().getNome();
-            return new Sessao(jwt.gerar(u), UsuarioDto.de(u), empresa);
+            return nova(u, empresa);
         }
 
         // Não entrou: cada conta ativa com esse nome ganha um erro (as que já estavam bloqueadas continuam bloqueadas).
         boolean bloqueada = false;
         for (Usuario u : ativos) {
-            if (!certos.contains(u)) bloqueada |= contas.registrarFalha(u.getId());
+            if (!certos.contains(u)) {
+                bloqueada |= contas.registrarFalha(u.getId());
+                auditoria.registrar(u.getTenantId(), u.getId(), "LOGIN_FALHA", "Senha inválida", ip, userAgent);
+            }
         }
         if (bloqueada) throw new ContaBloqueadaException();
         throw new BadCredentialsException("credenciais");
@@ -132,7 +150,7 @@ public class AuthService {
         usuarios.save(u);
         auditoria.registrar(u.getTenantId(), u.getId(), "SENHA_ALTERADA", "A própria pessoa trocou a senha");
         String empresa = tenants.findById(u.getTenantId()).orElseThrow().getNome();
-        return new Sessao(jwt.gerar(u), UsuarioDto.de(u), empresa);
+        return nova(u, empresa);
     }
 
     // ---------- verificação em duas etapas ----------
@@ -190,7 +208,7 @@ public class AuthService {
         if (email != null && usuarios.existsByEmailIgnoreCase(email)) throw new NegocioException("E-mail já cadastrado");
         Usuario u = criarEmpresaComAdmin(empresa, nome, email, senha, false);
         Tenant t = tenants.findById(u.getTenantId()).orElseThrow();
-        return new Sessao(jwt.gerar(u), UsuarioDto.de(u), t.getNome());
+        return nova(u, t.getNome());
     }
 
     /** Cria a empresa, o administrador e os padrões. {@code provisoria}: o administrador troca a senha no primeiro acesso. */

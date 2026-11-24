@@ -17,6 +17,7 @@ import Entregas from './pages/Entregas'
 import Usuarios from './pages/Usuarios'
 import Relatorios from './pages/Relatorios'
 import DefinirSenha from './pages/DefinirSenha'
+import AtivarDoisFatores from './pages/AtivarDoisFatores'
 import Painel from './pages/Painel'
 import Inicio from './pages/Inicio'
 import Auditoria from './pages/Auditoria'
@@ -165,5 +166,6 @@ export default function App() {
   if (carregando) return <p className="centro">Carregando…</p>
   if (!usuario) return <Login />
   // Senha inicial ou zerada: nada do sistema abre antes de a pessoa criar a própria senha.
-  return usuario.deveTrocarSenha ? <DefinirSenha /> : <Layout />
+  if (usuario.deveTrocarSenha) return <DefinirSenha />
+  return usuario.deveAtivarDoisFatores ? <AtivarDoisFatores /> : <Layout />
 }

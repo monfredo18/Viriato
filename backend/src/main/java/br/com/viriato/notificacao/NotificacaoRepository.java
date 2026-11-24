@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Pageable;
 
 public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> {
+    long countByUsuarioIdAndTenantId(Long usuarioId, Long tenantId);
     List<Notificacao> findByUsuarioIdAndTenantIdOrderByIdDesc(Long usuarioId, Long tenantId, Pageable page);
     long countByUsuarioIdAndTenantIdAndLidaFalse(Long usuarioId, Long tenantId);
     void deleteByUsuarioIdAndTenantId(Long usuarioId, Long tenantId);

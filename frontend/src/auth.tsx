@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { api, setOnUnauthorized, tokenStore, type Sessao, type Usuario } from './api'
+import { api, setOnUnauthorized, type Sessao, type Usuario } from './api'
 
 interface AuthCtx {
   usuario: Usuario | null
@@ -18,15 +18,11 @@ export const useAuth = () => useContext(Ctx)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [empresa, setEmpresa] = useState(() => localStorage.getItem('viriato.empresa') ?? '')
-  const [carregando, setCarregando] = useState(!!tokenStore.get())
+  const [carregando, setCarregando] = useState(true)
 
-  const sair = useCallback(() => {
-    tokenStore.clear()
-    setUsuario(null)
-  }, [])
+  const sair = useCallback(() => setUsuario(null), [])
 
   const entrar = useCallback((s: Sessao) => {
-    tokenStore.set(s.token)
     localStorage.setItem('viriato.empresa', s.empresa)
     setEmpresa(s.empresa)
     setUsuario(s.usuario)
@@ -34,8 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setOnUnauthorized(sair)
-    if (!tokenStore.get()) return
-    api.get<Usuario>('/me').then(setUsuario).catch(sair).finally(() => setCarregando(false))
+    // Sem sessão (cookie ausente ou vencido), o /me responde 401 e a tela de acesso aparece.
+    api.get<Usuario>('/me').then(setUsuario).catch(() => setUsuario(null)).finally(() => setCarregando(false))
   }, [sair])
 
   const papel = usuario?.papel

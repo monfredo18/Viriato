@@ -37,6 +37,7 @@ services:
       DB_URL: jdbc:mysql://mysql:3306/viriato?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
       DB_USER: ${DB_USER:-viriato}
       DB_PASSWORD: ${DB_PASSWORD:-viriato}
+      SEGURANCA_EXIGIR_2FA_ADMIN: ${SEGURANCA_EXIGIR_2FA_ADMIN:-false}
       JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao-com-32-bytes-ou-mais}
       # Só para rodar localmente: aceita o segredo de exemplo acima. Em produção defina JWT_SECRET e remova estas duas linhas.
       VIRIATO_JWT_PERMITIR_PADRAO: ${VIRIATO_JWT_PERMITIR_PADRAO:-true}
@@ -50,7 +51,7 @@ services:
       ADMIN_NOME: ${ADMIN_NOME:-Administrador}
       ADMIN_SENHA: ${ADMIN_SENHA:-trocar-12345}
       ADMIN_EMPRESA: ${ADMIN_EMPRESA:-Minha empresa}
-    ports: ["8080:8080"]
+    ports: ["127.0.0.1:8080:8080"]   # só o nginx (frontend) fala com a API
 
   frontend:
     build: ./frontend

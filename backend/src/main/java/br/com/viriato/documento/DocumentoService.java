@@ -29,9 +29,17 @@ public class DocumentoService {
     private final ProcessoService processos;
     private final RequisitoService requisitos;
     private final EtapaRequisitoRepository requisitosRepo;
+    private final ValidadorDeArquivo validador;
+    private final AntivirusScanner antivirus;
+    private final boolean falharFechado;
 
     public DocumentoService(DocumentoRepository repo, ArmazenamentoArquivos storage, ProcessoService processos,
-                            RequisitoService requisitos, EtapaRequisitoRepository requisitosRepo) {
+                            RequisitoService requisitos, EtapaRequisitoRepository requisitosRepo,
+                            ValidadorDeArquivo validador, AntivirusScanner antivirus,
+                            @org.springframework.beans.factory.annotation.Value("${viriato.antivirus.falhar-fechado:true}") boolean falharFechado) {
+        this.validador = validador;
+        this.antivirus = antivirus;
+        this.falharFechado = falharFechado;
         this.repo = repo;
         this.storage = storage;
         this.processos = processos;
@@ -62,8 +70,8 @@ public class DocumentoService {
         }
 
         String nome = limparNome(arquivo.getOriginalFilename());
+        String tipo = validarConteudo(nome, arquivo);
         String chave = "tenant-%d/processo-%d/%s-%s".formatted(quem.tenantId(), processoId, UUID.randomUUID(), nome);
-        String tipo = arquivo.getContentType() != null ? arquivo.getContentType() : "application/octet-stream";
 
         try (InputStream in = arquivo.getInputStream()) {
             storage.salvar(chave, in, arquivo.getSize(), tipo);
@@ -83,6 +91,22 @@ public class DocumentoService {
             storage.remover(chave); // não deixa arquivo órfão se o banco falhar
             throw e;
         }
+    }
+
+    /** Confere extensão e conteúdo (magic bytes) e passa o arquivo pelo antivírus; devolve o tipo a gravar. Reaproveitável por outros módulos. */
+    public String validarConteudo(String nome, MultipartFile arquivo) throws IOException {
+        byte[] inicio;
+        try (InputStream in = arquivo.getInputStream()) { inicio = in.readNBytes(ValidadorDeArquivo.CABECALHO); }
+        String tipo = validador.validar(nome, inicio);
+        String ameaca;
+        try (InputStream in = arquivo.getInputStream()) {
+            ameaca = antivirus.examinar(nome, in);
+        } catch (IOException e) {
+            if (falharFechado) throw new NegocioException("Não foi possível verificar o arquivo com o antivírus agora. Tente novamente em instantes.");
+            ameaca = null;
+        }
+        if (ameaca != null) throw new NegocioException("Arquivo recusado: o antivírus encontrou uma ameaça (" + ameaca + ").");
+        return tipo;
     }
 
     @Transactional(readOnly = true)

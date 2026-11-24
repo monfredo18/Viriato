@@ -20,6 +20,11 @@ public class AutomacaoExecucao {
     @Enumerated(EnumType.STRING) private StatusExecucao status;
     private String mensagem;
     @Column(name = "executado_em") private Instant executadoEm;
+    @Column(name = "etapa_id") private Long etapaId;
+    @Column(name = "usuario_id") private Long usuarioId;
+    private int tentativas;
+    @Column(name = "proxima_tentativa") private Instant proximaTentativa;
+    @Column(name = "iniciado_em") private Instant iniciadoEm;
 
     @PrePersist void antesDeInserir() { if (executadoEm == null) executadoEm = Instant.now(); }
 }
