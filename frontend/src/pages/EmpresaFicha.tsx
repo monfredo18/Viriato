@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import {
   api, ROTULO_AREA, ROTULO_PROCURACAO, ROTULO_REGIME, ROTULO_STATUS,
-  type AreaContato, type Ficha, type Regime, type StatusContratual, type TipoProcuracao,
+  type AreaContato, type Ficha, type ObrigacaoDaEmpresa, type Usuario, type Regime, type StatusContratual, type TipoProcuracao,
 } from '../api'
 import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 import { fmtData } from '../formato'
 
-type Aba = 'dados' | 'socios' | 'contatos' | 'certificados' | 'procuracoes' | 'checklist'
-const ABAS: [Aba, string][] = [['dados', 'Dados fiscais'], ['socios', 'Sócios'], ['contatos', 'Contatos'], ['certificados', 'Certificados'], ['procuracoes', 'Procurações'], ['checklist', 'Checklist']]
+type Aba = 'dados' | 'socios' | 'contatos' | 'certificados' | 'procuracoes' | 'obrigacoes' | 'checklist'
+const ABAS: [Aba, string][] = [['dados', 'Dados fiscais'], ['socios', 'Sócios'], ['contatos', 'Contatos'], ['certificados', 'Certificados'], ['procuracoes', 'Procurações'], ['obrigacoes', 'Obrigações'], ['checklist', 'Checklist']]
 const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
 
 /** Do nome completo do certificado (CN=..., O=...) fica só o CN. */
@@ -51,6 +51,7 @@ export default function EmpresaFicha() {
           {aba === 'contatos' && <Contatos ficha={ficha} base={base} agir={agir} />}
           {aba === 'certificados' && <Certificados ficha={ficha} base={base} agir={agir} />}
           {aba === 'procuracoes' && <Procuracoes ficha={ficha} base={base} agir={agir} />}
+          {aba === 'obrigacoes' && <ObrigacoesDaEmpresa base={base} />}
           {aba === 'checklist' && <Checklist ficha={ficha} base={base} agir={agir} />}
         </>
       )}
@@ -350,5 +351,44 @@ function Checklist({ ficha, base, agir }: { ficha: Ficha; base: string; agir: Ag
         )
       })}
     </>
+  )
+}
+
+// ---------------------------------------------------------------- obrigações
+/** Obrigações vinculadas à empresa: sugeridas pelo regime, UF e CNAE; liga, desliga e define o responsável padrão. */
+function ObrigacoesDaEmpresa({ base }: { base: string }) {
+  const [lista, setLista] = useState<ObrigacaoDaEmpresa[]>([])
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [erro, setErro] = useState('')
+  const carregar = useCallback(() => { api.get<ObrigacaoDaEmpresa[]>(`${base}/obrigacoes`).then(setLista).catch((e) => setErro(e.message)) }, [base])
+  useEffect(() => { carregar(); api.pagina<Usuario>('/usuarios', 0, 500).then((r) => setUsuarios(r.itens.filter((u) => u.ativo))) }, [carregar])
+  const agir = (fn: () => Promise<unknown>) => fn().then(() => { setErro(''); carregar() }).catch((e) => setErro(e.message))
+  const rotuloPeriodo = { MENSAL: 'Mensal', TRIMESTRAL: 'Trimestral', ANUAL: 'Anual' }
+  return (
+    <section className="cartao">
+      <h3>Obrigações desta empresa</h3>
+      <p className="sub">Vinculadas sozinhas pelo regime tributário, UF e CNAE da aba Dados fiscais. Desligue as que não se aplicam e defina quem cuida de cada uma; os processos do mês são abertos para as que estiverem ligadas.</p>
+      {erro && <p className="erro">{erro}</p>}
+      <div className="tabela-wrap"><table>
+        <thead><tr><th>Obrigação</th><th>Periodicidade</th><th>Vence</th><th>Responsável</th><th>Situação</th></tr></thead>
+        <tbody>
+          {lista.map((o) => (
+            <tr key={o.modeloId}>
+              <td><b>{o.nome}</b>{!o.compativel && <small className="sub"> · fora do perfil da empresa</small>}</td>
+              <td>{rotuloPeriodo[o.periodicidade]}</td>
+              <td>{o.vencimento}</td>
+              <td>
+                <select disabled={!o.vinculada} aria-label={`Responsável por ${o.nome}`} value={o.responsavelId ?? ''} onChange={(e) => agir(() => api.patch(`${base}/obrigacoes/${o.modeloId}`, e.target.value ? { responsavelId: Number(e.target.value) } : { limparResponsavel: true }))}>
+                  <option value="">— o padrão da obrigação —</option>
+                  {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                </select>
+              </td>
+              <td><label className="chk"><input type="checkbox" checked={o.vinculada && o.ativa} onChange={() => agir(() => api.patch(`${base}/obrigacoes/${o.modeloId}`, { ativa: !(o.vinculada && o.ativa) }))} /> {o.vinculada && o.ativa ? 'Ligada' : 'Desligada'}</label></td>
+            </tr>
+          ))}
+          {lista.length === 0 && <tr><td colSpan={5} className="vazio">Nenhuma obrigação cadastrada. Crie os modelos em Obrigações.</td></tr>}
+        </tbody>
+      </table></div>
+    </section>
   )
 }

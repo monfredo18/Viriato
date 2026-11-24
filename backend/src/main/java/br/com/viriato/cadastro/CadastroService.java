@@ -79,6 +79,7 @@ public class CadastroService {
         fichaFiscal.aplicar(c, fiscal);
         c = clientes.save(c);
         checklists.aoMudarStatus(c, null);
+        if (fiscal != null) eventos.publishEvent(new br.com.viriato.fiscal.FiscalDoClienteAtualizado(tid, c.getId()));
         return dto(c);
     }
 
@@ -102,6 +103,7 @@ public class CadastroService {
         fichaFiscal.aplicar(c, fiscal);
         c = clientes.save(c);
         checklists.aoMudarStatus(c, antes);
+        if (fiscal != null) eventos.publishEvent(new br.com.viriato.fiscal.FiscalDoClienteAtualizado(tid, c.getId()));
         return dto(c);
     }
 
@@ -334,7 +336,7 @@ public class CadastroService {
     }
 
     /** Administrador mexe em qualquer entrega; o gestor só nas do próprio setor (as de outros setores ele nem vê). */
-    private Entrega entregaQueEleMexe(UsuarioLogado quem, Long id) {
+    public Entrega entregaQueEleMexe(UsuarioLogado quem, Long id) {
         Entrega e = entregas.findByIdAndTenantId(id, quem.tenantId()).orElseThrow(() -> new NaoEncontradoException("Entrega"));
         if (quem.papel() == Papel.ADMIN) return e;
         if (e.getSetorDonoId() == null || !e.getSetorDonoId().equals(usuarios.setorDe(quem))) throw new NaoEncontradoException("Entrega");

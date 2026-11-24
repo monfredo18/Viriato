@@ -121,6 +121,7 @@ export interface Processo {
   responsavelId: number | null; responsavelNome: string | null
   status: Status; prazoEtapa: string | null; atrasado: boolean
   camposExtras: Record<string, unknown>; criadoEm: string; atualizadoEm: string
+  competenciaAno: number | null; competenciaMes: number | null; obrigacaoModeloId: number | null
 }
 interface Historico { id: number; acao: string; usuarioNome: string | null; deEtapa: string | null; paraEtapa: string | null; comentario: string | null; criadoEm: string }
 type StatusAprovacao = 'PENDENTE' | 'APROVADA' | 'RECUSADA' | 'CANCELADA'
@@ -129,7 +130,7 @@ interface Aprovacao {
   solicitadoPorId: number | null; solicitadoPor: string | null; solicitadoEm: string; comentario: string | null
   status: StatusAprovacao; decididoPor: string | null; decididoEm: string | null; motivo: string | null
 }
-export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historico: Historico[]; requisitos: RequisitoStatus[]; etapaOrdem: number | null; aprovacoes: Aprovacao[] }
+export interface Detalhe { processo: Processo; proximasEtapas: Etapa[]; historico: Historico[]; requisitos: RequisitoStatus[]; etapaOrdem: number | null; aprovacoes: Aprovacao[]; dependencias: Dependencia[]; campos: CampoExtra[] }
 /** Administrador atende gestor, que atende usuário (mesma regra do servidor). */
 export const NIVEL_PAPEL: Record<Papel, number> = { ADMIN: 2, GESTOR: 1, USUARIO: 0 }
 export const ROTULO_QUEM_MOVE: Record<Papel, string> = { USUARIO: 'Qualquer responsável', GESTOR: 'Somente gestor ou administrador', ADMIN: 'Somente administrador' }
@@ -159,3 +160,23 @@ export interface ConversaAjuda { id: number; usuarioId: number; fotoVersao: numb
 export interface ConversaAjudaAberta { id: number; usuarioId: number; fotoVersao: number | null; pessoa: string; setor: string | null; mensagens: MensagemAjuda[] }
 export interface RegistroAuditoria { id: number; usuario: string | null; acao: string; detalhe: string | null; criadoEm: string; ip: string | null; userAgent: string | null }
 export interface ConfigDoisFatores { segredo: string; uri: string }
+
+// ---- Fase 3: calendário fiscal, matriz de obrigações, dependências e campos extras ----
+export type Periodicidade = 'MENSAL' | 'TRIMESTRAL' | 'ANUAL'
+export type ModoVencimento = 'DIA_DO_MES' | 'ENESIMO_DIA_UTIL' | 'ULTIMO_DIA_UTIL'
+export type RegraDiaUtil = 'MANTER_DATA' | 'ANTECIPAR_DIA_UTIL' | 'POSTERGAR_DIA_UTIL'
+export type Esfera = 'FEDERAL' | 'ESTADUAL' | 'MUNICIPAL'
+export const ROTULO_REGRA: Record<RegraDiaUtil, string> = { MANTER_DATA: 'Manter a data (dias corridos)', ANTECIPAR_DIA_UTIL: 'Antecipar para o dia útil anterior', POSTERGAR_DIA_UTIL: 'Postergar para o próximo dia útil' }
+export interface ModeloObrigacao {
+  id: number; nome: string; entregaId: number; entregaNome: string | null; setorId: number | null; periodicidade: Periodicidade; modoVencimento: ModoVencimento
+  diaVencimento: number | null; mesesDefasagem: number; mesesAplicaveis: number[]; regraDiaUtil: RegraDiaUtil; esfera: Esfera; regimesAplicaveis: Regime[]
+  ufsAplicaveis: string[]; cnaesAplicaveis: string[]; responsavelPadraoId: number | null; ativo: boolean; dependeDeModeloIds: number[]; empresasVinculadas: number
+}
+export interface ItemCatalogo { nome: string; periodicidade: Periodicidade; modoVencimento: ModoVencimento; diaVencimento: number | null; mesesDefasagem: number; mesesAplicaveis: number[]; regraDiaUtil: RegraDiaUtil; esfera: Esfera; regimesAplicaveis: Regime[]; observacao: string }
+export interface ObrigacaoDaEmpresa { modeloId: number; nome: string; entregaNome: string | null; periodicidade: Periodicidade; esfera: Esfera; vencimento: string; vinculada: boolean; ativa: boolean; compativel: boolean; responsavelId: number | null; personalizado: boolean }
+export interface Feriado { id: number; escopo: 'NACIONAL' | 'ESTADUAL' | 'MUNICIPAL'; uf: string | null; codigoMunicipioIbge: string | null; data: string | null; dia: number | null; mes: number | null; descricao: string; ativo: boolean }
+export interface ResultadoGeracao { ano: number; mes: number; gerados: number; jaExistiam: number; dependenciasCriadas: number; ignorados: string[] }
+export interface Dependencia { id: number; predecessorId: number; numero: string; titulo: string; empresa: string | null; status: Status; etapaAtual: string | null; resolvida: boolean }
+export type TipoCampo = 'TEXTO' | 'NUMERO' | 'DATA' | 'MOEDA' | 'SELECAO'
+export const ROTULO_TIPO_CAMPO: Record<TipoCampo, string> = { TEXTO: 'Texto', NUMERO: 'Número', DATA: 'Data', MOEDA: 'Valor em reais', SELECAO: 'Seleção' }
+export interface CampoExtra { id: number; chave: string; rotulo: string; tipo: TipoCampo; obrigatorio: boolean; opcoes: string[]; ordem: number }

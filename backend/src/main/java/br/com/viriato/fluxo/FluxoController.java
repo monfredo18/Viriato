@@ -62,6 +62,19 @@ public class FluxoController {
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#id)")
     public void apagar(@PathVariable Long id) { service.apagar(id, Contexto.tenantId()); }
 
+    public record Ordem(java.util.List<Long> etapaIds) {}
+    public record Transicoes(java.util.List<FluxoService.TransicaoIds> transicoes) {}
+
+    /** Reordena as etapas intermediárias (a inicial e as de conclusão não mudam de lugar). */
+    @PutMapping("/{id}/ordem")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#id)")
+    public FluxoService.FluxoDto reordenar(@PathVariable Long id, @RequestBody Ordem r) { return service.reordenar(Contexto.tenantId(), id, r.etapaIds()); }
+
+    /** Define todas as transições do fluxo (não lineares: ramificações e retornos). */
+    @PutMapping("/{id}/transicoes")
+    @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#id)")
+    public FluxoService.FluxoDto transicoes(@PathVariable Long id, @RequestBody Transicoes r) { return service.definirTransicoes(Contexto.tenantId(), id, r.transicoes()); }
+
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','GESTOR') and @permissaoFluxo.pode(#id)")
     public FluxoService.FluxoDto ativo(@PathVariable Long id, @RequestBody AtivoReq r) {

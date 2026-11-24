@@ -3,6 +3,8 @@ import { api, type Entrega, type Fluxo, type RegraAutomacao, type Setor } from '
 import BotaoApagar from '../BotaoApagar'
 import { useAuth } from '../auth'
 import ConfigurarEtapa from './ConfigurarEtapa'
+import EditorCampos from './EditorCampos'
+import EditorFluxo from './EditorFluxo'
 import { JanelaCancelamento } from './AutomacoesSecao'
 import { fmtData, hojeIso } from '../formato'
 
@@ -27,6 +29,7 @@ export default function Entregas() {
   const [erro, setErro] = useState('')
   const [erroForm, setErroForm] = useState('')
   const [config, setConfig] = useState<{ fluxoId: number; etapaId: number | null } | null>(null)
+  const [editor, setEditor] = useState<{ tipo: 'fluxo' | 'campos'; entrega: Entrega } | null>(null)
   const [apagando, setApagando] = useState<{ e: Entrega; qtd: number } | null>(null)
   const [novaEtapa, setNovaEtapa] = useState<{ fluxoId: number; nome: string } | null>(null)
 
@@ -149,6 +152,8 @@ export default function Entregas() {
                 {mexer && (
                   <p className="dica-campo">
                     <button type="button" className="link" onClick={() => alterarPrazo(e)}>Alterar prazo padrão</button>
+                    {configurar && fluxo && <button type="button" className="link" onClick={() => setEditor({ tipo: 'fluxo', entrega: e })}>Editar fluxo (ordem e transições)</button>}
+                    <button type="button" className="link" onClick={() => setEditor({ tipo: 'campos', entrega: e })}>Campos extras</button>
                   </p>
                 )}
                 {outras.length > 0 && <p className="dica-campo">Este fluxo é compartilhado com: {outras.map((o) => o.nome).join(', ')}.</p>}
@@ -227,6 +232,8 @@ export default function Entregas() {
           fechar={() => setApagando(null)} apagado={() => { setApagando(null); carregar() }}
         />
       )}
+      {editor?.tipo === 'fluxo' && (() => { const fl = fluxos.find((x) => x.id === editor.entrega.fluxoId); return fl ? <EditorFluxo fluxo={fl} recarregar={carregar} fechar={() => setEditor(null)} /> : null })()}
+      {editor?.tipo === 'campos' && <EditorCampos entrega={editor.entrega} fechar={() => setEditor(null)} />}
       {config && (() => {
         const fl = fluxos.find((x) => x.id === config.fluxoId)
         if (!fl) return null

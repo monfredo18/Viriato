@@ -149,7 +149,7 @@ public class AutomacaoExecutor {
         Instant agora = Instant.now();
         novaTransacao(() -> execucoes.devolverTravadas(agora, agora.minus(travadaApos)));
         int feitas = 0;
-        for (AutomacaoExecucao x : execucoes.prontas(agora, PageRequest.of(0, 50))) {
+        for (AutomacaoExecucao x : execucoes.prontas(agora.plusMillis(5), PageRequest.of(0, 50))) {   // folga: o banco arredonda o instante gravado
             int reservou = new TransactionTemplate(tm, requiresNew()).execute(st -> execucoes.reservar(x.getId(), Instant.now()));
             if (reservou == 1) {
                 processar(x.getId());

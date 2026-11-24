@@ -57,13 +57,17 @@ public class ProcessoController {
                                     @RequestParam(required = false) String busca,
                                     @RequestParam(defaultValue = "false") boolean atrasados,
                                     @RequestParam(defaultValue = "false") boolean meus,
+                                    @RequestParam(required = false) Integer competenciaAno,
+                                    @RequestParam(required = false) Integer competenciaMes,
+                                    @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate prazoDe,
+                                    @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate prazoAte,
                                     @RequestParam(defaultValue = "0") int pagina,
                                     @RequestParam(defaultValue = "20") int tamanho) {
         var u = Contexto.atual();
         Long resp = meus ? u.id() : responsavelId;
         var page = PageRequest.of(Math.max(pagina, 0), Math.min(Math.max(tamanho, 1), 100),
                 Sort.by(Sort.Direction.DESC, "id"));
-        return service.listar(u, new ProcessoService.Filtro(status, etapaId, resp, clienteId, setorId, entregaId, busca, atrasados), page);
+        return service.listar(u, new ProcessoService.Filtro(status, etapaId, resp, clienteId, setorId, entregaId, busca, atrasados, competenciaAno, competenciaMes, prazoDe, prazoAte), page);
     }
 
     @PostMapping

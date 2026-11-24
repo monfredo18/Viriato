@@ -395,6 +395,15 @@
     <li><strong>Alertas e painel:</strong> aviso diário em 30, 15 e 5 dias e no vencimento (um por marco) para administradores e gestores; painel "Saúde cadastral e certificados" em Cadastros e no Início.</li>
   </ul>
 
+  <h2>3.21 Calendário fiscal, matriz de obrigações e geração recorrente</h2>
+  <ul>
+    <li><strong>Calendário fiscal:</strong> feriados nacionais fixos por empresa do sistema, estaduais e municipais cadastráveis, Sexta-feira Santa calculada; regras de vencimento manter a data, antecipar ou postergar para o dia útil; cálculo do enésimo e do último dia útil.</li>
+    <li><strong>Matriz tributária:</strong> modelos de obrigação ligados a uma entrega (fluxo e setor), com periodicidade, meses de competência, vencimento com defasagem, esfera e filtros por regime, UF e CNAE; vínculo automático com as empresas compatíveis e ajuste por empresa (ligar, desligar, responsável).</li>
+    <li><strong>Geração recorrente:</strong> no dia 1º de cada mês (competência do mês anterior) e sob demanda, abre um processo por empresa e obrigação com o prazo do calendário da empresa; idempotente pela chave empresa, obrigação e competência.</li>
+    <li><strong>Dependências:</strong> um processo só avança quando os predecessores concluem; ligadas pela matriz ou à mão, com card no detalhe.</li>
+    <li><strong>Fluxos não lineares, Kanban, Calendário e campos extras:</strong> editor de ordem e de transições (ramificações e retornos), visões Kanban (arrastar) e Calendário em Processos, e campos tipados por entrega (texto, número, data, moeda, seleção), com obrigatoriedade na conclusão.</li>
+  </ul>
+
   <h1>4. Papéis e permissões</h1>
   <p>Os <strong>processos são separados por setor</strong>: gestor e usuário enxergam apenas os processos (e documentos e histórico) do próprio setor; <strong>só o administrador vê os de todos os setores</strong>. Processo de outro setor responde “não encontrado”, inclusive no endereço direto, nos documentos e nos filtros. Cadastros, fluxos e a equipe (com papel e setor) continuam visíveis a todos. O que muda, além disso, é quem pode <strong>alterar</strong>.</p>
   <table>
@@ -636,10 +645,7 @@
   <h2>Limitações funcionais</h2>
   <ul>
     <li>Os próprios processos não podem ser apagados (só concluídos ou cancelados); por isso um processo encerrado pode ficar com empresa, setor, entrega, fluxo ou responsável em branco depois que esses cadastros são apagados.</li>
-    <li>Fluxos não podem ser editados depois de criados (só ativados ou desativados); a tela monta apenas transições em sequência.</li>
-    <li>Os campos extras do processo são um JSON livre aceito pela API; ainda não há tela para preenchê-los.</li>
     <li>Processos criados antes da versão com empresa, entrega e setor continuam existindo, mas mostram esses campos em branco.</li>
-    <li>Prazos em dias corridos, sem calendário de feriados.</li>
     <li>Cada relatório comporta até 10.000 processos, e o período por encerramento usa a data da última movimentação do processo. Os PDFs usam IBM Plex Sans embutida em UTF-8.</li>
     <li>Listas de usuários, fluxos e notificações aceitam <code>pagina</code> e <code>tamanho</code> (padrões 200, 100 e 50); a tela de Usuários pagina de 50 em 50, e as demais telas usam o tamanho padrão.</li>
     <li>Data e hora do histórico aparecem no fuso do navegador.</li>
@@ -690,7 +696,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>168 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>185 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>
@@ -876,7 +882,7 @@
 <h2>11.9 O que o sistema ainda não faz</h2>
 <ul>
 <li>Não envia e-mail nem SMS; não tem aplicativo de celular nativo (a tela se adapta ao celular).</li>
-<li>Não reordena etapas pela tela (só adiciona antes da conclusão, renomeia e remove); a API já aceita transições arbitrárias, mas a tela liga as etapas em sequência.</li>
+<li>O editor de fluxos usa uma matriz de transições e botões de subir e descer (não é um quadro de arrastar nós).</li>
 <li>Não há recuperação de senha por e-mail: a senha é zerada pelo administrador (ou pelo próprio fluxo de primeiro acesso).</li>
 <li>Não exporta relatórios em planilha, só em PDF; não há comentários com menção de pessoas nem anexos no chat.</li>
 <li>O token fica no armazenamento local do navegador; bloqueio de tentativas é por conta, não por endereço de origem.</li>

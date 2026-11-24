@@ -1131,3 +1131,41 @@ input:focus, select:focus, textarea:focus { border-color: var(--azul); box-shado
 .linha-acoes { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .8rem; }
 .ficha-2col { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-top: 1rem; }
 td.corta { max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Visões de Processos: Lista, Kanban e Calendário */
+.vistas { display: inline-flex; border: 1px solid var(--borda-forte); border-radius: var(--raio); overflow: hidden; margin-left: 1rem; }
+.vistas button { border: 0; border-radius: 0 !important; background: var(--card); height: 30px; box-shadow: none; }
+.vistas button + button { border-left: 1px solid var(--borda-forte); }
+.vistas button.ativa { background: var(--azul); color: var(--azul-fg); }
+.kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: .8rem; overflow-x: auto; padding-bottom: .6rem; align-items: start; }
+.kanban-coluna { background: color-mix(in srgb, var(--bg) 70%, var(--card)); border: 1px solid var(--borda); border-radius: var(--raio-grande); padding: .6rem; min-height: 160px; transition: background var(--tempo), border-color var(--tempo), opacity var(--tempo); }
+.kanban-coluna h4 { margin: .1rem .2rem .6rem; font-size: 13px; display: flex; justify-content: space-between; }
+.kanban-coluna.permitida { border-color: var(--azul); border-style: dashed; }
+.kanban-coluna.sobre { background: var(--azul-fundo); }
+.kanban-coluna.bloqueada { opacity: .5; }
+.kanban-cartoes { display: grid; gap: .5rem; }
+.kanban-cartao { background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio); padding: .55rem .65rem; display: grid; gap: .15rem; cursor: grab; font-size: 12.5px; box-shadow: var(--sombra-1); }
+.kanban-cartao.atrasado { border-left: 3px solid var(--vermelho); }
+.kanban-cartao.feito { cursor: default; opacity: .8; }
+.kanban-cartao:active { cursor: grabbing; }
+.calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--borda); border-radius: var(--raio-grande); overflow: hidden; background: var(--card); }
+.cal-cab { padding: .5rem; font-size: 12px; font-weight: 600; color: var(--suave); border-bottom: 1px solid var(--borda); background: color-mix(in srgb, var(--bg) 70%, var(--card)); }
+.cal-dia { min-height: 104px; padding: .3rem .35rem; border-right: 1px solid var(--borda); border-bottom: 1px solid var(--borda); display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.cal-dia:nth-child(7n + 7) { border-right: 0; }
+.cal-dia.sem-expediente { background: color-mix(in srgb, var(--bg) 85%, var(--card)); }
+.cal-dia.hoje .cal-num { background: var(--azul); color: var(--azul-fg); border-radius: 50% !important; }
+.cal-num { font-size: 12px; font-weight: 600; width: 22px; height: 22px; display: inline-grid; place-items: center; }
+.cal-feriado { color: var(--ouro-texto); font-size: 10.5px; line-height: 1.2; }
+.cal-chip { display: block; font-size: 11px; padding: 2px 5px; border-radius: 3px !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; border: 1px solid transparent; }
+.cal-chip.aberto { background: var(--azul-fundo); color: var(--link); border-color: var(--azul-borda); }
+.cal-chip.proximo { background: var(--ouro-fundo); color: var(--ouro-texto); border-color: var(--ouro-borda); }
+.cal-chip.atrasado { background: var(--vermelho-fundo); color: var(--vermelho); border-color: var(--vermelho); }
+.cal-titulo { min-width: 11rem; text-align: center; }
+.seg-ouro { background: var(--ouro); }
+.aviso-resultado { margin-top: 1rem; padding: .7rem .9rem; border: 1px solid var(--borda); border-radius: var(--raio); background: color-mix(in srgb, var(--bg) 70%, var(--card)); }
+.aviso-resultado ul { margin: .3rem 0 0; padding-left: 1.2rem; }
+.modal-largo { max-width: 860px; width: calc(100vw - 2rem); max-height: calc(100vh - 2rem); overflow-y: auto; }
+.matriz th, .matriz td { text-align: center; white-space: nowrap; font-size: 12px; }
+.matriz tbody th { text-align: left; }
+.campo-linha { display: grid; grid-template-columns: 1.6fr 1fr 1.6fr auto auto; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+@media (max-width: 720px) { .campo-linha { grid-template-columns: 1fr; } }

@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface ProcessoRepository extends JpaRepository<Processo, Long>, JpaSpecificationExecutor<Processo> {
     Optional<Processo> findByIdAndTenantId(Long id, Long tenantId);
+    boolean existsByTenantIdAndClienteIdAndObrigacaoModeloIdAndCompetenciaAnoAndCompetenciaMes(Long tenantId, Long clienteId, Long modeloId, Integer ano, Integer mes);
+    List<Processo> findByTenantIdAndCompetenciaAnoAndCompetenciaMes(Long tenantId, Integer ano, Integer mes);
 
     // Processos EM ANDAMENTO que usam cada cadastro: só eles impedem apagar o cadastro.
     long countByTenantIdAndClienteIdAndStatus(Long tenantId, Long clienteId, StatusProcesso status);

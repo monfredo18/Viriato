@@ -89,6 +89,11 @@ viriato:
       base-segundos: ${AUTOMACAO_RETRY_BASE_SEGUNDOS:60}
       travada-minutos: ${AUTOMACAO_TRAVADA_MINUTOS:10}
       cron: ${AUTOMACAO_RETRY_CRON:*/30 * * * * *}
+  # Geração mensal das obrigações (dia 1º, para a competência do mês anterior) e alertas de vencimento de certificados e procurações.
+  obrigacoes:
+    cron: ${OBRIGACOES_CRON:0 0 5 1 * *}
+  alertas:
+    cron: ${ALERTAS_CRON:0 30 7 * * *}
   prazos:
     cron: ${PRAZOS_CRON:0 0 8 * * *}
     antecedencia-dias: ${PRAZOS_ANTECEDENCIA_DIAS:1}

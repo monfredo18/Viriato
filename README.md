@@ -114,6 +114,16 @@ Menu lateral (Início, Processos, Painel, Cadastros, Entregas, Usuários, Relat�
 - **Procurações eletrônicas** (e-CAC, SEFAZ, Prefeitura, FGTS/Conectividade, Outra) com outorga, vencimento, poderes e comprovante em PDF.
 - **Alertas de vencimento:** todo dia às 07:30 (Brasília) o sistema confere certificados e procurações e avisa administradores e gestores (sininho) em 30, 15 e 5 dias e quando vence, uma vez por marco. O painel **Saúde cadastral e certificados** aparece em Cadastros e no Início.
 
+### Calendário fiscal, matriz de obrigações e geração recorrente
+
+- **Calendário fiscal:** cada empresa do sistema tem os feriados nacionais fixos (e cadastra estaduais e municipais); a Sexta-feira Santa é calculada. Um feriado estadual vale só para empresas atendidas da UF, e um municipal, para as do município (código IBGE). Regras de vencimento: manter a data, antecipar para o dia útil anterior ou postergar para o seguinte.
+- **Matriz tributária** (menu *Obrigações*, administrador e gestor): modelos como PGDAS-D, DCTFWeb, EFD-Reinf, EFD ICMS/IPI, EFD-Contribuições, ECD, ECF, eSocial/folha e FGTS, a partir de um catálogo de pontos de partida (confira os prazos com a legislação). Cada modelo está ligado a uma entrega (que já traz fluxo e setor), com periodicidade, meses de competência, vencimento (dia do mês, enésimo dia útil ou último dia útil, com defasagem em meses), esfera e filtros de regime, UF e CNAE. Ao salvar o modelo, ou ao mudar regime, UF ou CNAE de uma empresa, as obrigações compatíveis são vinculadas sozinhas; na aba *Obrigações* da ficha, o gestor liga, desliga e define o responsável de cada uma.
+- **Geração recorrente:** no dia 1º de cada mês o sistema abre, para a competência do mês anterior, um processo por empresa ativa e obrigação ligada, com o prazo calculado pelo calendário da empresa. Também há o botão *Gerar competência* (qualquer mês). É idempotente (empresa + obrigação + competência nunca duplica). O responsável é o definido para a empresa, senão o padrão da obrigação, senão o gestor do setor.
+- **Dependências entre processos:** "Apuração fiscal depende de Importação de XMLs". Definidas na matriz (ligam-se sozinhas na geração) ou à mão no detalhe do processo; enquanto o predecessor não estiver concluído, o processo não avança (nem por aprovação), e o detalhe mostra o card "Dependências" com o link.
+- **Fluxos não lineares:** em *Entregas → Editar fluxo*, reordena as etapas do meio e marca, numa matriz, para onde cada etapa pode levar (ramificações e retornos, como Revisão voltar para Análise). O sistema confere que toda etapa é alcançável e chega a uma conclusão.
+- **Kanban e Calendário fiscal** em *Processos*, ao lado da Lista: o Kanban tem uma coluna por etapa e aceita arrastar (o servidor aplica transições, requisitos, aprovações e dependências); o Calendário mostra os vencimentos do mês por cor (no prazo, até 3 dias, atrasado) e os dias sem expediente.
+- **Campos extras por entrega** (texto, número, data, valor em reais e seleção), definidos em *Entregas → Campos extras* e preenchidos no detalhe do processo; os obrigatórios travam a conclusão.
+
 ### Relatórios (PDF)
 A aba **Relatórios** gera um PDF dos processos, com filtros por setor, responsável, empresa, período (abertura ou encerramento) e situação (em andamento, concluídos, cancelados). A abrangência depende do papel e é imposta pelo servidor:
 
@@ -172,8 +182,5 @@ ECS Fargate (backend + frontend) · RDS MySQL · S3 com bloqueio de acesso públ
 
 ## Roadmap
 
-- [ ] Edição de fluxos existentes e transições não sequenciais na UI (a API já aceita transições arbitrárias)
 - [ ] Recuperação de senha por e-mail
-- [ ] Campos personalizados por fluxo (hoje: JSON livre via API)
 - [ ] Cobrança/planos e limites por empresa
-- [ ] Feriados e prazos em dias úteis

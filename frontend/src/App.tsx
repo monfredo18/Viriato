@@ -14,6 +14,7 @@ import Processos from './pages/Processos'
 import ProcessoDetalhe from './pages/ProcessoDetalhe'
 import Cadastros from './pages/Cadastros'
 import EmpresaFicha from './pages/EmpresaFicha'
+import Obrigacoes from './pages/Obrigacoes'
 import Entregas from './pages/Entregas'
 import Usuarios from './pages/Usuarios'
 import Relatorios from './pages/Relatorios'
@@ -23,11 +24,12 @@ import Painel from './pages/Painel'
 import Inicio from './pages/Inicio'
 import Auditoria from './pages/Auditoria'
 
-const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean; soAdmin?: boolean }[] = [
+const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean; soAdmin?: boolean; soGestao?: boolean }[] = [
   { para: '/inicio', rotulo: 'Início', icone: 'inicio' },
   { para: '/processos', rotulo: 'Processos', icone: 'processos', fim: true },
   { para: '/painel', rotulo: 'Painel', icone: 'painel' },
   { para: '/cadastros', rotulo: 'Cadastros', icone: 'cadastros' },
+  { para: '/obrigacoes', rotulo: 'Obrigações', icone: 'calendario', soGestao: true },
   { para: '/entregas', rotulo: 'Entregas', icone: 'fluxos' },
   { para: '/usuarios', rotulo: 'Usuários', icone: 'usuarios' },
   { para: '/relatorios', rotulo: 'Relatórios', icone: 'relatorios' },
@@ -107,7 +109,7 @@ function Layout() {
       <aside className="lateral" aria-label="Menu principal">
         <div className="lateral-marca"><Logo altura={104} className="logo-branca" /></div>
         <nav>
-          {ITENS.filter((i) => !i.soAdmin || ehAdmin).map((i) => (
+          {ITENS.filter((i) => (!i.soAdmin || ehAdmin) && (!i.soGestao || ehAdmin || usuario?.papel === 'GESTOR')).map((i) => (
             <NavLink key={i.para} to={i.para} end={i.fim} className={({ isActive }) => (isActive && !(i.para === '/processos' && aMinhas) ? 'ativo' : undefined)}>
               <Icone nome={i.icone} /><span>{i.rotulo}</span>
             </NavLink>
@@ -149,6 +151,7 @@ function Layout() {
             <Route path="/painel" element={<Painel />} />
             <Route path="/cadastros" element={<Cadastros />} />
             <Route path="/cadastros/empresas/:id" element={<EmpresaFicha />} />
+            <Route path="/obrigacoes" element={<Obrigacoes />} />
             <Route path="/entregas" element={<Entregas />} />
             <Route path="/fluxos" element={<Navigate to="/entregas" replace />} />
             <Route path="/usuarios" element={<Usuarios />} />

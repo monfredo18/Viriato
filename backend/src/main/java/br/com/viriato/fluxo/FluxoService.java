@@ -177,15 +177,27 @@ public class FluxoService {
                 .orElseThrow(() -> new NaoEncontradoException("Etapa"));
     }
 
-    /** As telas só montam fluxos em sequência (cada etapa leva à próxima); fluxo com transições personalizadas não é editado por aqui. */
-    private void exigirSequencial(Long tenantId, Long fluxoId, List<Etapa> lista) {
+    /** Fluxo em sequência: cada etapa leva só à seguinte. Os outros têm transições personalizadas (não lineares). */
+    private boolean ehSequencial(Long tenantId, Long fluxoId, List<Etapa> lista) {
         var existentes = transicoes.findByFluxoIdAndTenantId(fluxoId, tenantId).stream()
                 .map(t -> t.getDeEtapa() + ">" + t.getParaEtapa()).collect(java.util.stream.Collectors.toSet());
         var esperadas = new java.util.HashSet<String>();
         for (int i = 0; i + 1 < lista.size(); i++) if (!lista.get(i).isFinalEtapa()) esperadas.add(lista.get(i).getId() + ">" + lista.get(i + 1).getId());
-        if (!existentes.equals(esperadas)) {
-            throw new NegocioException("Este fluxo tem transições personalizadas e não pode ser editado pela tela");
-        }
+        return existentes.equals(esperadas);
+    }
+
+    private void renumerar(List<Etapa> ordenadas) {
+        for (int i = 0; i < ordenadas.size(); i++) { ordenadas.get(i).setOrdem(i + 1); etapas.save(ordenadas.get(i)); }
+    }
+
+    private void ligar(Long tenantId, Long fluxoId, Long de, Long para) {
+        if (de.equals(para) || transicoes.existsByDeEtapaAndParaEtapaAndTenantId(de, para, tenantId)) return;
+        Transicao t = new Transicao();
+        t.setTenantId(tenantId);
+        t.setFluxoId(fluxoId);
+        t.setDeEtapa(de);
+        t.setParaEtapa(para);
+        transicoes.save(t);
     }
 
     /** Renumera as etapas na ordem dada e religa as transições em sequência. */
@@ -213,7 +225,7 @@ public class FluxoService {
         fluxoDaEmpresa(tenantId, fluxoId);
         if (nome == null || nome.isBlank()) throw new NegocioException("Toda etapa precisa de nome");
         List<Etapa> lista = new ArrayList<>(etapas.findByFluxoIdAndTenantIdOrderByOrdem(fluxoId, tenantId));
-        exigirSequencial(tenantId, fluxoId, lista);
+        boolean sequencial = ehSequencial(tenantId, fluxoId, lista);
         int posicao = -1;
         if (antesDeEtapaId != null) {
             Etapa ref = etapaDoFluxo(tenantId, fluxoId, antesDeEtapaId);
@@ -230,7 +242,12 @@ public class FluxoService {
         nova.setOrdem(posicao + 1);
         nova = etapas.save(nova);
         lista.add(posicao, nova);
-        religar(tenantId, fluxoId, lista);
+        if (sequencial) religar(tenantId, fluxoId, lista);
+        else {   // fluxo personalizado: mantém as transições e encaixa a nova etapa entre a anterior e a seguinte
+            renumerar(lista);
+            ligar(tenantId, fluxoId, lista.get(posicao - 1).getId(), nova.getId());
+            ligar(tenantId, fluxoId, nova.getId(), lista.get(posicao + 1).getId());
+        }
         return dto(fluxoDaEmpresa(tenantId, fluxoId), tenantId);
     }
 
@@ -261,15 +278,95 @@ public class FluxoService {
             throw new NegocioException("Há " + dentro + " processo(s) em andamento na etapa \"" + e.getNome() + "\". Mova-os para outra etapa antes de removê-la.");
         }
         List<Etapa> lista = new ArrayList<>(etapas.findByFluxoIdAndTenantIdOrderByOrdem(fluxoId, tenantId));
-        exigirSequencial(tenantId, fluxoId, lista);
+        boolean sequencial = ehSequencial(tenantId, fluxoId, lista);
         lista.removeIf(x -> x.getId().equals(etapaId));
         processos.desvincularEtapa(tenantId, etapaId);
+        if (sequencial) {
+            transicoes.deleteAll(transicoes.findByFluxoIdAndTenantId(fluxoId, tenantId));
+            transicoes.flush();
+            etapas.delete(e);
+            etapas.flush();
+            religar(tenantId, fluxoId, lista);
+        } else {   // fluxo personalizado: quem entrava na etapa removida passa a entrar em quem ela alimentava
+            var todas = transicoes.findByFluxoIdAndTenantId(fluxoId, tenantId);
+            var entradas = todas.stream().filter(t -> t.getParaEtapa().equals(etapaId)).map(Transicao::getDeEtapa).toList();
+            var saidas = todas.stream().filter(t -> t.getDeEtapa().equals(etapaId)).map(Transicao::getParaEtapa).toList();
+            transicoes.deleteAll(todas.stream().filter(t -> t.getDeEtapa().equals(etapaId) || t.getParaEtapa().equals(etapaId)).toList());
+            transicoes.flush();
+            etapas.delete(e);
+            etapas.flush();
+            for (Long de : entradas) for (Long para : saidas) ligar(tenantId, fluxoId, de, para);
+            renumerar(lista);
+        }
+        return dto(fluxoDaEmpresa(tenantId, fluxoId), tenantId);
+    }
+
+    public record TransicaoIds(Long de, Long para) {}
+
+    /** Reordena as etapas intermediárias; a inicial continua primeiro e as de conclusão por último. Em fluxo em sequência, religa as transições. */
+    @Transactional
+    public FluxoDto reordenar(Long tenantId, Long fluxoId, List<Long> intermediariasNaOrdem) {
+        fluxoDaEmpresa(tenantId, fluxoId);
+        List<Etapa> lista = new ArrayList<>(etapas.findByFluxoIdAndTenantIdOrderByOrdem(fluxoId, tenantId));
+        boolean sequencial = ehSequencial(tenantId, fluxoId, lista);
+        List<Etapa> inicial = lista.stream().filter(Etapa::isInicial).toList();
+        List<Etapa> finais = lista.stream().filter(Etapa::isFinalEtapa).toList();
+        List<Etapa> meio = lista.stream().filter(e -> !e.isInicial() && !e.isFinalEtapa()).toList();
+        var porId = meio.stream().collect(java.util.stream.Collectors.toMap(Etapa::getId, e -> e));
+        if (intermediariasNaOrdem == null || intermediariasNaOrdem.size() != meio.size() || !porId.keySet().equals(new java.util.HashSet<>(intermediariasNaOrdem))) {
+            throw new NegocioException("Informe todas as etapas intermediárias, cada uma uma vez (a inicial e as de conclusão não mudam de lugar)");
+        }
+        List<Etapa> nova = new ArrayList<>(inicial);
+        intermediariasNaOrdem.forEach(id -> nova.add(porId.get(id)));
+        nova.addAll(finais);
+        if (sequencial) religar(tenantId, fluxoId, nova); else renumerar(nova);
+        return dto(fluxoDaEmpresa(tenantId, fluxoId), tenantId);
+    }
+
+    /**
+     * Define todas as transições do fluxo (não lineares: uma etapa pode ir para várias, e voltar). Regras: nenhuma etapa leva a si
+     * mesma, a de conclusão não tem saída, toda etapa é alcançável a partir da inicial e toda etapa chega a uma conclusão.
+     */
+    @Transactional
+    public FluxoDto definirTransicoes(Long tenantId, Long fluxoId, List<TransicaoIds> novas) {
+        fluxoDaEmpresa(tenantId, fluxoId);
+        List<Etapa> lista = etapas.findByFluxoIdAndTenantIdOrderByOrdem(fluxoId, tenantId);
+        var porId = lista.stream().collect(java.util.stream.Collectors.toMap(Etapa::getId, e -> e));
+        java.util.Set<String> vistos = new java.util.LinkedHashSet<>();
+        java.util.Map<Long, java.util.Set<Long>> saidas = new java.util.HashMap<>();
+        java.util.Map<Long, java.util.Set<Long>> entradas = new java.util.HashMap<>();
+        for (TransicaoIds t : novas) {
+            if (t.de() == null || t.para() == null || !porId.containsKey(t.de()) || !porId.containsKey(t.para())) throw new NegocioException("Transição com etapa que não é deste fluxo");
+            if (t.de().equals(t.para())) throw new NegocioException("Uma etapa não pode levar a ela mesma");
+            if (porId.get(t.de()).isFinalEtapa()) throw new NegocioException("A etapa \"" + porId.get(t.de()).getNome() + "\" é de conclusão e não pode ter saída");
+            if (porId.get(t.para()).isInicial()) throw new NegocioException("Nenhuma etapa pode levar de volta à etapa inicial");
+            if (!vistos.add(t.de() + ">" + t.para())) continue;
+            saidas.computeIfAbsent(t.de(), k -> new java.util.HashSet<>()).add(t.para());
+            entradas.computeIfAbsent(t.para(), k -> new java.util.HashSet<>()).add(t.de());
+        }
+        Etapa ini = lista.stream().filter(Etapa::isInicial).findFirst().orElseThrow(() -> new NegocioException("Fluxo sem etapa inicial"));
+        var alcancaveis = percorrer(ini.getId(), saidas);
+        for (Etapa e : lista) if (!alcancaveis.contains(e.getId())) throw new NegocioException("A etapa \"" + e.getNome() + "\" não é alcançável a partir da etapa inicial");
+        java.util.Set<Long> chegamNoFim = new java.util.HashSet<>();
+        for (Etapa f : lista) if (f.isFinalEtapa()) chegamNoFim.addAll(percorrer(f.getId(), entradas));
+        for (Etapa e : lista) if (!chegamNoFim.contains(e.getId())) throw new NegocioException("A etapa \"" + e.getNome() + "\" não leva a nenhuma etapa de conclusão");
         transicoes.deleteAll(transicoes.findByFluxoIdAndTenantId(fluxoId, tenantId));
         transicoes.flush();
-        etapas.delete(e);
-        etapas.flush();
-        religar(tenantId, fluxoId, lista);
+        for (String k : vistos) {
+            String[] p = k.split(">");
+            ligar(tenantId, fluxoId, Long.valueOf(p[0]), Long.valueOf(p[1]));
+        }
         return dto(fluxoDaEmpresa(tenantId, fluxoId), tenantId);
+    }
+
+    private static java.util.Set<Long> percorrer(Long origem, java.util.Map<Long, java.util.Set<Long>> grafo) {
+        java.util.Set<Long> vistos = new java.util.HashSet<>();
+        java.util.Deque<Long> pilha = new java.util.ArrayDeque<>(List.of(origem));
+        while (!pilha.isEmpty()) {
+            Long x = pilha.pop();
+            if (vistos.add(x)) pilha.addAll(grafo.getOrDefault(x, java.util.Set.of()));
+        }
+        return vistos;
     }
 
     private FluxoDto dto(Fluxo f, Long tenantId) {

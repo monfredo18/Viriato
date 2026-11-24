@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, type Cliente, type Entrega, type Fluxo, type Pagina, type Processo, type Setor, type Status, type Usuario } from '../api'
 import { useAuth } from '../auth'
 import { fmtData, hojeIso } from '../formato'
+import ProcessosCalendario from './ProcessosCalendario'
+import ProcessosKanban from './ProcessosKanban'
 
 
 export function Selo({ p }: { p: Processo }) {
@@ -13,7 +15,9 @@ export function Selo({ p }: { p: Processo }) {
 export default function Processos() {
   const [dados, setDados] = useState<Pagina<Processo> | null>(null)
   const [pagina, setPagina] = useState(0)
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
+  const vista = params.get('vista') === 'kanban' ? 'kanban' : params.get('vista') === 'calendario' ? 'calendario' : 'lista'
+  const trocarVista = (v: string) => { const q = new URLSearchParams(params); if (v === 'lista') q.delete('vista'); else q.set('vista', v); setParams(q) }
   const [busca, setBusca] = useState(params.get('busca') ?? '')
   const [status, setStatus] = useState<Status | ''>(params.get('busca') ? '' : 'ABERTO')
   const [meus, setMeus] = useState(params.get('meus') === '1')
@@ -58,10 +62,34 @@ export default function Processos() {
     return () => clearTimeout(t)
   }, [carregar])
 
+  const seletor = (
+    <div className="vistas" role="group" aria-label="Forma de exibição">
+      {([['lista', 'Lista'], ['kanban', 'Kanban'], ['calendario', 'Calendário']] as const).map(([k, r]) => (
+        <button key={k} type="button" className={vista === k ? 'ativa' : ''} aria-pressed={vista === k} onClick={() => trocarVista(k)}>{r}</button>
+      ))}
+    </div>
+  )
+
+  if (vista !== 'lista') {
+    return (
+      <>
+        <div className="barra">
+          <h2>Processos</h2>
+          {seletor}
+          <span className="espaco" />
+          <button className="primario" onClick={() => setNovo(true)}>+ Novo processo</button>
+        </div>
+        {vista === 'kanban' ? <ProcessosKanban /> : <ProcessosCalendario />}
+        {novo && <NovoProcesso fechar={() => setNovo(false)} criado={() => { setNovo(false); trocarVista('lista') }} />}
+      </>
+    )
+  }
+
   return (
     <>
       <div className="barra">
         <h2>Processos</h2>
+        {seletor}
         <span className="espaco" />
         <button className="primario" onClick={() => setNovo(true)}>+ Novo processo</button>
       </div>

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api, NIVEL_PAPEL, ROTULO_AUTOMACAO, type Detalhe, type Documento, type ExecucaoAutomacao, type Papel, type Usuario } from '../api'
 import { useAuth } from '../auth'
 import { Selo } from './Processos'
+import { CamposExtras, Dependencias } from './ProcessoExtras'
 
 const ROTULO: Record<string, string> = {
   CRIADO: 'Criado', MOVIDO: 'Movimentado', COMENTARIO: 'Comentário', ATRIBUIDO: 'Atribuído', CANCELADO: 'Cancelado', REQUISITO: 'Requisito',
@@ -223,6 +224,9 @@ export default function ProcessoDetalhe() {
             </div>
           )}
         </section>
+
+        <Dependencias d={d} recarregar={carregar} />
+        <CamposExtras d={d} podeMexer={podeMexer} recarregar={carregar} />
 
         <section className="cartao">
           <h3>Documentos</h3>

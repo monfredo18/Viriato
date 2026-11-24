@@ -58,13 +58,18 @@ public class ProcessoService {
     private final ProcessoRequisitoRepository confirmacoes;
     private final ProcessoAprovacaoRepository aprovacoes;
     private final ApplicationEventPublisher eventos;
+    private final CampoExtraService campos;
+    private final DependenciaService dependencias;
 
     public ProcessoService(ProcessoRepository processos, ProcessoHistoricoRepository historicos,
                            FluxoRepository fluxos, EtapaRepository etapas, TransicaoRepository transicoes,
                            UsuarioRepository usuarios, NotificacaoService notificacoes, CadastroService cadastros,
                            ClienteRepository clientes, EntregaRepository entregasRepo, SetorRepository setoresRepo,
                            ObjectMapper json, RequisitoService requisitos, ProcessoRequisitoRepository confirmacoes,
-                           ProcessoAprovacaoRepository aprovacoes, ApplicationEventPublisher eventos) {
+                           ProcessoAprovacaoRepository aprovacoes, ApplicationEventPublisher eventos,
+                           CampoExtraService campos, DependenciaService dependencias) {
+        this.campos = campos;
+        this.dependencias = dependencias;
         this.processos = processos;
         this.historicos = historicos;
         this.fluxos = fluxos;
@@ -84,7 +89,8 @@ public class ProcessoService {
     }
 
     public record Filtro(StatusProcesso status, Long etapaId, Long responsavelId, Long clienteId, Long setorId,
-                         Long entregaId, String busca, boolean atrasados) {}
+                         Long entregaId, String busca, boolean atrasados,
+                         Integer competenciaAno, Integer competenciaMes, LocalDate prazoDe, LocalDate prazoAte) {}
 
     /**
      * Dados do formulário de novo processo. Quem decide setor e responsável é o papel de quem cria:
@@ -135,7 +141,7 @@ public class ProcessoService {
         if (n.prazo() != null && n.prazo().isBefore(Datas.hoje())) throw new NegocioException("O prazo para concluir não pode ser anterior a hoje");
         p.setPrazoEtapa(n.prazo() != null ? n.prazo() : prazoPadrao(entrega, fluxoId, tid));
         p.setEtapaDesde(Instant.now());
-        p.setCamposExtras(serializar(extras));
+        p.setCamposExtras(serializar(semNulos(campos.normalizar(campos.esquema(entrega.getId(), tid), extras))));
         p.setCriadoPor(quem.id());
         p = processos.save(p);
 
@@ -165,6 +171,10 @@ public class ProcessoService {
             if (f.clienteId() != null) ps.add(cb.equal(root.get("clienteId"), f.clienteId()));
             if (f.setorId() != null) ps.add(cb.equal(root.get("setorId"), f.setorId()));
             if (f.entregaId() != null) ps.add(cb.equal(root.get("entregaId"), f.entregaId()));
+            if (f.competenciaAno() != null) ps.add(cb.equal(root.get("competenciaAno"), f.competenciaAno()));
+            if (f.competenciaMes() != null) ps.add(cb.equal(root.get("competenciaMes"), f.competenciaMes()));
+            if (f.prazoDe() != null) ps.add(cb.greaterThanOrEqualTo(root.get("prazoEtapa"), f.prazoDe()));
+            if (f.prazoAte() != null) ps.add(cb.lessThanOrEqualTo(root.get("prazoEtapa"), f.prazoAte()));
             if (f.atrasados()) {
                 ps.add(cb.equal(root.get("status"), StatusProcesso.ABERTO));
                 ps.add(cb.lessThan(root.get("prazoEtapa"), Datas.hoje()));
@@ -192,7 +202,8 @@ public class ProcessoService {
                         h.getParaEtapa(), h.getComentario(), h.getCriadoEm()))
                 .toList();
         Integer ordem = p.getEtapaAtualId() == null ? null : etapas.findById(p.getEtapaAtualId()).map(Etapa::getOrdem).orElse(null);
-        return new Detalhe(paraDto(p), proximas, hist, p.getStatus() == StatusProcesso.ABERTO ? requisitos.situacao(p) : List.of(), ordem, aprovacoesDto(p));
+        return new Detalhe(paraDto(p), proximas, hist, p.getStatus() == StatusProcesso.ABERTO ? requisitos.situacao(p) : List.of(), ordem, aprovacoesDto(p),
+                dependencias.doProcesso(p), campos.esquemaDto(p.getEntregaId(), tenantId));
     }
 
     /** Pedidos de aprovação do processo, do mais recente para o mais antigo (até 10). */
@@ -250,6 +261,8 @@ public class ProcessoService {
     @Transactional
     public ProcessoDto movimentar(UsuarioLogado quem, Processo p, Etapa destino, String comentario) {
         exigirTransicaoPermitida(p, destino);
+        dependencias.exigirResolvidas(p);   // trava interdepartamental: o processo do qual este depende precisa estar concluído
+        if (destino.isFinalEtapa()) campos.exigirObrigatorios(p.getEntregaId(), p.getTenantId(), ler(p.getCamposExtras()));
         Etapa origem = etapas.findById(p.getEtapaAtualId()).orElseThrow();
         // Avançar exige os requisitos da etapa de origem; voltar para uma etapa anterior não exige nada.
         if (destino.getOrdem() > origem.getOrdem()) requisitos.exigirCumpridos(p, origem);
@@ -497,6 +510,73 @@ public class ProcessoService {
         historicos.save(h);
     }
 
+    /** Preenche (ou apaga, com valor vazio) campos extras do processo, validados pelo esquema da entrega. */
+    @Transactional
+    public ProcessoDto definirCampos(UsuarioLogado quem, Long id, Map<String, Object> valores) {
+        Processo p = buscar(quem, id);
+        exigirAberto(p);
+        exigirPodeMexer(quem, p);
+        List<EntregaCampo> esquema = campos.esquema(p.getEntregaId(), p.getTenantId());
+        if (esquema.isEmpty()) throw new NegocioException("Esta entrega não tem campos extras definidos");
+        Map<String, Object> novos = campos.normalizar(esquema, valores);
+        Map<String, Object> atuais = new LinkedHashMap<>(ler(p.getCamposExtras()));
+        List<String> mudou = new ArrayList<>();
+        for (var e : novos.entrySet()) {
+            Object antes = atuais.get(e.getKey());
+            if (e.getValue() == null) { if (atuais.remove(e.getKey()) != null) mudou.add(e.getKey()); }
+            else if (!String.valueOf(e.getValue()).equals(String.valueOf(antes))) { atuais.put(e.getKey(), e.getValue()); mudou.add(e.getKey()); }
+        }
+        p.setCamposExtras(serializar(atuais));
+        p = processos.save(p);
+        if (!mudou.isEmpty()) {
+            Map<String, String> rotulos = esquema.stream().collect(Collectors.toMap(EntregaCampo::getChave, EntregaCampo::getRotulo));
+            registrar(p, quem.id(), "CAMPOS", null, null, "Campos atualizados: " + mudou.stream().map(k -> rotulos.getOrDefault(k, k)).collect(Collectors.joining(", ")));
+        }
+        return paraDto(p);
+    }
+
+    private static Map<String, Object> semNulos(Map<String, Object> m) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        m.forEach((k, v) -> { if (v != null) out.put(k, v); });
+        return out;
+    }
+
+    /**
+     * Abre um processo gerado pela matriz tributária (sistema, sem quem o abra): setor e fluxo vêm da entrega, o prazo é o
+     * vencimento calculado e o responsável pode ficar em branco. Cada chamada é uma transação própria.
+     */
+    @Transactional
+    public Long criarAutomatico(Long tid, Cliente cliente, Entrega entrega, Long responsavelId, LocalDate prazo, int ano, int mes, Long modeloId, String nomeObrigacao) {
+        if (!entrega.isAtivo()) throw new NegocioException("A entrega \"" + entrega.getNome() + "\" está inativa");
+        if (entrega.getSetorDonoId() == null) throw new NegocioException("A entrega \"" + entrega.getNome() + "\" não pertence a um setor");
+        Setor setor = cadastros.setorAtivo(tid, entrega.getSetorDonoId());
+        Fluxo fluxo = fluxos.findByIdAndTenantId(entrega.getFluxoId(), tid).orElseThrow(() -> new NegocioException("A entrega não tem um fluxo válido"));
+        if (!fluxo.isAtivo()) throw new NegocioException("O fluxo da entrega \"" + entrega.getNome() + "\" está inativo");
+        Etapa inicial = etapas.findFirstByFluxoIdAndTenantIdAndInicialTrue(fluxo.getId(), tid).orElseThrow(() -> new NegocioException("Fluxo sem etapa inicial"));
+        String competencia = "%02d/%d".formatted(mes, ano);
+        String titulo = (nomeObrigacao == null ? entrega.getNome() : nomeObrigacao) + " — " + cliente.getNome() + " — " + competencia;
+        if (titulo.length() > 200) titulo = titulo.substring(0, 200);
+        Processo p = new Processo();
+        p.setTenantId(tid);
+        p.setNumero(cliente.getNumero());
+        p.setTitulo(titulo);
+        p.setClienteId(cliente.getId());
+        p.setEntregaId(entrega.getId());
+        p.setSetorId(setor.getId());
+        p.setFluxoId(fluxo.getId());
+        p.setEtapaAtualId(inicial.getId());
+        p.setResponsavelId(responsavelId);
+        p.setPrazoEtapa(prazo);
+        p.setEtapaDesde(Instant.now());
+        p.setCompetenciaAno(ano);
+        p.setCompetenciaMes(mes);
+        p.setObrigacaoModeloId(modeloId);
+        p = processos.save(p);
+        registrar(p, null, "CRIADO", null, inicial.getNome(), "Gerado automaticamente pela matriz tributária (competência " + competencia + ")");
+        eventos.publishEvent(new AutomacaoEvento(tid, p.getId(), EventoAutomacao.ENTRAR_ETAPA, inicial.getId(), null));
+        return p.getId();
+    }
+
     private String serializar(Map<String, Object> extras) {
         if (extras == null || extras.isEmpty()) return null;
         try {
@@ -558,6 +638,6 @@ public class ProcessoService {
                 p.getEtapaAtualId(), e == null ? null : e.getNome(), e != null && e.isFinalEtapa(),
                 p.getResponsavelId(), nomeResponsavel(p, lk),
                 p.getStatus(), p.getPrazoEtapa(), atrasado, ler(p.getCamposExtras()),
-                p.getCriadoEm(), p.getAtualizadoEm());
+                p.getCriadoEm(), p.getAtualizadoEm(), p.getCompetenciaAno(), p.getCompetenciaMes(), p.getObrigacaoModeloId());
     }
 }

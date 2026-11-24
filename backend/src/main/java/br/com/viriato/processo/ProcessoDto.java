@@ -15,14 +15,16 @@ public record ProcessoDto(Long id, String numero, String titulo, String descrica
                           Long etapaAtualId, String etapaAtual, boolean etapaFinal,
                           Long responsavelId, String responsavelNome,
                           StatusProcesso status, LocalDate prazoEtapa, boolean atrasado,
-                          Map<String, Object> camposExtras, Instant criadoEm, Instant atualizadoEm) {
+                          Map<String, Object> camposExtras, Instant criadoEm, Instant atualizadoEm,
+                          Integer competenciaAno, Integer competenciaMes, Long obrigacaoModeloId) {
 
     public record HistoricoDto(Long id, String acao, String usuarioNome, String deEtapa, String paraEtapa,
                                String comentario, Instant criadoEm) {}
 
     public record Detalhe(ProcessoDto processo, List<EtapaDto> proximasEtapas, List<HistoricoDto> historico,
                           List<RequisitoService.RequisitoStatusDto> requisitos, Integer etapaOrdem,
-                          List<AprovacaoDto> aprovacoes) {}
+                          List<AprovacaoDto> aprovacoes, List<DependenciaService.DependenciaDto> dependencias,
+                          List<CampoExtraService.CampoDto> campos) {}
 
     /** Pedido de aprovação para mover o processo a uma etapa que exige gestor (ou administrador). */
     public record AprovacaoDto(Long id, Long etapaDestinoId, String etapaDestino, Papel papelMinimo, Long solicitadoPorId, String solicitadoPor,

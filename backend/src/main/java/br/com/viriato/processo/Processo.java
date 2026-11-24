@@ -30,6 +30,10 @@ public class Processo {
     @Column(name = "etapa_desde") private Instant etapaDesde;
     @Column(name = "prazo_alertado") private boolean prazoAlertado;
     @Column(name = "campos_extras") private String camposExtras;
+    /** Processos gerados pela matriz tributária: competência (mês de referência) e o modelo de obrigação. */
+    @Column(name = "competencia_ano") private Integer competenciaAno;
+    @Column(name = "competencia_mes") private Integer competenciaMes;
+    @Column(name = "obrigacao_modelo_id") private Long obrigacaoModeloId;
     @Column(name = "criado_por") private Long criadoPor;
     @Column(name = "criado_em") private Instant criadoEm;
     @Column(name = "atualizado_em") private Instant atualizadoEm;

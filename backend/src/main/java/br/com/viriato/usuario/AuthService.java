@@ -33,12 +33,15 @@ public class AuthService {
     private final Cifra cifra;
     private final SessaoRevogadaRepository revogadas;
     private final boolean exigirDoisFatoresAdmin;
+    private final br.com.viriato.fiscal.CalendarioFiscalService calendario;
     private final String hashFalso;   // gasta o mesmo tempo quando o nome não existe
 
     public AuthService(UsuarioRepository usuarios, TenantRepository tenants, PasswordEncoder encoder,
                        JwtService jwt, FluxoService fluxos, CadastroService cadastros, ContaSeguranca contas,
                        AuditoriaService auditoria, Cifra cifra, SessaoRevogadaRepository revogadas,
-                       @org.springframework.beans.factory.annotation.Value("${viriato.seguranca.exigir-2fa-admin:false}") boolean exigirDoisFatoresAdmin) {
+                       @org.springframework.beans.factory.annotation.Value("${viriato.seguranca.exigir-2fa-admin:false}") boolean exigirDoisFatoresAdmin,
+                       br.com.viriato.fiscal.CalendarioFiscalService calendario) {
+        this.calendario = calendario;
         this.exigirDoisFatoresAdmin = exigirDoisFatoresAdmin;
         this.usuarios = usuarios;
         this.tenants = tenants;
@@ -229,6 +232,7 @@ public class AuthService {
 
         var fluxoPadrao = fluxos.criarFluxoPadrao(t.getId());
         cadastros.criarPadroes(t.getId(), fluxoPadrao.id());
+        calendario.semearNacionais(t.getId());
         return u;
     }
 
