@@ -2,15 +2,14 @@ package br.com.viriato.ged;
 
 import br.com.viriato.cadastro.Cliente;
 import br.com.viriato.cadastro.ClienteRepository;
+import br.com.viriato.agente.AgenteService;
 import br.com.viriato.cadastro.TenantIds;
 import br.com.viriato.comum.Datas;
 import br.com.viriato.comum.NaoEncontradoException;
 import br.com.viriato.comum.NegocioException;
 import br.com.viriato.crm.CertificadoService;
 import br.com.viriato.crm.ClienteCertificado;
-import br.com.viriato.crm.ClienteCertificadoRepository;
 import br.com.viriato.crm.Enums.StatusContratual;
-import br.com.viriato.crm.Enums.TipoCertificado;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -22,8 +21,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 /**
- * Baixa da SEFAZ (Distribuição DF-e) as notas emitidas contra o CNPJ da empresa atendida, usando o certificado A1 do cofre,
- * e as importa pelo mesmo caminho dos XMLs enviados à mão. Guarda o último NSU e respeita a espera de 1 hora que a SEFAZ
+ * Baixa da SEFAZ (Distribuição DF-e) as notas emitidas contra o CNPJ da empresa atendida, usando o certificado instalado no
+ * computador de um usuário (a chamada com a chave privada é feita pelo agente local), e as importa pelo mesmo caminho dos XMLs
+ * enviados à mão. Guarda o último NSU e respeita a espera de 1 hora que a SEFAZ
  * exige quando não há documentos novos.
  */
 @Service
@@ -36,18 +36,18 @@ public class DfeService {
 
     private final SefazDfeConnector conector;
     private final ClienteRepository clientes;
-    private final ClienteCertificadoRepository certs;
     private final CertificadoService certificados;
+    private final AgenteService agentes;
     private final DfeControleRepository controles;
     private final ImportacaoXmlService importacao;
     private final TenantIds tenants;
 
-    public DfeService(SefazDfeConnector conector, ClienteRepository clientes, ClienteCertificadoRepository certs, CertificadoService certificados,
+    public DfeService(SefazDfeConnector conector, ClienteRepository clientes, CertificadoService certificados, AgenteService agentes,
                       DfeControleRepository controles, ImportacaoXmlService importacao, TenantIds tenants) {
         this.conector = conector;
         this.clientes = clientes;
-        this.certs = certs;
         this.certificados = certificados;
+        this.agentes = agentes;
         this.controles = controles;
         this.importacao = importacao;
         this.tenants = tenants;
@@ -68,19 +68,18 @@ public class DfeService {
     public Resultado consultar(Long tenantId, Long usuarioId, Cliente c) {
         if (!conector.habilitado()) throw new NegocioException("A consulta automática à SEFAZ está desligada neste ambiente (VIRIATO_SEFAZ_HABILITADO)");
         if (c.getCnpj() == null) throw new NegocioException("A empresa não tem CNPJ cadastrado");
-        ClienteCertificado cert = certs.findByClienteIdAndTenantIdOrderByIdDesc(c.getId(), tenantId).stream()
-                .filter(x -> x.getTipo() == TipoCertificado.A1 && x.isAtivo() && x.getArquivoChave() != null && (x.getValidoAte() == null || !x.getValidoAte().isBefore(Datas.hoje())))
-                .findFirst().orElseThrow(() -> new NegocioException("A empresa não tem certificado A1 ativo e dentro da validade no cofre"));
+        ClienteCertificado cert = certificados.paraUso(tenantId, c.getId());   // um certificado válido, num computador com o agente conectado
         DfeControle ctl = controles.findByClienteIdAndTenantId(c.getId(), tenantId).orElseGet(() -> { DfeControle n = new DfeControle(); n.setTenantId(tenantId); n.setClienteId(c.getId()); return n; });
         if (ctl.getProximaConsulta() != null && ctl.getProximaConsulta().isAfter(Instant.now())) {
             throw new NegocioException("A SEFAZ pede para esperar antes de consultar de novo (próxima consulta a partir de " + Datas.DATA_HORA.format(ctl.getProximaConsulta().atZone(Datas.ZONA)) + ")");
         }
-        var emUso = certificados.abrirParaUso(tenantId, usuarioId, cert.getId(), "Consulta de notas na SEFAZ (DF-e)");   // registra o uso na auditoria
+        certificados.registrarUso(tenantId, usuarioId, cert, "Consulta de notas na SEFAZ (DF-e)");   // fica na auditoria
+        SefazDfeConnector.Postador postador = (url, tipo, corpo) -> agentes.executarHttps(tenantId, cert.getId(), url, tipo, corpo);
         int importadas = 0, duplicadas = 0, resumos = 0;
         String status = "OK", mensagem = null;
         try {
             for (int i = 0; i < RODADAS; i++) {
-                SefazDfeConnector.Resposta r = conector.consultar(emUso, c.getCnpj(), c.getUf(), ctl.getUltimoNsu());
+                SefazDfeConnector.Resposta r = conector.consultar(postador, c.getCnpj(), c.getUf(), ctl.getUltimoNsu());
                 if (r.ultimoNsu() != null) ctl.setUltimoNsu(r.ultimoNsu());
                 mensagem = r.codigoStatus() + " — " + r.motivo();
                 if ("137".equals(r.codigoStatus()) || "656".equals(r.codigoStatus())) {   // nada novo, ou consumo indevido: esperar 1 hora

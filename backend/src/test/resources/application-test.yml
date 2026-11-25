@@ -21,6 +21,8 @@ viriato:
       cron: "-"
   alertas:
     cron: "-"
+  agente:
+    espera-segundos: 4        # o agente simulado responde na hora; o teste de agente que some não espera 90 s
   obrigacoes:
     cron: "-"
   prazos:

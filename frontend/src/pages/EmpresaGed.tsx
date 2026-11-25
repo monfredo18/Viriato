@@ -235,9 +235,9 @@ export function NotasXml({ clienteId }: { clienteId: number }) {
 
         <section className="cartao">
           <h3>Consulta à SEFAZ</h3>
-          {!sefaz?.habilitado ? <p className="sub">A consulta automática à SEFAZ está desligada neste ambiente (VIRIATO_SEFAZ_HABILITADO). Quando ligada, ela usa o certificado A1 do cofre desta empresa.</p> : (
+          {!sefaz?.habilitado ? <p className="sub">A consulta automática à SEFAZ está desligada neste ambiente (VIRIATO_SEFAZ_HABILITADO). Quando ligada, ela usa o certificado desta empresa instalado no computador de um usuário, pelo agente (ver Certificados).</p> : (
             <>
-              <p className="sub">Baixa as notas emitidas contra o CNPJ da empresa, com o certificado A1 do cofre. Último NSU: {sefaz.ultimoNsu}{sefaz.ultimaConsulta ? ` · última consulta ${new Date(sefaz.ultimaConsulta).toLocaleString('pt-BR')}` : ''}.
+              <p className="sub">Baixa as notas emitidas contra o CNPJ da empresa, com o certificado do computador onde o agente está instalado. Último NSU: {sefaz.ultimoNsu}{sefaz.ultimaConsulta ? ` · última consulta ${new Date(sefaz.ultimaConsulta).toLocaleString('pt-BR')}` : ''}.
                 {sefaz.proximaConsulta && new Date(sefaz.proximaConsulta) > new Date() ? ` A SEFAZ pede espera até ${new Date(sefaz.proximaConsulta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.` : ''}</p>
               <div className="linha-acoes"><button className="primario" disabled={ocupado} onClick={consultar}>Consultar agora</button></div>
               {consulta && <div className="aviso-resultado"><p><b>{consulta.importadas}</b> nota(s) importada(s), {consulta.duplicadas} repetida(s), {consulta.resumosIgnorados} resumo(s) ignorado(s).</p><p className="sub">{consulta.mensagem}</p></div>}

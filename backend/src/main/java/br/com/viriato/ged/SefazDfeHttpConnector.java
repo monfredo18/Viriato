@@ -1,25 +1,13 @@
 package br.com.viriato.ged;
 
-import br.com.viriato.comum.NegocioException;
-import br.com.viriato.crm.CertificadoService.CertificadoEmUso;
 import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
@@ -27,10 +15,10 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 /**
- * Cliente SOAP do NFeDistribuicaoDFe (leiaute 1.01) com autenticação por certificado A1 (TLS mútuo). Pede os documentos
- * a partir do último NSU; devolve os XMLs já descompactados (docZip: base64 + gzip). A cadeia de certificação da SEFAZ
- * (ICP-Brasil) normalmente não está no armazém de confiança do Java: aponte {@code viriato.sefaz.truststore} para um
- * JKS/PKCS12 com a cadeia. Não foi exercitado contra a SEFAZ real neste projeto (só com respostas simuladas).
+ * Cliente SOAP do NFeDistribuicaoDFe (leiaute 1.01). Monta o pedido a partir do último NSU e lê a resposta (docZip: base64 + gzip),
+ * devolvendo os XMLs já descompactados. A chamada com TLS mútuo é feita pelo agente no computador onde está o certificado (ele
+ * confia nas autoridades do Windows e, se preciso, em um armazém indicado na configuração do agente). Não foi exercitado contra a
+ * SEFAZ real neste projeto (só com respostas simuladas).
  */
 public class SefazDfeHttpConnector implements SefazDfeConnector {
     static final Map<String, String> CODIGO_UF = Map.ofEntries(Map.entry("RO", "11"), Map.entry("AC", "12"), Map.entry("AM", "13"), Map.entry("RR", "14"), Map.entry("PA", "15"), Map.entry("AP", "16"),
@@ -40,16 +28,10 @@ public class SefazDfeHttpConnector implements SefazDfeConnector {
 
     private final String url;
     private final boolean homologacao;
-    private final String truststore;
-    private final String truststoreSenha;
-    private final Duration timeout;
 
-    public SefazDfeHttpConnector(String url, boolean homologacao, String truststore, String truststoreSenha, Duration timeout) {
+    public SefazDfeHttpConnector(String url, boolean homologacao) {
         this.url = url;
         this.homologacao = homologacao;
-        this.truststore = truststore;
-        this.truststoreSenha = truststoreSenha;
-        this.timeout = timeout;
     }
 
     @Override public boolean habilitado() { return true; }
@@ -64,21 +46,14 @@ public class SefazDfeHttpConnector implements SefazDfeConnector {
     }
 
     @Override
-    public Resposta consultar(CertificadoEmUso cert, String cnpj, String uf, String ultimoNsu) throws IOException {
+    public Resposta consultar(Postador postador, String cnpj, String uf, String ultimoNsu) throws IOException {
+        byte[] corpo = postador.postar(url, "application/soap+xml; charset=utf-8", envelope(cnpj, uf, ultimoNsu, homologacao).getBytes(StandardCharsets.UTF_8));
         try {
-            HttpClient http = HttpClient.newBuilder().sslContext(contexto(cert)).connectTimeout(timeout).build();
-            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(timeout).header("Content-Type", "application/soap+xml; charset=utf-8")
-                    .POST(HttpRequest.BodyPublishers.ofString(envelope(cnpj, uf, ultimoNsu, homologacao), StandardCharsets.UTF_8)).build();
-            HttpResponse<byte[]> res = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
-            if (res.statusCode() / 100 != 2) throw new IOException("A SEFAZ respondeu HTTP " + res.statusCode());
-            return interpretar(res.body());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Consulta à SEFAZ interrompida", e);
+            return interpretar(corpo);
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
-            throw new IOException("Falha na consulta à SEFAZ: " + e.getMessage(), e);
+            throw new IOException("Resposta da SEFAZ ilegível: " + e.getMessage(), e);
         }
     }
 
@@ -107,26 +82,4 @@ public class SefazDfeHttpConnector implements SefazDfeConnector {
         NodeList l = raiz.getElementsByTagNameNS("*", nome);
         return l.getLength() == 0 ? null : l.item(0).getTextContent().trim();
     }
-
-    /** TLS mútuo: o A1 em um armazém só em memória (a chave privada não é gravada em lugar nenhum). */
-    private SSLContext contexto(CertificadoEmUso cert) throws Exception {
-        KeyStore ks = KeyStore.getInstance("PKCS12");
-        ks.load(null, null);
-        char[] senha = java.util.UUID.randomUUID().toString().toCharArray();
-        ks.setKeyEntry("cliente", cert.chave(), senha, cert.cadeia());
-        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        kmf.init(ks, senha);
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        if (truststore == null || truststore.isBlank()) tmf.init((KeyStore) null);
-        else {
-            KeyStore ts = KeyStore.getInstance(truststore.toLowerCase().endsWith(".jks") ? "JKS" : "PKCS12");
-            try (FileInputStream in = new FileInputStream(truststore)) { ts.load(in, truststoreSenha == null ? null : truststoreSenha.toCharArray()); }
-            tmf.init(ts);
-        }
-        SSLContext ctx = SSLContext.getInstance("TLS");
-        ctx.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-        return ctx;
-    }
-
-    static NegocioException semUso() { return new NegocioException("Certificado indisponível"); }
 }

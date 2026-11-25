@@ -23,6 +23,7 @@ import AtivarDoisFatores from './pages/AtivarDoisFatores'
 import Painel from './pages/Painel'
 import Inicio from './pages/Inicio'
 import Auditoria from './pages/Auditoria'
+import Certificados from './pages/Certificados'
 
 const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean; soAdmin?: boolean; soGestao?: boolean }[] = [
   { para: '/inicio', rotulo: 'Início', icone: 'inicio' },
@@ -33,6 +34,7 @@ const ITENS: { para: string; rotulo: string; icone: NomeIcone; fim?: boolean; so
   { para: '/entregas', rotulo: 'Entregas', icone: 'fluxos' },
   { para: '/usuarios', rotulo: 'Usuários', icone: 'usuarios' },
   { para: '/relatorios', rotulo: 'Relatórios', icone: 'relatorios' },
+  { para: '/certificados', rotulo: 'Certificados', icone: 'chave' },
   { para: '/auditoria', rotulo: 'Auditoria', icone: 'escudo', soAdmin: true },
 ]
 
@@ -156,6 +158,7 @@ function Layout() {
             <Route path="/fluxos" element={<Navigate to="/entregas" replace />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/relatorios" element={<Relatorios />} />
+            <Route path="/certificados" element={<Certificados />} />
             {ehAdmin && <Route path="/auditoria" element={<Auditoria />} />}
             <Route path="*" element={<Navigate to="/inicio" />} />
           </Routes>

@@ -1178,3 +1178,7 @@ td.corta { max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-sp
 .ged-conteudo { display: grid; gap: 1rem; min-width: 0; }
 tr.arquivado td { opacity: .6; }
 @media (max-width: 900px) { .ged { grid-template-columns: 1fr; } }
+
+/* Certificados e agente */
+.codigo-agente { font: 700 2rem/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .18em; margin: .25rem 0 .75rem; color: var(--link); }
+.comando { margin: .5rem 0; padding: .75rem 1rem; overflow-x: auto; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo-suave, rgba(127, 127, 127, .08)); font: .85rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; user-select: all; }

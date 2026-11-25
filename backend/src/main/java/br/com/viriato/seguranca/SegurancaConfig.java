@@ -24,7 +24,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SegurancaConfig {
 
     @Bean
-    SecurityFilterChain chain(HttpSecurity http, JwtFilter jwtFilter) throws Exception {
+    SecurityFilterChain chain(HttpSecurity http, JwtFilter jwtFilter, br.com.viriato.agente.AgenteFilter agenteFilter) throws Exception {
         http.csrf(c -> c.disable())
             .cors(c -> {})
             .headers(h -> h
@@ -37,9 +37,11 @@ public class SegurancaConfig {
             .authorizeHttpRequests(a -> a
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/agente/**").hasRole("AGENTE")   // só o token do agente (AgenteFilter)
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().denyAll())
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(agenteFilter, JwtFilter.class);
         return http.build();
     }
 

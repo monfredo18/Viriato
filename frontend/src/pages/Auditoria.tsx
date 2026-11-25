@@ -16,8 +16,13 @@ const ROTULO: Record<string, string> = {
   '2FA_DESATIVADA': 'Verificação em duas etapas desativada',
   '2FA_REMOVIDA_PELO_ADMIN': 'Duas etapas removida pelo administrador',
   FOTO_REMOVIDA_PELO_ADMIN: 'Foto removida pelo administrador',
+  AGENTE_PAREADO: 'Agente de certificados instalado',
+  AGENTE_REVOGADO: 'Agente de certificados desligado',
+  CERTIFICADOS_DETECTADOS: 'Certificados lidos de um computador',
+  CERTIFICADO_VINCULADO: 'Certificado ligado a uma empresa',
+  CERTIFICADO_USADO: 'Certificado usado pelo sistema',
 }
-const ALERTA = new Set(['LOGIN_FALHA', 'LOGIN_RECUSADO', 'CONTA_BLOQUEADA', 'SENHA_ZERADA', 'USUARIO_APAGADO', '2FA_REMOVIDA_PELO_ADMIN'])
+const ALERTA = new Set(['AGENTE_REVOGADO', 'LOGIN_FALHA', 'LOGIN_RECUSADO', 'CONTA_BLOQUEADA', 'SENHA_ZERADA', 'USUARIO_APAGADO', '2FA_REMOVIDA_PELO_ADMIN'])
 
 /** Registro de segurança e de administração da empresa (só o administrador vê; os 300 mais recentes). */
 export default function Auditoria() {

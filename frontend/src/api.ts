@@ -95,7 +95,10 @@ export const ROTULO_AREA: Record<AreaContato, string> = { FISCAL: 'Fiscal', CONT
 export interface Socio { id: number; nome: string; cpf: string | null; percentual: number | null; responsavelLegal: boolean; email: string | null; telefone: string | null }
 export interface ContatoCliente { id: number; nome: string; area: AreaContato; email: string | null; telefone: string | null; recebeGuias: boolean; recebeCobrancas: boolean }
 export type SituacaoVencimento = 'VALIDO' | 'VENCENDO' | 'VENCIDO' | 'SEM_VALIDADE'
-export interface Certificado { id: number; tipo: 'A1' | 'A3'; titular: string | null; cnpjCertificado: string | null; emissora: string | null; numeroSerie: string | null; validoDe: string | null; validoAte: string | null; situacao: SituacaoVencimento; diasParaVencer: number | null; ativo: boolean; observacao: string | null }
+/** Certificado lido por um agente do computador de um usuário: só dados públicos (a chave privada nunca chega ao sistema). */
+export interface Certificado { id: number; titular: string | null; cnpjCertificado: string | null; emissora: string | null; numeroSerie: string | null; validoDe: string | null; validoAte: string | null; situacao: SituacaoVencimento; diasParaVencer: number | null; presente: boolean; clienteId: number | null; clienteNome: string | null; vinculoManual: boolean; computadores: string[]; computadoresConectados: number }
+export interface AgenteLocal { id: number; nome: string; versao: string | null; usuarioId: number; usuario: string | null; ultimoContato: string | null; conectado: boolean; certificados: number }
+export interface CodigoAgente { codigo: string; expiraEm: string }
 export type TipoProcuracao = 'ECAC' | 'SEFAZ' | 'PREFEITURA' | 'FGTS_CONECTIVIDADE' | 'OUTRO'
 export const ROTULO_PROCURACAO: Record<TipoProcuracao, string> = { ECAC: 'e-CAC', SEFAZ: 'SEFAZ', PREFEITURA: 'Prefeitura', FGTS_CONECTIVIDADE: 'FGTS (Conectividade)', OUTRO: 'Outra' }
 export interface Procuracao { id: number; tipo: TipoProcuracao; dataOutorga: string; dataVencimento: string | null; poderes: string | null; temComprovante: boolean; comprovanteNome: string | null; situacao: 'VIGENTE' | 'VENCENDO' | 'VENCIDA' | 'SEM_VENCIMENTO'; diasParaVencer: number | null; ativa: boolean }

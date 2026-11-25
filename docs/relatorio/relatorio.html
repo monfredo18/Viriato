@@ -390,7 +390,7 @@
     <li><strong>Ficha fiscal e societária</strong> (Cadastros → <em>Ficha</em>; só administrador e gestor): CNPJ com dígitos verificadores e unicidade por empresa do sistema, razão social, nome fantasia, inscrições, CNAEs, regime tributário, UF, código IBGE, data de abertura e situação contratual.</li>
     <li><strong>Sócios e contatos:</strong> CPF validado, cifrado e exibido mascarado; participação somando até 100%; contatos por área (Fiscal, Contábil, DP, Financeiro) com marca de guias e cobranças.</li>
     <li><strong>Onboarding e offboarding:</strong> checklist de entrada gerado ao cadastrar a empresa e de encerramento ao iniciar o offboarding; concluir todos os itens ativa ou encerra a empresa.</li>
-    <li><strong>Cofre de certificados:</strong> A1 aberto com <code>KeyStore</code> (senha, titular, emissora, série e validade extraídos), arquivo e senha cifrados com AES-256-GCM, nunca devolvidos; uso registrado na Auditoria. A3 informativo.</li>
+    <li><strong>Certificados lidos do computador:</strong> sem envio de arquivo nem senha; o <em>agente local</em> de cada usuário lê o repositório de certificados do Windows (A1 e A3) e informa só os dados públicos; empresa reconhecida pelo CNPJ do titular; pareamento por código de uso único; uso registrado na Auditoria.</li>
     <li><strong>Procurações:</strong> e-CAC, SEFAZ, Prefeitura, FGTS (Conectividade) e outras, com vencimento e comprovante em PDF.</li>
     <li><strong>Alertas e painel:</strong> aviso diário em 30, 15 e 5 dias e no vencimento (um por marco) para administradores e gestores; painel "Saúde cadastral e certificados" em Cadastros e no Início.</li>
   </ul>
@@ -409,7 +409,7 @@
     <li><strong>Árvore arquivística:</strong> arquivos novos guardados por empresa, ano, mês e setor; aba <em>Documentos (GED)</em> na ficha da empresa, com explorador, busca e categorias.</li>
     <li><strong>Guarda legal:</strong> guias, recibos, extratos e XMLs nascem em guarda de 5 anos ou mais; não se excluem, só se arquivam, com registro na auditoria.</li>
     <li><strong>Importação de XMLs:</strong> NF-e, NFC-e, CT-e e NFS-e (nacional e ABRASF), soltos ou em .zip, com leitura segura do XML, chave única por empresa do sistema, ligação pela empresa (CNPJ) e inferência de entrada ou saída.</li>
-    <li><strong>SEFAZ (DF-e):</strong> conector com o certificado A1 do cofre, controle de NSU e espera de 1 hora; desligado por padrão e não exercitado contra a SEFAZ real.</li>
+    <li><strong>SEFAZ (DF-e):</strong> o agente faz a chamada com TLS mútuo no computador do certificado; controle de NSU e espera de 1 hora; desligado por padrão e não exercitado contra a SEFAZ real.</li>
     <li><strong>Conferência do anexo:</strong> CNPJ e período do documento contra a empresa e a competência do processo, com aviso antes de confirmar o envio.</li>
   </ul>
 
@@ -705,7 +705,7 @@
   <h2>O que foi verificado</h2>
   <table>
     <tr><th style="width:62mm">Verificação</th><th>Resultado</th></tr>
-    <tr><td>205 testes automáticos de integração (banco H2 em modo MySQL)</td><td class="ok">passam</td></tr>
+    <tr><td>211 testes automáticos de integração (banco H2 em modo MySQL) e 11 do agente local (TLS mútuo com certificados reais)</td><td class="ok">passam</td></tr>
     <tr><td>Requisitos por etapa: configuração e limites, bloqueio do avanço para todos os papéis, confirmação e anexo, voltar sem exigir, reentrada exige de novo, histórico</td><td class="ok">coberto por teste (5 testes)</td></tr>
     <tr><td>Aprovação em etapas: quem move direto, pedido, aprovação em nome do aprovador, recusa com motivo, retirada, cancelamento automático, etapa só de administrador, requisitos conferidos no pedido e na aprovação</td><td class="ok">coberto por teste (7 testes)</td></tr>
     <tr><td>Painel: atrasados por setor, tempo médio por etapa com prazo (datas controladas), carga por funcionário, abrangência por papel e filtro de setor</td><td class="ok">coberto por teste (5 testes)</td></tr>

@@ -50,7 +50,7 @@ export default function EmpresaFicha() {
           {aba === 'dados' && <Dados ficha={ficha} salvar={(fiscal) => agir(() => api.patch(base, { fiscal }))} />}
           {aba === 'socios' && <Socios ficha={ficha} base={base} agir={agir} />}
           {aba === 'contatos' && <Contatos ficha={ficha} base={base} agir={agir} />}
-          {aba === 'certificados' && <Certificados ficha={ficha} base={base} agir={agir} />}
+          {aba === 'certificados' && <Certificados ficha={ficha} />}
           {aba === 'procuracoes' && <Procuracoes ficha={ficha} base={base} agir={agir} />}
           {aba === 'obrigacoes' && <ObrigacoesDaEmpresa base={base} />}
           {aba === 'ged' && <Ged clienteId={ficha.id} />}
@@ -212,63 +212,36 @@ function Contatos({ ficha, base, agir }: { ficha: Ficha; base: string; agir: Agi
 }
 
 // ---------------------------------------------------------------- certificados
-function Certificados({ ficha, base, agir }: { ficha: Ficha; base: string; agir: Agir }) {
-  const [arquivo, setArquivo] = useState<File | null>(null)
-  const [senha, setSenha] = useState('')
-  const [a3, setA3] = useState({ titular: '', emissora: '', numeroSerie: '', validoAte: '' })
-  const enviarA1 = (e: FormEvent) => {
-    e.preventDefault()
-    if (!arquivo) return
-    const form = new FormData()
-    form.append('arquivo', arquivo)
-    form.append('senha', senha)
-    return agir(async () => { await api.upload(`${base}/certificados/a1`, form); setArquivo(null); setSenha('') })
-  }
-  const enviarA3 = (e: FormEvent) => { e.preventDefault(); return agir(async () => { await api.post(`${base}/certificados/a3`, a3); setA3({ titular: '', emissora: '', numeroSerie: '', validoAte: '' }) }) }
+/** Só leitura: os certificados vêm do agente instalado no computador de um usuário (não há envio de arquivo nem de senha). */
+function Certificados({ ficha }: { ficha: Ficha }) {
+  const { podeGerenciar: gestao } = useAuth()
   return (
-    <>
-      <section className="cartao">
-        <h3>Cofre de certificados digitais</h3>
-        <p className="sub">O arquivo do A1 e a senha ficam cifrados e nunca voltam pela tela. Cada uso do certificado pelo sistema fica na Auditoria.</p>
-        <div className="tabela-wrap"><table>
-          <thead><tr><th>Tipo</th><th>Titular</th><th>Emissora</th><th>Validade</th><th>Situação</th><th></th></tr></thead>
-          <tbody>
-            {ficha.certificados.map((c) => (
-              <tr key={c.id}>
-                <td>{c.tipo}</td>
-                <td className="corta" title={c.numeroSerie ? `${cn(c.titular)} · série ${c.numeroSerie}` : cn(c.titular)}>{cn(c.titular)}</td>
-                <td className="corta" title={cn(c.emissora)}>{cn(c.emissora)}</td>
-                <td>{fmtData(c.validoAte)}</td>
-                <td><span className={`selo ${seloDe(c.situacao)}`}>{rotuloSituacao[c.situacao]}{c.diasParaVencer !== null && c.diasParaVencer >= 0 && c.situacao === 'VENCENDO' ? ` · ${c.diasParaVencer} d` : ''}</span></td>
-                <td className="acoes-linha">
-                  <label className="chk"><input type="checkbox" checked={c.ativo} onChange={() => agir(() => api.patch(`${base}/certificados/${c.id}`, { ativo: !c.ativo }))} /> Ativo</label>
-                  <BotaoApagar nome={`certificado ${c.tipo}`} apagar={() => agir(() => api.del(`${base}/certificados/${c.id}`))} />
-                </td>
-              </tr>
-            ))}
-            {ficha.certificados.length === 0 && <tr><td colSpan={6} className="vazio">Nenhum certificado no cofre.</td></tr>}
-          </tbody>
-        </table></div>
-      </section>
-      <div className="ficha-2col">
-        <form className="cartao" onSubmit={enviarA1}>
-          <h3>Enviar certificado A1</h3>
-          <label>Arquivo (.pfx ou .p12)<input type="file" accept=".pfx,.p12" required onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} /></label>
-          <label>Senha do certificado<input type="password" required autoComplete="off" value={senha} onChange={(e) => setSenha(e.target.value)} /></label>
-          <small>A senha é conferida na hora, e o sistema lê o titular, a emissora, a série e a validade do próprio arquivo.</small>
-          <button className="primario" disabled={!arquivo}>Guardar no cofre</button>
-        </form>
-        <form className="cartao" onSubmit={enviarA3}>
-          <h3>Registrar certificado A3</h3>
-          <label>Titular<input required value={a3.titular} onChange={(e) => setA3({ ...a3, titular: e.target.value })} /></label>
-          <label>Emissora<input value={a3.emissora} onChange={(e) => setA3({ ...a3, emissora: e.target.value })} /></label>
-          <label>Número de série<input value={a3.numeroSerie} onChange={(e) => setA3({ ...a3, numeroSerie: e.target.value })} /></label>
-          <label>Validade<input type="date" required value={a3.validoAte} onChange={(e) => setA3({ ...a3, validoAte: e.target.value })} /></label>
-          <small>O A3 fica no token do titular: o sistema só acompanha a validade.</small>
-          <button className="primario">Registrar A3</button>
-        </form>
-      </div>
-    </>
+    <section className="cartao">
+      <h3>Certificados digitais</h3>
+      <p className="sub">
+        Lidos dos computadores onde o agente do Viriato está instalado (o certificado e a senha ficam no computador do usuário, nunca aqui).
+        As empresas são reconhecidas pelo CNPJ do titular.{' '}
+        {gestao ? <>Para ligar um certificado a esta empresa, ou instalar o agente em outro computador, abra <Link to="/certificados">Certificados e agente</Link>.</> : 'Para instalar o agente em outro computador, abra Certificados e agente.'}
+      </p>
+      <div className="tabela-wrap"><table>
+        <thead><tr><th>Titular</th><th>Emissora</th><th>Validade</th><th>Situação</th><th>Computador</th></tr></thead>
+        <tbody>
+          {ficha.certificados.map((c) => (
+            <tr key={c.id}>
+              <td className="corta" title={c.numeroSerie ? `${cn(c.titular)} · série ${c.numeroSerie}` : cn(c.titular)}>{cn(c.titular)}</td>
+              <td className="corta" title={cn(c.emissora)}>{cn(c.emissora)}</td>
+              <td>{fmtData(c.validoAte)}</td>
+              <td><span className={`selo ${seloDe(c.situacao)}`}>{rotuloSituacao[c.situacao]}{c.diasParaVencer !== null && c.diasParaVencer >= 0 && c.situacao === 'VENCENDO' ? ` · ${c.diasParaVencer} d` : ''}</span></td>
+              <td className="corta" title={c.computadores.join(', ')}>
+                {c.presente ? (c.computadores.join(', ') || '—') : <span className="selo cancelado">Fora do computador</span>}
+                {c.presente && c.computadoresConectados === 0 && <> <span className="selo atrasado" title="O agente não deu sinal nos últimos segundos">Agente desconectado</span></>}
+              </td>
+            </tr>
+          ))}
+          {ficha.certificados.length === 0 && <tr><td colSpan={5} className="vazio">Nenhum certificado reconhecido para esta empresa ainda.</td></tr>}
+        </tbody>
+      </table></div>
+    </section>
   )
 }
 

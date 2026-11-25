@@ -67,8 +67,8 @@ public class AlertaVencimentoService {
         int enviados = 0;
         Map<Long, Cliente> porId = clientes.findAll().stream().collect(Collectors.toMap(Cliente::getId, Function.identity()));
         for (ClienteCertificado c : certs.findByAtivoTrue()) {
-            if (c.getValidoAte() == null) continue;
-            enviados += avisar(CERTIFICADO, c.getId(), c.getTenantId(), porId.get(c.getClienteId()), "Certificado digital " + c.getTipo(), c.getValidoAte(), hoje);
+            if (c.getValidoAte() == null || c.getClienteId() == null) continue;   // sem empresa, não há para quem avisar
+            enviados += avisar(CERTIFICADO, c.getId(), c.getTenantId(), porId.get(c.getClienteId()), "Certificado digital", c.getValidoAte(), hoje);
         }
         for (ClienteProcuracao p : procs.findByAtivoTrue()) {
             if (p.getDataVencimento() == null) continue;
@@ -103,12 +103,12 @@ public class AlertaVencimentoService {
         long certVenc = 0, certAvencer = 0, procVenc = 0, procAvencer = 0;
         List<ClienteCertificado> cs = certs.findByTenantIdAndAtivoTrue(tenantId);
         for (ClienteCertificado c : cs) {
-            Cliente cli = porId.get(c.getClienteId());
+            Cliente cli = c.getClienteId() == null ? null : porId.get(c.getClienteId());
             if (c.getValidoAte() == null || cli == null || cli.getStatusContratual() == StatusContratual.ENCERRADO) continue;
             long dias = ChronoUnit.DAYS.between(hoje, c.getValidoAte());
             if (dias > 30) continue;
             if (dias < 0) certVenc++; else certAvencer++;
-            itens.add(new Item(CERTIFICADO, c.getId(), cli.getId(), cli.getNome(), "Certificado digital " + c.getTipo(), c.getValidoAte(), dias, dias <= 5 ? "CRITICA" : "ALERTA"));
+            itens.add(new Item(CERTIFICADO, c.getId(), cli.getId(), cli.getNome(), "Certificado digital", c.getValidoAte(), dias, dias <= 5 ? "CRITICA" : "ALERTA"));
         }
         for (ClienteProcuracao p : procs.findByTenantIdAndAtivoTrue(tenantId)) {
             Cliente cli = porId.get(p.getClienteId());

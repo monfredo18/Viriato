@@ -3,9 +3,7 @@ package br.com.viriato.crm;
 import br.com.viriato.cadastro.Cliente;
 import br.com.viriato.cadastro.ClienteRepository;
 import br.com.viriato.comum.NaoEncontradoException;
-import br.com.viriato.crm.CertificadoService.AtualizaCertificado;
 import br.com.viriato.crm.CertificadoService.CertificadoDto;
-import br.com.viriato.crm.CertificadoService.NovoA3;
 import br.com.viriato.crm.ChecklistService.ItemDto;
 import br.com.viriato.crm.Enums.RegimeTributario;
 import br.com.viriato.crm.Enums.StatusContratual;
@@ -89,19 +87,6 @@ public class FichaClienteController {
     public ContatoDto alterarContato(@PathVariable Long clienteId, @PathVariable Long id, @RequestBody ContatoReq r) { return sc.alterarContato(Contexto.tenantId(), clienteId, id, r); }
     @DeleteMapping("/contatos/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void apagarContato(@PathVariable Long clienteId, @PathVariable Long id) { sc.apagarContato(Contexto.tenantId(), clienteId, id); }
-
-    // ---------- certificados (o arquivo e a senha nunca saem) ----------
-    @PostMapping(value = "/certificados/a1", consumes = MediaType.MULTIPART_FORM_DATA_VALUE) @ResponseStatus(HttpStatus.CREATED)
-    public CertificadoDto enviarA1(@PathVariable Long clienteId, @RequestParam("arquivo") MultipartFile arquivo, @RequestParam("senha") String senha,
-                                   @RequestParam(value = "observacao", required = false) String observacao) throws IOException {
-        return certs.enviarA1(Contexto.atual(), clienteId, arquivo, senha, observacao);
-    }
-    @PostMapping("/certificados/a3") @ResponseStatus(HttpStatus.CREATED)
-    public CertificadoDto registrarA3(@PathVariable Long clienteId, @RequestBody NovoA3 r) { return certs.registrarA3(Contexto.atual(), clienteId, r); }
-    @PatchMapping("/certificados/{id}")
-    public CertificadoDto alterarCertificado(@PathVariable Long clienteId, @PathVariable Long id, @RequestBody AtualizaCertificado r) { return certs.alterar(Contexto.atual(), clienteId, id, r); }
-    @DeleteMapping("/certificados/{id}") @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void apagarCertificado(@PathVariable Long clienteId, @PathVariable Long id) { certs.apagar(Contexto.atual(), clienteId, id); }
 
     // ---------- procurações ----------
     @PostMapping(value = "/procuracoes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE) @ResponseStatus(HttpStatus.CREATED)

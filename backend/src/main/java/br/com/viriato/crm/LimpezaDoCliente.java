@@ -15,7 +15,7 @@ public class LimpezaDoCliente {
 
     @EventListener
     public void aoApagar(ClienteApagado e) {
-        certs.removerArquivosDaEmpresa(e.tenantId(), e.clienteId());
+        certs.desvincularDaEmpresa(e.tenantId(), e.clienteId());
         procs.removerArquivosDaEmpresa(e.tenantId(), e.clienteId());
     }
 }
